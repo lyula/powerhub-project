@@ -28,7 +28,7 @@ const ThemeToggle = ({ isDark }) => {
           fill="none"
           viewBox="0 0 24 24"
           strokeWidth={1.5}
-          stroke="#fff"
+          stroke="#222"
           className="w-6 h-6"
         >
           <path
