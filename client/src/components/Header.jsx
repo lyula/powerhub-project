@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import ThemeToggle from './ThemeToggle';
 import { LogoutIcon } from './icons';
 
 export default function Header({ onToggleSidebar }) {
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
+  
   const handleThemeToggle = () => {
     if (document.documentElement.classList.contains('dark')) {
       document.documentElement.classList.remove('dark');
@@ -16,6 +21,12 @@ export default function Header({ onToggleSidebar }) {
     setIsDark(document.documentElement.classList.contains('dark'));
     console.log('[ThemeToggle] isDark:', document.documentElement.classList.contains('dark'), '| <html>.classList:', document.documentElement.classList.value);
   };
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
+
   return (
     <header className="w-full bg-gray-100 dark:bg-[#111111] border-b border-gray-200 dark:border-gray-900 px-4 py-3 flex items-center justify-between">
       <div className="flex items-center gap-3 w-full">
@@ -43,10 +54,30 @@ export default function Header({ onToggleSidebar }) {
         >
           <ThemeToggle isDark={isDark} />
         </button>
-        <button className="hidden md:flex items-center justify-center px-2 py-2 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 shadow hover:shadow-lg transition hover:bg-[#c42152] dark:hover:bg-[#222] focus:outline-none" aria-label="Logout" style={{ minWidth: 40, height: 40 }}>
+        
+        {/* User Info */}
+        {user && (
+          <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-lg bg-gray-200 dark:bg-gray-800">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              {user.firstName} {user.lastName}
+            </span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+              ({user.role})
+            </span>
+          </div>
+        )}
+        
+        <button 
+          className="hidden md:flex items-center justify-center px-2 py-2 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 shadow hover:shadow-lg transition hover:bg-red-500 dark:hover:bg-red-600 focus:outline-none" 
+          aria-label="Logout" 
+          style={{ minWidth: 40, height: 40 }}
+          onClick={handleLogout}
+        >
           <LogoutIcon />
         </button>
       </div>
     </header>
   );
 }
+
+
