@@ -15,6 +15,7 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/powerhub', 
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
+  app.use('/api/filters', require('./routes/filter'));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
