@@ -133,7 +133,7 @@ export default function Home() {
                         <img src={video.profile} alt={video.author} className="w-7 h-7 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 dark:border-gray-700 flex-shrink-0" />
                         <div className="flex flex-col min-w-0">
                           <h3
-                            className="font-bold text-xs sm:text-base md:text-lg text-white line-clamp-2"
+                            className="font-bold text-xs sm:text-base md:text-lg text-black dark:text-white line-clamp-2"
                             title={video.title}
                             style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'normal', minHeight: '1.2em' }}
                           >
