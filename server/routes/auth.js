@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
+const auth = require('../middleware/auth');
 
 router.post('/register', userController.register);
 router.post('/login', userController.login);
@@ -23,5 +24,9 @@ router.get('/me', async (req, res) => {
 		res.status(401).json({ message: 'Invalid token.' });
 	}
 });
+
+// Protected routes - require authentication
+router.put('/profile', auth, userController.updateProfile);
+router.put('/change-password', auth, userController.changePassword);
 
 module.exports = router;
