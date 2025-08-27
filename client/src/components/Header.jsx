@@ -59,10 +59,7 @@ export default function Header({ onToggleSidebar }) {
         {user && (
           <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-lg bg-gray-200 dark:bg-gray-800">
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              {user.firstName} {user.lastName}
-            </span>
-            <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-              ({user.role})
+              {user.username}
             </span>
           </div>
         )}
