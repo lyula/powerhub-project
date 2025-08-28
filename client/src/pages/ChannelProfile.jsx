@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Header from '../components/Header';
@@ -10,6 +10,10 @@ export default function ChannelProfile() {
   const { author } = useParams();
   const [channel, setChannel] = useState(null);
   const [loading, setLoading] = useState(true);
+  // Video grid state for hover and thumb
+  const [hoveredIdx, setHoveredIdx] = useState(-1);
+  const [showThumbArr, setShowThumbArr] = useState([]);
+  const videoRefs = useRef([]);
 
   useEffect(() => {
     const fetchChannel = async () => {
@@ -20,6 +24,11 @@ export default function ChannelProfile() {
         if (response.ok) {
           const data = await response.json();
           setChannel(data);
+          // Initialize thumb state and refs for videos
+          if (Array.isArray(data.videos)) {
+            setShowThumbArr(data.videos.map((_, idx) => idx === 0 ? false : true));
+            videoRefs.current = data.videos.map(() => React.createRef());
+          }
         } else {
           setChannel(null);
         }
@@ -30,6 +39,19 @@ export default function ChannelProfile() {
     };
     fetchChannel();
   }, [author]);
+
+  // First video: autoplay for 15s then show thumb
+  useEffect(() => {
+    if (channel && Array.isArray(channel.videos) && channel.videos.length > 0 && !showThumbArr[0] && videoRefs.current[0]?.current) {
+      videoRefs.current[0].current.currentTime = 0;
+      videoRefs.current[0].current.play();
+      const timer = setTimeout(() => {
+        videoRefs.current[0].current.pause();
+        setShowThumbArr(arr => arr.map((v, idx) => idx === 0 ? true : v));
+      }, 15000);
+      return () => clearTimeout(timer);
+    }
+  }, [channel, showThumbArr]);
 
   if (loading) {
     // Skeleton UI for channel loading
@@ -76,6 +98,10 @@ export default function ChannelProfile() {
               <img src={channel.avatar} alt="Channel Avatar" className="w-28 h-28 rounded-full border-4 border-white dark:border-[#222] shadow-lg" />
             </div>
           </div>
+          {/* About this channel link below the banner */}
+          <div className="w-full flex justify-end px-8 mt-2 mb-2">
+            <a href="#about" className="text-[#0bb6bc] font-semibold">About this channel</a>
+          </div>
           {/* Channel Info */}
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between px-8 pt-16 pb-4">
             <div>
@@ -86,12 +112,79 @@ export default function ChannelProfile() {
             </div>
             <SubscribeButton channel={channel} />
           </div>
-          {/* Description */}
+          {/* Videos Grid styled like YouTube thumbnails */}
           <div className="px-8 pb-6">
+            {Array.isArray(channel.videos) && channel.videos.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {channel.videos.map((video, idx) => {
+                  const postedAgo = (() => {
+                    const posted = new Date(video.createdAt);
+                    const now = new Date();
+                    const diff = Math.floor((now - posted) / 1000);
+                    if (diff < 60) return `${diff}s ago`;
+                    if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+                    if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+                    if (diff < 2592000) return `${Math.floor(diff/86400)}d ago`;
+                    return posted.toLocaleDateString();
+                  })();
+                  return (
+                    <div
+                      key={video._id}
+                      className="relative group cursor-pointer"
+                      style={{ minHeight: '220px' }}
+                      onMouseEnter={() => {
+                        setHoveredIdx(idx);
+                        setShowThumbArr(arr => arr.map((v, i) => i === idx ? false : v));
+                        if (videoRefs.current[idx]?.current) {
+                          videoRefs.current[idx].current.currentTime = 0;
+                          videoRefs.current[idx].current.play();
+                        }
+                      }}
+                      onMouseLeave={() => {
+                        setHoveredIdx(-1);
+                        setShowThumbArr(arr => arr.map((v, i) => i === idx ? true : v));
+                        if (videoRefs.current[idx]?.current) {
+                          videoRefs.current[idx].current.pause();
+                          videoRefs.current[idx].current.currentTime = 0;
+                        }
+                      }}
+                    >
+                      {(!showThumbArr[idx] || hoveredIdx === idx) ? (
+                        <video
+                          ref={videoRefs.current[idx]}
+                          src={video.videoUrl}
+                          poster={video.thumbnailUrl}
+                          muted
+                          controls={false}
+                          className="w-full h-48 object-cover rounded-lg shadow-lg"
+                          onClick={() => window.location.href = `/watch/${video._id}`}
+                        />
+                      ) : (
+                        <img
+                          src={video.thumbnailUrl}
+                          alt={video.title}
+                          className="w-full h-48 object-cover rounded-lg shadow-lg group-hover:scale-105 transition-transform"
+                          onClick={() => window.location.href = `/watch/${video._id}`}
+                        />
+                      )}
+                      <div className="mt-2 text-base font-semibold text-black dark:text-white truncate">{video.title}</div>
+                      <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-300 mt-1">
+                        <span>{video.viewCount || 0} views</span>
+                        <span>{postedAgo}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-gray-500 dark:text-gray-300">No videos yet.</div>
+            )}
+          </div>
+          {/* About section, hidden by default, shown when link is clicked */}
+          <div id="about" className="px-8 pb-6 hidden">
+            <h2 className="text-xl font-bold mb-2 text-black dark:text-white">About this channel</h2>
             <p className="text-gray-700 dark:text-gray-200 text-base">{channel.description}</p>
           </div>
-          {/* Videos Grid styled like YouTube thumbnails */}
-          {/* You can add channel.videos here if available */}
         </div>
       </div>
     </div>
