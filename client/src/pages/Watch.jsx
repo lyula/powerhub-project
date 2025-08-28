@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import Comments from '../components/Comments';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
@@ -49,6 +50,7 @@ export default function Watch() {
   const [dislikeCount, setDislikeCount] = useState(5); // example count
   const [showComments, setShowComments] = useState(false);
   const [commentCount, setCommentCount] = useState(2); // sync with Comments component
+  const [subscribed, setSubscribed] = useState(false);
 
   // Update comment count when Comments component changes
   const handleCommentCountChange = (count) => setCommentCount(count);
@@ -116,9 +118,18 @@ export default function Watch() {
               </div>
             </div>
             <div className="flex items-center gap-3 mb-2">
-              <img src={video.authorProfile} alt={video.author} className="w-10 h-10 rounded-full border-2 border-gray-300 dark:border-gray-700" />
-              <span className="font-semibold text-gray-800 dark:text-gray-200">{video.author}</span>
+              <Link to={`/channel/${video.author}`} className="flex items-center gap-2 min-w-0">
+                <img src={video.authorProfile} alt={video.author} className="w-10 h-10 rounded-full border-2 border-gray-300 dark:border-gray-700 cursor-pointer" />
+                <span className="font-semibold text-gray-800 dark:text-gray-200 cursor-pointer truncate max-w-[120px]" title={video.author}>{video.author}</span>
+              </Link>
               <span className="text-xs text-gray-500 dark:text-gray-400">{video.views} views • {video.posted}</span>
+              <button
+                className={`ml-2 px-4 py-1 rounded-full font-semibold text-xs transition ${subscribed ? 'bg-gray-300 text-gray-700 cursor-default' : 'bg-red-600 text-white hover:bg-red-700'}`}
+                onClick={() => !subscribed && setSubscribed(true)}
+                disabled={subscribed}
+              >
+                {subscribed ? 'Subscribed' : 'Subscribe'}
+              </button>
             </div>
             <p className="text-gray-700 dark:text-gray-200 text-base mb-4">{video.description}</p>
             {showComments && <Comments onCountChange={handleCommentCountChange} />}
