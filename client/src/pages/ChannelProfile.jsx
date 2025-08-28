@@ -5,6 +5,15 @@ import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import SubscribeButton from '../components/SubscribeButton';
 
+function formatDuration(seconds) {
+  if (!seconds || isNaN(seconds)) return '';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
 export default function ChannelProfile() {
   const { user, token } = useAuth();
   const { author } = useParams();
@@ -14,6 +23,7 @@ export default function ChannelProfile() {
   const [hoveredIdx, setHoveredIdx] = useState(-1);
   const [showThumbArr, setShowThumbArr] = useState([]);
   const videoRefs = useRef([]);
+  const [durations, setDurations] = useState([]);
 
   useEffect(() => {
     const fetchChannel = async () => {
@@ -28,6 +38,7 @@ export default function ChannelProfile() {
           if (Array.isArray(data.videos)) {
             setShowThumbArr(data.videos.map((_, idx) => idx === 0 ? false : true));
             videoRefs.current = data.videos.map(() => React.createRef());
+            setDurations(data.videos.map(v => v.duration || null));
           }
         } else {
           setChannel(null);
@@ -39,6 +50,40 @@ export default function ChannelProfile() {
     };
     fetchChannel();
   }, [author]);
+
+  // Extract durations from video elements after metadata loads
+  useEffect(() => {
+    if (!channel || !Array.isArray(channel.videos)) return;
+    const listeners = [];
+    channel.videos.forEach((video, idx) => {
+      const vidEl = videoRefs.current[idx]?.current;
+      if (vidEl && (durations[idx] == null || isNaN(durations[idx]))) {
+        const handler = () => {
+          setDurations(durs => {
+            const newArr = [...durs];
+            newArr[idx] = vidEl.duration;
+            return newArr;
+          });
+        };
+        vidEl.addEventListener('loadedmetadata', handler);
+        listeners.push({ vidEl, handler });
+        // If metadata already loaded, set immediately
+        if (vidEl.readyState >= 1 && vidEl.duration && !isNaN(vidEl.duration)) {
+          setDurations(durs => {
+            const newArr = [...durs];
+            newArr[idx] = vidEl.duration;
+            return newArr;
+          });
+        }
+      }
+    });
+    return () => {
+      listeners.forEach(({ vidEl, handler }) => {
+        vidEl.removeEventListener('loadedmetadata', handler);
+      });
+    };
+    // eslint-disable-next-line
+  }, [channel, videoRefs, durations]);
 
   // First video: autoplay for 15s then show thumb
   useEffect(() => {
@@ -127,6 +172,7 @@ export default function ChannelProfile() {
                     if (diff < 2592000) return `${Math.floor(diff/86400)}d ago`;
                     return posted.toLocaleDateString();
                   })();
+                  const formattedDuration = formatDuration(durations[idx] || video.duration);
                   return (
                     <div
                       key={video._id}
@@ -149,24 +195,38 @@ export default function ChannelProfile() {
                         }
                       }}
                     >
-                      {(!showThumbArr[idx] || hoveredIdx === idx) ? (
+                      <div className="relative">
+                        {(!showThumbArr[idx] || hoveredIdx === idx) ? (
+                          <video
+                            ref={videoRefs.current[idx]}
+                            src={video.videoUrl}
+                            poster={video.thumbnailUrl}
+                            muted
+                            controls={false}
+                            className="w-full h-48 object-cover rounded-lg shadow-lg"
+                            onClick={() => window.location.href = `/watch/${video._id}`}
+                          />
+                        ) : (
+                          <img
+                            src={video.thumbnailUrl}
+                            alt={video.title}
+                            className="w-full h-48 object-cover rounded-lg shadow-lg group-hover:scale-105 transition-transform"
+                            onClick={() => window.location.href = `/watch/${video._id}`}
+                          />
+                        )}
+                        {/* Hidden video for duration extraction */}
                         <video
                           ref={videoRefs.current[idx]}
                           src={video.videoUrl}
                           poster={video.thumbnailUrl}
                           muted
                           controls={false}
-                          className="w-full h-48 object-cover rounded-lg shadow-lg"
-                          onClick={() => window.location.href = `/watch/${video._id}`}
+                          className="hidden"
                         />
-                      ) : (
-                        <img
-                          src={video.thumbnailUrl}
-                          alt={video.title}
-                          className="w-full h-48 object-cover rounded-lg shadow-lg group-hover:scale-105 transition-transform"
-                          onClick={() => window.location.href = `/watch/${video._id}`}
-                        />
-                      )}
+                        <div className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
+                          {formattedDuration}
+                        </div>
+                      </div>
                       <div className="mt-2 text-base font-semibold text-black dark:text-white truncate">{video.title}</div>
                       <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-300 mt-1">
                         <span>{video.viewCount || 0} views</span>
