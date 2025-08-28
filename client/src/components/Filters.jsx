@@ -27,7 +27,7 @@ export default function Filters() {
       style={{ position: 'relative', overflowX: 'auto', overflowY: 'hidden', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}
     >
       <div
-        className="flex gap-2 whitespace-nowrap"
+        className="flex gap-1 whitespace-nowrap"
         style={{ minWidth: 0, overflowX: 'auto', width: '100%' }}
       >
         {loading ? (
@@ -38,7 +38,7 @@ export default function Filters() {
           categories.map((cat) => (
             <button
               key={cat}
-              className="px-3 py-1 rounded-full text-sm font-medium transition bg-[#0bb6bc] text-white hover:bg-[#c42152] dark:bg-[#222] dark:text-gray-200 dark:hover:bg-[#333]"
+              className="px-2 py-0.5 rounded-full text-xs font-medium transition bg-[#0bb6bc] text-white hover:bg-[#c42152] dark:bg-[#222] dark:text-gray-200 dark:hover:bg-[#333]"
               style={{ minWidth: 'max-content', wordBreak: 'keep-all' }}
             >
               {cat}

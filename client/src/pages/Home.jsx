@@ -57,9 +57,9 @@ export default function Home() {
   }, []);
 
   return (
-  <div className="min-h-screen bg-gray-100 dark:bg-[#111111] w-full" style={{ overflowX: 'hidden', scrollbarWidth: 'none' }}>
-      <HeaderFixed onToggleSidebar={handleToggleSidebar} />
-  <div className="flex flex-row w-full" style={{ height: 'calc(100vh - 56px)', maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
+  <div className="min-h-screen bg-gray-100 dark:bg-[#111111] w-full" style={{ overflowX: 'hidden', scrollbarWidth: 'none', maxWidth: '100vw' }}>
+    <HeaderFixed onToggleSidebar={handleToggleSidebar} />
+  <div className="flex flex-row w-full" style={{ height: 'calc(100vh - 44px)', maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
         <SidebarFixed sidebarOpen={sidebarOpen} />
         {/* Render StudentUtility only when sidebar is collapsed on desktop */}
         {!sidebarOpen && (
@@ -68,16 +68,18 @@ export default function Home() {
           </div>
         )}
   <div className={`flex-1 flex flex-col ${sidebarOpen ? 'ml-0 md:ml-64' : 'ml-0 md:ml-0'} w-full`} style={{ maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
-          <div className="p-4 md:p-8">
-            <h2 className="text-2xl font-bold mb-4 text-[#0bb6bc] dark:text-[#0bb6bc]">Welcome to PowerHub</h2>
+          <div className="p-2 md:p-4">
+            <h2 className="text-lg md:text-xl font-bold mb-2 text-[#0bb6bc] dark:text-[#0bb6bc]">Welcome to PowerHub</h2>
             {/* Removed the statement as requested */}
 
             {/* Category Filters */}
-            <Filters />
+            <div className="mt-4 md:mt-6">
+              <Filters />
+            </div>
           </div>
-          <main className="flex-1 p-2 sm:p-4 pb-0 overflow-y-auto w-full" style={{ maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
+          <main className="flex-1 p-1 sm:p-2 pb-0 overflow-y-auto w-full" style={{ maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
             <div
-              className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 w-full"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 w-full"
               style={{ margin: 0, maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}
             >
               {loading ? (
@@ -116,14 +118,14 @@ export default function Home() {
                   <div
                     key={i}
                     className="bg-gray-100 dark:bg-[#111111] rounded-lg shadow-md overflow-hidden flex flex-col min-w-0 w-full"
-                    style={{ maxWidth: '100%', minWidth: 0 }}
+                    style={{ maxWidth: '100%', minWidth: 0, height: '320px', fontSize: '0.95em' }}
                   >
-                    <div className="w-full aspect-video bg-gray-300 dark:bg-gray-700 flex items-center justify-center" style={{ borderRadius: '0', margin: 0, padding: 0 }}>
+                    <div className="w-full bg-gray-300 dark:bg-gray-700 flex items-center justify-center" style={{ borderRadius: '0', margin: 0, padding: 0, height: '180px', minHeight: '180px', maxHeight: '180px', aspectRatio: '16/9' }}>
                       <img
                         src={video.thumbnail}
                         alt={video.title}
                         className="object-cover w-full h-full rounded-none"
-                        style={{ borderRadius: 0, margin: 0, padding: 0, display: 'block' }}
+                        style={{ borderRadius: 0, margin: 0, padding: 0, display: 'block', width: '100%', height: '100%', aspectRatio: '16/9', minHeight: '180px', maxHeight: '180px' }}
                       />
                     </div>
                     {/* Add spacing below thumbnail for mobile */}
@@ -172,7 +174,7 @@ export default function Home() {
 
 function HeaderFixed({ onToggleSidebar }) {
   return (
-    <div className="fixed top-0 left-0 w-full z-40">
+    <div className="fixed top-0 left-0 w-full z-40" style={{ height: '44px' }}>
       <Header onToggleSidebar={onToggleSidebar} />
     </div>
   );
