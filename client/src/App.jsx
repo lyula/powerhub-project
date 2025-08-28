@@ -13,7 +13,7 @@ import Watch from './pages/Watch';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, serverConnected } = useAuth();
   
   if (loading) {
     return (
@@ -21,6 +21,11 @@ const ProtectedRoute = ({ children }) => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
+          {!serverConnected && (
+            <p className="mt-2 text-red-500 text-sm">
+              Server connection issue. Please ensure the server is running on port 5000.
+            </p>
+          )}
         </div>
       </div>
     );
@@ -31,7 +36,7 @@ const ProtectedRoute = ({ children }) => {
 
 // Public Route Component (redirects to home if already authenticated)
 const PublicRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, serverConnected } = useAuth();
   
   if (loading) {
     return (
@@ -39,6 +44,11 @@ const PublicRoute = ({ children }) => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
+          {!serverConnected && (
+            <p className="mt-2 text-red-500 text-sm">
+              Server connection issue. Please ensure the server is running on port 5000.
+            </p>
+          )}
         </div>
       </div>
     );
