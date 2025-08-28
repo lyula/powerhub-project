@@ -8,7 +8,13 @@ app.use(express.json());
 app.use(cors());
 
 // DB Connection
-mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/powerhub', {
+const dbUri = process.env.MONGO_URI || 'mongodb://localhost:27017/powerhub';
+if (process.env.MONGO_URI) {
+  console.log('[DB] Using MONGO_URI from .env:', process.env.MONGO_URI);
+} else {
+  console.log('[DB] Using fallback URI:', dbUri);
+}
+mongoose.connect(dbUri, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 }).then(() => console.log('MongoDB connected')).catch(err => console.error('MongoDB connection error:', err));
