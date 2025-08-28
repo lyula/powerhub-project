@@ -66,24 +66,31 @@ export default function Header({ onToggleSidebar }) {
                 <span className="">Create</span>
               </button>
               {showCreateModal && modalRoot && createPortal(
-                <div className="fixed" style={{ left: 'auto', top: '56px', right: '32px', zIndex: 2147483647, minWidth: 'max-content' }}>
-                  <div className="w-44 bg-white dark:bg-[#222] rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col">
-                    <button
-                      className="w-full px-4 py-2 flex items-center gap-2 text-left hover:bg-gray-100 dark:hover:bg-[#333] text-gray-800 dark:text-gray-200"
-                      onClick={() => { setShowCreateModal(false); navigate('/upload'); }}
-                    >
-                      <FaVideo className="text-[#0bb6bc]" />
-                      <span>Create Video</span>
-                    </button>
-                    <button
-                      className="w-full px-4 py-2 flex items-center gap-2 text-left hover:bg-gray-100 dark:hover:bg-[#333] text-gray-800 dark:text-gray-200"
-                      onClick={() => { setShowCreateModal(false); navigate('/create-post'); }}
-                    >
-                      <FaRegEdit className="text-[#c42152]" />
-                      <span>Create Post</span>
-                    </button>
+                <>
+                  {/* Overlay to close modal when clicking outside */}
+                  <div
+                    className="fixed inset-0 z-[2147483646] bg-black bg-opacity-0"
+                    onClick={() => setShowCreateModal(false)}
+                  />
+                  <div className="fixed" style={{ left: 'auto', top: '56px', right: '32px', zIndex: 2147483647, minWidth: 'max-content' }}>
+                    <div className="w-44 bg-white dark:bg-[#222] rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col">
+                      <button
+                        className="w-full px-4 py-2 flex items-center gap-2 text-left hover:bg-gray-100 dark:hover:bg-[#333] text-gray-800 dark:text-gray-200"
+                        onClick={() => { setShowCreateModal(false); navigate('/upload'); }}
+                      >
+                        <FaVideo className="text-[#0bb6bc]" />
+                        <span>Create Video</span>
+                      </button>
+                      <button
+                        className="w-full px-4 py-2 flex items-center gap-2 text-left hover:bg-gray-100 dark:hover:bg-[#333] text-gray-800 dark:text-gray-200"
+                        onClick={() => { setShowCreateModal(false); navigate('/create-post'); }}
+                      >
+                        <FaRegEdit className="text-[#c42152]" />
+                        <span>Create Post</span>
+                      </button>
+                    </div>
                   </div>
-                </div>,
+                </>,
                 modalRoot
               )}
             </div>

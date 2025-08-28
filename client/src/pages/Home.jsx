@@ -1,3 +1,5 @@
+import PostCard from '../components/PostCard';
+import postCardData from '../components/PostCardData';
 import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
@@ -82,7 +84,7 @@ export default function Home() {
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 w-full"
               style={{ margin: 0, maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}
             >
-              {loading ? (
+                {loading ? ( 
                   Array.from({ length: 6 }).map((_, i) => (
                     <div
                       key={i}
