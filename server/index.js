@@ -1,6 +1,8 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
@@ -19,10 +21,17 @@ mongoose.connect(dbUri, {
   useUnifiedTopology: true,
 }).then(() => console.log('MongoDB connected')).catch(err => console.error('MongoDB connection error:', err));
 
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir);
+}
+
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/filters', require('./routes/filter'));
 app.use('/api/channel', require('./routes/channel'));
+app.use('/api/videos', require('./routes/video'));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
