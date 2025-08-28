@@ -158,7 +158,7 @@ const Profile = () => {
         )}
         <div className={`flex-1 flex flex-col ${sidebarOpen ? 'ml-0 md:ml-64' : 'ml-0 md:ml-0'} w-full`} style={{ maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
           <div className="p-4 md:p-8">
-            <h2 className="text-2xl font-bold mb-6 text-[#0bb6bc] dark:text-[#0bb6bc]">My Profile</h2>
+            <h2 className="text-2xl font-bold mb-6 text-[#0bb6bc] dark:text-[#0bb6bc] mt-8 pl-12">My Profile</h2>
             
             {message.text && (
               <div className={`mb-6 p-4 rounded-lg border ${
@@ -277,28 +277,65 @@ const Profile = () => {
                     </div>
                   </form>
                 ) : (
-                  <div className="space-y-4">
-                    <div className="flex justify-between py-3 border-b border-gray-200 dark:border-gray-700">
-                      <span className="font-medium text-gray-700 dark:text-gray-300">First Name:</span>
-                      <span className="text-gray-900 dark:text-white">{user.firstName || 'Not set'}</span>
+                  <form className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          First Name
+                        </label>
+                        <input
+                          type="text"
+                          value={user.firstName || ''}
+                          disabled
+                          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Last Name
+                        </label>
+                        <input
+                          type="text"
+                          value={user.lastName || ''}
+                          disabled
+                          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
+                        />
+                      </div>
                     </div>
-                    <div className="flex justify-between py-3 border-b border-gray-200 dark:border-gray-700">
-                      <span className="font-medium text-gray-700 dark:text-gray-300">Last Name:</span>
-                      <span className="text-gray-900 dark:text-white">{user.lastName || 'Not set'}</span>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Username
+                      </label>
+                      <input
+                        type="text"
+                        value={user.username || ''}
+                        disabled
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
+                      />
                     </div>
-                    <div className="flex justify-between py-3 border-b border-gray-200 dark:border-gray-700">
-                      <span className="font-medium text-gray-700 dark:text-gray-300">Username:</span>
-                      <span className="text-gray-900 dark:text-white">{user.username || 'Not set'}</span>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        value={user.email || ''}
+                        disabled
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
+                      />
                     </div>
-                    <div className="flex justify-between py-3 border-b border-gray-200 dark:border-gray-700">
-                      <span className="font-medium text-gray-700 dark:text-gray-300">Email:</span>
-                      <span className="text-gray-900 dark:text-white">{user.email}</span>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Role
+                      </label>
+                      <input
+                        type="text"
+                        value={user.role || 'User'}
+                        disabled
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
+                      />
                     </div>
-                    <div className="flex justify-between py-3">
-                      <span className="font-medium text-gray-700 dark:text-gray-300">Role:</span>
-                      <span className="text-gray-900 dark:text-white">{user.role || 'User'}</span>
-                    </div>
-                  </div>
+                  </form>
                 )}
               </div>
 

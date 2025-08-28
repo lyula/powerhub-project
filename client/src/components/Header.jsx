@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
+import { FaVideo, FaRegEdit } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ThemeToggle from './ThemeToggle';
 import { LogoutIcon } from './icons';
 
 export default function Header({ onToggleSidebar }) {
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const modalRoot = typeof window !== 'undefined' ? document.body : null;
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
@@ -49,7 +53,37 @@ export default function Header({ onToggleSidebar }) {
       </div>
   <div className="flex items-center gap-4 w-full justify-center min-w-0">
         <input type="text" placeholder="Search videos..." className="px-3 py-2 rounded-lg bg-gray-200 dark:bg-gray-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0bb6bc] placeholder-gray-400 w-full max-w-md text-center text-base" style={{ height: '36px' }} />
-        <button className="hidden md:inline px-4 py-2 rounded-lg bg-[#c42152] text-white font-semibold hover:bg-[#0bb6bc] transition text-base" style={{ height: '36px' }}>Upload</button>
+            <div className="relative" style={{ position: 'relative', zIndex: 100 }}>
+              <button
+                className="hidden md:inline flex flex-row items-center gap-3 px-4 py-2 rounded-lg bg-[#c42152] text-white font-semibold hover:bg-[#0bb6bc] transition text-base"
+                style={{ height: '36px', paddingTop: 0, paddingBottom: 0, width: 'auto', minWidth: 0 }}
+                onClick={() => setShowCreateModal((prev) => !prev)}
+              >
+                <span className="text-lg font-bold">+</span>
+                <span className="">Create</span>
+              </button>
+              {showCreateModal && modalRoot && createPortal(
+                <div className="fixed" style={{ left: 'auto', top: '56px', right: '32px', zIndex: 2147483647, minWidth: 'max-content' }}>
+                  <div className="w-44 bg-white dark:bg-[#222] rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col">
+                    <button
+                      className="w-full px-4 py-2 flex items-center gap-2 text-left hover:bg-gray-100 dark:hover:bg-[#333] text-gray-800 dark:text-gray-200"
+                      onClick={() => { setShowCreateModal(false); navigate('/upload'); }}
+                    >
+                      <FaVideo className="text-[#0bb6bc]" />
+                      <span>Create Video</span>
+                    </button>
+                    <button
+                      className="w-full px-4 py-2 flex items-center gap-2 text-left hover:bg-gray-100 dark:hover:bg-[#333] text-gray-800 dark:text-gray-200"
+                      onClick={() => { setShowCreateModal(false); navigate('/create-post'); }}
+                    >
+                      <FaRegEdit className="text-[#c42152]" />
+                      <span>Create Post</span>
+                    </button>
+                  </div>
+                </div>,
+                modalRoot
+              )}
+            </div>
         <button
           className="hidden md:flex items-center justify-center px-2 py-2 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 shadow hover:shadow-lg transition hover:bg-[#c42152] dark:hover:bg-[#222] focus:outline-none"
           aria-label="Toggle theme"
