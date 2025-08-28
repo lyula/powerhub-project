@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import StudentUtility from '../components/StudentUtility';
@@ -8,7 +9,7 @@ import { useAuth } from '../context/AuthContext';
 
 export default function ChannelSetup({ onChannelCreated }) {
   // Get user from context
-  const { user } = useAuth();
+  const { user, token, setChannel } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const handleToggleSidebar = () => setSidebarOpen((open) => !open);
   const [channelName, setChannelName] = useState("");
@@ -20,20 +21,51 @@ export default function ChannelSetup({ onChannelCreated }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const navigate = useNavigate();
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
     try {
-      // Replace with your backend API call
-      // Example: await fetch('/api/channel', { method: 'POST', body: ... })
-      setTimeout(() => {
+  const formData = new FormData();
+  formData.append("name", channelName); // match backend field
+  formData.append("description", description);
+  formData.append("username", user?.username || "");
+  if (avatarFile) formData.append("avatar", avatarFile);
+  if (bannerFile) formData.append("banner", bannerFile);
+
+      const apiUrl = import.meta.env.VITE_API_URL;
+      const response = await fetch(`${apiUrl}/channel`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        },
+        body: formData,
+      });
+      let data = null;
+      try {
+        data = await response.json();
+      } catch (jsonErr) {
+        console.error('Failed to parse JSON:', jsonErr);
+      }
+      if (!response.ok) {
+        console.error('Channel creation failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          data,
+        });
         setLoading(false);
-        if (onChannelCreated) onChannelCreated({ channelName, description, avatar, banner });
-      }, 1000);
+        setError(data?.error || data?.message || `Failed to create channel: ${response.statusText}`);
+        return;
+      }
+      setLoading(false);
+  if (onChannelCreated) onChannelCreated(data);
+  if (setChannel) setChannel(data); // update channel in context
+  navigate("/upload");
     } catch (err) {
       setLoading(false);
       setError("Failed to create channel. Try again.");
+      console.error('Channel creation error:', err);
     }
   };
 
@@ -41,6 +73,8 @@ export default function ChannelSetup({ onChannelCreated }) {
   const avatarInputRef = React.useRef();
   const bannerInputRef = React.useRef();
 
+  // Handle avatar file selection
+  // Remove file input handlers (now using widget)
   // Handle avatar file selection
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
@@ -162,10 +196,13 @@ export default function ChannelSetup({ onChannelCreated }) {
               />
               <button
                 type="submit"
-                style={{ background: `linear-gradient(90deg, ${colors.primary}, ${colors.secondary})` }}
-                className="text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:opacity-90 transition mt-2 text-lg w-full"
+                style={{ background: `linear-gradient(90deg, ${colors.primary}, ${colors.secondary})`, position: 'relative' }}
+                className="text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:opacity-90 transition mt-2 text-lg w-full flex items-center justify-center"
                 disabled={loading}
               >
+                {loading && (
+                  <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></span>
+                )}
                 {loading ? "Creating..." : "Create Channel"}
               </button>
               {error && <span className="text-red-500 text-sm mt-2">{error}</span>}

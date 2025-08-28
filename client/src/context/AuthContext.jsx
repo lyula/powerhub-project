@@ -31,44 +31,51 @@ export const AuthProvider = ({ children }) => {
               'Content-Type': 'application/json'
             }
           });
-          
+          let userData = null;
           if (response.ok) {
             const data = await response.json();
-            setUser(data.data.user);
+            userData = data.data.user;
+            setUser(userData);
           } else {
-              // Fetch channel info after user is set
-              try {
-                const channelRes = await fetch(CHANNEL_API_URL, {
-                  headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                  }
-                });
-                if (channelRes.ok) {
-                  const channelData = await channelRes.json();
-                  setChannel(channelData);
-                } else {
-                  setChannel(null);
-                }
-              } catch (err) {
-                setChannel(null);
-              }
-            // Token is invalid, remove it
             localStorage.removeItem('token');
             setToken(null);
+            setUser(null);
+          }
+          // Always fetch channel info after user check
+          try {
+            const channelRes = await fetch(CHANNEL_API_URL, {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            });
+            if (channelRes.ok) {
+              const channelData = await channelRes.json();
+              // Only set channel if valid object with _id
+              if (channelData && channelData._id) {
+                setChannel(channelData);
+              } else {
+                setChannel(null);
+              }
+            } else {
               setChannel(null);
+            }
+          } catch (err) {
+            setChannel(null);
           }
         } catch (error) {
           console.error('Auth check failed:', error);
           localStorage.removeItem('token');
           setToken(null);
-            setChannel(null);
-        }
-      }
+          setUser(null);
           setChannel(null);
+        }
+      } else {
+        setChannel(null);
+        setUser(null);
+      }
       setLoading(false);
     };
-
     checkAuth();
   }, [token]);
 
