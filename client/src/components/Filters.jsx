@@ -38,8 +38,8 @@ export default function Filters() {
           categories.map((cat) => (
             <button
               key={cat}
-              className="px-2 py-0.5 rounded-full text-xs font-medium transition bg-[#0bb6bc] text-white hover:bg-[#c42152] dark:bg-[#222] dark:text-gray-200 dark:hover:bg-[#333]"
-              style={{ minWidth: 'max-content', wordBreak: 'keep-all' }}
+              className="px-3 py-1 rounded-full text-xs sm:text-sm md:text-base font-medium transition bg-[#0bb6bc] text-white hover:bg-[#c42152] dark:bg-[#222] dark:text-gray-200 dark:hover:bg-[#333]"
+              style={{ minWidth: 'max-content', wordBreak: 'keep-all', fontSize: 'inherit' }}
             >
               {cat}
             </button>
