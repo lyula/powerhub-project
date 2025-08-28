@@ -127,14 +127,22 @@ export default function ChannelProfile() {
                     if (diff < 2592000) return `${Math.floor(diff/86400)}d ago`;
                     return posted.toLocaleDateString();
                   })();
+                  const isActive = hoveredIdx === idx || (!showThumbArr[idx] && idx === 0 && hoveredIdx === -1);
                   return (
                     <div
                       key={video._id}
                       className="relative group cursor-pointer"
                       style={{ minHeight: '220px' }}
                       onMouseEnter={() => {
+                        // Pause all other videos and show their thumbnails
                         setHoveredIdx(idx);
-                        setShowThumbArr(arr => arr.map((v, i) => i === idx ? false : v));
+                        setShowThumbArr(arr => arr.map((v, i) => i === idx ? false : true));
+                        videoRefs.current.forEach((ref, i) => {
+                          if (ref?.current && i !== idx) {
+                            ref.current.pause();
+                            ref.current.currentTime = 0;
+                          }
+                        });
                         if (videoRefs.current[idx]?.current) {
                           videoRefs.current[idx].current.currentTime = 0;
                           videoRefs.current[idx].current.play();
@@ -149,7 +157,7 @@ export default function ChannelProfile() {
                         }
                       }}
                     >
-                      {(!showThumbArr[idx] || hoveredIdx === idx) ? (
+                      {isActive ? (
                         <video
                           ref={videoRefs.current[idx]}
                           src={video.videoUrl}
