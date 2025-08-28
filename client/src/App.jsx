@@ -6,6 +6,7 @@ import Register from './pages/Register';
 import Home from './pages/Home';
 import Profile from './pages/Profile';
 import UploadVideo from './pages/UploadVideo';
+import CreatePost from './pages/CreatePost';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -49,9 +50,10 @@ function AppRoutes() {
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-  <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-  <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-  <Route path="/upload" element={<ProtectedRoute><UploadVideo /></ProtectedRoute>} />
+      <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+      <Route path="/upload" element={<ProtectedRoute><UploadVideo /></ProtectedRoute>} />
+      <Route path="/create-post" element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
