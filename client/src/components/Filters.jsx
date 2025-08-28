@@ -23,7 +23,7 @@ export default function Filters() {
 
   return (
     <div
-      className="w-full max-w-full md:max-w-4xl mx-auto"
+      className="w-full max-w-full md:max-w-4xl mx-auto pt-4 sm:pt-0"
       style={{ position: 'relative', overflowX: 'auto', overflowY: 'hidden', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}
     >
       <div

@@ -131,24 +131,24 @@ export default function Home() {
                     {/* Add spacing below thumbnail for mobile */}
                     <div className="block sm:hidden" style={{ height: '12px' }} />
                     <div className="p-0 sm:p-3 flex-1 flex flex-col justify-between">
-                      <div className="flex items-start gap-2 sm:gap-3 mb-1">
+                      <div className="flex items-start gap-2 sm:gap-3 mb-0">
                         <img src={video.profile} alt={video.author} className="w-7 h-7 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 dark:border-gray-700 flex-shrink-0" />
                         <div className="flex flex-col min-w-0">
                           <h3
-                            className="font-bold text-xs sm:text-base md:text-lg text-black dark:text-white line-clamp-2"
+                            className="font-bold text-xs sm:text-base md:text-lg text-black dark:text-white line-clamp-2 mb-0"
                             title={video.title}
-                            style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'normal', minHeight: '1.2em' }}
+                            style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'normal', minHeight: '1.2em', marginBottom: '0' }}
                           >
                             {video.title}
                           </h3>
                           {/* Author above details on desktop/large screens, hidden on mobile/tablet */}
-                          <span className="hidden md:block text-xs font-medium text-gray-600 dark:text-gray-400 mt-0 truncate">{video.author}</span>
+                          <span className="hidden md:block text-xs font-medium text-gray-600 dark:text-gray-400 mt-0 truncate" style={{ marginTop: '2px' }}>{video.author}</span>
                         </div>
                       </div>
                       {/* Responsive row for views, author, and time */}
                       <div
                         className="flex flex-row items-center gap-1 md:gap-3 pl-7 sm:pl-14 text-xs text-gray-600 dark:text-gray-400 truncate"
-                        style={{ marginBottom: '0' }}
+                        style={{ marginBottom: '0', marginTop: '2px' }}
                       >
                         {/* On desktop/large screens, hide author in details row */}
                         <span className="md:hidden">{video.author}</span>
