@@ -49,7 +49,10 @@ export default function Header({ onToggleSidebar }) {
             <line x1="3" y1="18" x2="21" y2="18" />
           </svg>
         </button>
-  <span className="hidden md:inline text-lg font-bold text-[#0bb6bc] dark:text-[#0bb6bc]">PLP PowerHub</span>
+            <span className="hidden md:inline text-lg font-bold">
+              <span style={{ color: '#c42152' }}>PLP</span>
+              <span className="text-[#0bb6bc] dark:text-[#0bb6bc]"> PowerHub</span>
+            </span>
       </div>
   <div className="flex items-center gap-4 w-full justify-center min-w-0">
         <input type="text" placeholder="Search videos..." className="px-3 py-2 rounded-lg bg-gray-200 dark:bg-gray-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0bb6bc] placeholder-gray-400 w-full max-w-md text-center text-base" style={{ height: '36px' }} />
