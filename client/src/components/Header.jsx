@@ -10,7 +10,7 @@ export default function Header({ onToggleSidebar }) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const modalRoot = typeof window !== 'undefined' ? document.body : null;
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, channel } = useAuth();
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
   
   const handleThemeToggle = () => {
@@ -60,7 +60,13 @@ export default function Header({ onToggleSidebar }) {
               <button
                 className="hidden md:inline flex flex-row items-center gap-3 px-4 py-2 rounded-lg bg-[#c42152] text-white font-semibold hover:bg-[#0bb6bc] transition text-base"
                 style={{ height: '36px', paddingTop: 0, paddingBottom: 0, width: 'auto', minWidth: 0 }}
-                onClick={() => setShowCreateModal((prev) => !prev)}
+                onClick={() => {
+                  if (!channel) {
+                    navigate('/channel-setup');
+                  } else {
+                    setShowCreateModal((prev) => !prev);
+                  }
+                }}
               >
                 <span className="text-lg font-bold">+</span>
                 <span className="">Create</span>

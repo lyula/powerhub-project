@@ -15,14 +15,17 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
-  const API_BASE_URL = 'http://localhost:5000/api/auth';
+  const API_BASE_URL = import.meta.env.VITE_API_URL;
+  const CHANNEL_API_URL = API_BASE_URL + '/channel/me';
 
   // Check if user is authenticated on app load
+  const [channel, setChannel] = useState(null);
+  // const CHANNEL_API_URL = import.meta.env.VITE_API_BASE_URL + '/api/channel/me';
   useEffect(() => {
     const checkAuth = async () => {
       if (token) {
         try {
-          const response = await fetch(`${API_BASE_URL}/me`, {
+          const response = await fetch(`${API_BASE_URL}/auth/me`, {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'
@@ -33,16 +36,36 @@ export const AuthProvider = ({ children }) => {
             const data = await response.json();
             setUser(data.data.user);
           } else {
+              // Fetch channel info after user is set
+              try {
+                const channelRes = await fetch(CHANNEL_API_URL, {
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                  }
+                });
+                if (channelRes.ok) {
+                  const channelData = await channelRes.json();
+                  setChannel(channelData);
+                } else {
+                  setChannel(null);
+                }
+              } catch (err) {
+                setChannel(null);
+              }
             // Token is invalid, remove it
             localStorage.removeItem('token');
             setToken(null);
+              setChannel(null);
           }
         } catch (error) {
           console.error('Auth check failed:', error);
           localStorage.removeItem('token');
           setToken(null);
+            setChannel(null);
         }
       }
+          setChannel(null);
       setLoading(false);
     };
 
@@ -51,7 +74,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (userData) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/register`, {
+  const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -78,7 +101,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/login`, {
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -106,7 +129,7 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       if (token) {
-        await fetch(`${API_BASE_URL}/logout`, {
+  await fetch(`${API_BASE_URL}/auth/logout`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -127,7 +150,7 @@ export const AuthProvider = ({ children }) => {
   // Update user profile
   const updateProfile = async (profileData) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/profile`, {
+  const response = await fetch(`${API_BASE_URL}/auth/profile`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -154,7 +177,7 @@ export const AuthProvider = ({ children }) => {
   // Change password
   const changePassword = async (passwordData) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/change-password`, {
+  const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -184,6 +207,8 @@ export const AuthProvider = ({ children }) => {
     logout,
     updateProfile,
     changePassword,
+    channel,
+    setChannel,
     isAuthenticated: !!token
   };
 

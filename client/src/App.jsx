@@ -6,6 +6,7 @@ import Register from './pages/Register';
 import Home from './pages/Home';
 import Profile from './pages/Profile';
 import UploadVideo from './pages/UploadVideo';
+import ChannelSetup from './pages/ChannelSetup';
 import CreatePost from './pages/CreatePost';
 import ChannelProfile from './pages/ChannelProfile';
 import Watch from './pages/Watch';
@@ -46,7 +47,16 @@ const PublicRoute = ({ children }) => {
   return isAuthenticated ? <Navigate to="/home" replace /> : children;
 };
 
+// Dummy hook to check if user has a channel (replace with real logic)
+import { useState } from 'react';
+function useHasChannel() {
+  // Replace with actual check from user context or API
+  const [hasChannel] = useState(false); // set to true to simulate having a channel
+  return hasChannel;
+}
+
 function AppRoutes() {
+  const hasChannel = useHasChannel();
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
@@ -54,10 +64,11 @@ function AppRoutes() {
       <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
       <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-      <Route path="/upload" element={<ProtectedRoute><UploadVideo /></ProtectedRoute>} />
+      <Route path="/upload" element={hasChannel ? <ProtectedRoute><UploadVideo /></ProtectedRoute> : <Navigate to="/channel-setup" replace />} />
+      <Route path="/channel-setup" element={<ProtectedRoute><ChannelSetup /></ProtectedRoute>} />
       <Route path="/create-post" element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
-  <Route path="/channel/:author" element={<ProtectedRoute><ChannelProfile /></ProtectedRoute>} />
-  <Route path="/watch/:id" element={<ProtectedRoute><Watch /></ProtectedRoute>} />
+      <Route path="/channel/:author" element={<ProtectedRoute><ChannelProfile /></ProtectedRoute>} />
+      <Route path="/watch/:id" element={<ProtectedRoute><Watch /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
