@@ -28,8 +28,15 @@ const channelSchema = new mongoose.Schema({
   banner: {
     type: String,
     default: '' // Cloudinary URL for channel banner
-  }
-  // Add more fields as needed (e.g., subscribers, social links)
+  },
+  subscribers: [{
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    }
+  }],
+  // Add more fields as needed (e.g., social links)
 });
 
 module.exports = mongoose.model('Channel', channelSchema);
