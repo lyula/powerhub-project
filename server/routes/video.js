@@ -27,6 +27,10 @@ router.post('/:id/comment/reply', auth, videoController.replyComment);
 
 // Get all videos
 router.get('/', videoController.getAllVideos);
+
+// Add a view to a video
+router.post('/:id/view', videoController.addView);
+
 // Get video details
 router.get('/:id', videoController.getVideo);
 

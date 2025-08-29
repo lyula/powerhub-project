@@ -1,3 +1,17 @@
+// Add a view to a video
+exports.addView = async (req, res) => {
+  try {
+    const video = await Video.findById(req.params.id);
+    if (!video) return res.status(404).json({ error: 'Video not found' });
+    // Optionally, get userId from req.user if auth is required
+    // For now, just increment viewCount
+    video.viewCount = (video.viewCount || 0) + 1;
+    await video.save();
+    res.json({ success: true, viewCount: video.viewCount });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to add view', details: err });
+  }
+};
 // Get videos by category
 exports.getVideosByCategory = async (req, res) => {
   try {

@@ -84,6 +84,22 @@ export default function Watch() {
 
   useEffect(() => {
     fetchVideoAndRecommendations(id);
+    // Send view count to backend when video is loaded
+    const sendView = async () => {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL;
+        await fetch(`${apiUrl}/videos/${id}/view`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            // Optionally add auth token if required
+          },
+        });
+      } catch (err) {
+        // Ignore errors for view count
+      }
+    };
+    sendView();
   }, [id]);
 
   const handleCommentCountChange = (count) => setCommentCount(count);
