@@ -5,7 +5,7 @@ import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import SubscribeButton from '../components/SubscribeButton';
 import AboutChannelModal from '../components/AboutChannelModal';
-import { FaGithub, FaEnvelope, FaWhatsapp, FaInstagram } from 'react-icons/fa';
+import { FaGithub, FaEnvelope, FaWhatsapp, FaInstagram, FaLinkedin } from 'react-icons/fa';
 import { colors } from '../theme/colors';
 
 function formatDuration(seconds) {
@@ -177,6 +177,13 @@ export default function ChannelProfile() {
               onMouseEnter={e => e.currentTarget.style.color = colors.secondary}
               onMouseLeave={e => e.currentTarget.style.color = 'var(--icon-color, #888)'}
             ><FaInstagram /></a>
+            <a href="#" 
+              className="icon-link"
+              title="LinkedIn"
+              style={{ fontSize: '1.5em', color: 'var(--icon-color, #888)' }}
+              onMouseEnter={e => e.currentTarget.style.color = colors.primary}
+              onMouseLeave={e => e.currentTarget.style.color = 'var(--icon-color, #888)'}
+            ><FaLinkedin /></a>
             <button
               type="button"
               className="text-[#0bb6bc] font-semibold hover:underline bg-transparent border-none p-0 m-0"
