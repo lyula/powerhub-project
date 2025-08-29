@@ -55,7 +55,8 @@ export default function SubscribeButton({ channel }) {
   if (!localChannel || !user) return null;
   return (
     <button
-      className={`mt-4 md:mt-0 px-6 py-2 rounded-full font-semibold transition ${isSubscribed ? 'bg-gray-400 text-white' : 'bg-[#c42152] text-white hover:bg-[#0bb6bc]'}`}
+      className={`mt-2 md:mt-0 px-3 py-1 rounded-full text-sm font-semibold transition ${isSubscribed ? 'bg-gray-400 text-white' : 'bg-[#c42152] text-white hover:bg-[#0bb6bc]'}`}
+      style={{ minWidth: '80px', height: '32px' }}
       onClick={handleSubscribe}
       disabled={subscribing}
     >

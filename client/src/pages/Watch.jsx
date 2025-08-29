@@ -149,50 +149,54 @@ export default function Watch() {
             <video
               src={video.videoUrl}
               controls
-              className="w-full h-full"
+              className="w-full max-w-full aspect-video rounded-lg shadow-lg mb-2"
               style={{ border: 'none' }}
             />
-            <div className="w-full max-w-3xl mt-4">
-              <div className="flex items-start w-full mb-3">
-                <h1 className="text-2xl font-bold text-black dark:text-white flex-1 break-words leading-tight mb-0" style={{ wordBreak: 'break-word' }}>{video.title}</h1>
-                <div className="flex items-center gap-6 ml-4">
-                  {/* Outlined Heart Like Icon, fill when liked */}
-                  <button
-                    className={`flex items-center gap-1 text-gray-700 dark:text-gray-200 transition bg-transparent border-none p-0 ${liked ? 'text-pink-500' : 'hover:text-pink-500'}`}
-                    onClick={() => {
-                      setLiked(l => !l);
-                      setLikeCount(count => liked ? count - 1 : count + 1);
-                    }}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill={liked ? '#c42152' : 'none'} stroke="currentColor" strokeWidth="2">
-                      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41 1.01 4.5 2.09C13.09 4.01 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                    </svg>
-                    <span className="text-xs">Like ({likeCount})</span>
-                  </button>
-                  {/* YouTube-style Thumbs Down Dislike Icon */}
-                  <button
-                    className={`flex items-center gap-1 text-gray-700 dark:text-gray-200 hover:text-gray-400 transition bg-transparent border-none p-0 ${disliked ? 'text-gray-400' : ''}`}
-                    onClick={() => {
-                      setDisliked(d => !d);
-                      setDislikeCount(count => disliked ? count - 1 : count + 1);
-                    }}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill={disliked ? '#888' : 'none'} stroke="currentColor" strokeWidth="2">
-                      <path d="M22 10.5c0-.83-.67-1.5-1.5-1.5h-6.36l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 2 7.59 8.59C7.22 8.95 7 9.45 7 10v8c0 .55.45 1 1 1h9c.55 0 1-.45 1-1v-6.5h2c.83 0 1.5-.67 1.5-1.5zM5 10v8c0 .55.45 1 1 1s1-.45 1-1v-8c0-.55-.45-1-1-1s-1 .45-1 1z" />
-                    </svg>
-                    <span className="text-xs">Dislike ({dislikeCount})</span>
-                  </button>
-                  {/* Instagram-style Comments (Speech Bubble) */}
-                  <button
-                    className="flex items-center gap-1 text-gray-700 dark:text-gray-200 hover:text-blue-500 transition bg-transparent border-none p-0"
-                    onClick={() => setShowComments((prev) => !prev)}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="22" height="22">
-                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2" fill="none" />
-                    </svg>
-                    <span className="text-xs">Comments ({commentCount})</span>
-                  </button>
-                </div>
+            <div className="w-full max-w-3xl mt-2 flex flex-col gap-2">
+              <h1
+                className="text-2xl font-bold text-black dark:text-white leading-tight mb-0 truncate block max-w-full"
+                style={{ wordBreak: 'break-word', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                title={video.title}
+              >
+                {video.title}
+              </h1>
+              <div className="flex flex-wrap gap-4 w-full justify-start items-center mt-2">
+                {/* Outlined Heart Like Icon, fill when liked */}
+                <button
+                  className={`flex items-center gap-1 text-gray-700 dark:text-gray-200 transition bg-transparent border-none p-0 ${liked ? 'text-pink-500' : 'hover:text-pink-500'}`}
+                  onClick={() => {
+                    setLiked(l => !l);
+                    setLikeCount(count => liked ? count - 1 : count + 1);
+                  }}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill={liked ? '#c42152' : 'none'} stroke="currentColor" strokeWidth="2">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41 1.01 4.5 2.09C13.09 4.01 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                  </svg>
+                  <span className="text-xs">Like ({likeCount})</span>
+                </button>
+                {/* YouTube-style Thumbs Down Dislike Icon */}
+                <button
+                  className={`flex items-center gap-1 text-gray-700 dark:text-gray-200 hover:text-gray-400 transition bg-transparent border-none p-0 ${disliked ? 'text-gray-400' : ''}`}
+                  onClick={() => {
+                    setDisliked(d => !d);
+                    setDislikeCount(count => disliked ? count - 1 : count + 1);
+                  }}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill={disliked ? '#888' : 'none'} stroke="currentColor" strokeWidth="2">
+                    <path d="M22 10.5c0-.83-.67-1.5-1.5-1.5h-6.36l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 2 7.59 8.59C7.22 8.95 7 9.45 7 10v8c0 .55.45 1 1 1h9c.55 0 1-.45 1-1v-6.5h2c.83 0 1.5-.67 1.5-1.5zM5 10v8c0 .55.45 1 1 1s1-.45 1-1v-8c0-.55-.45-1-1-1s-1 .45-1 1z" />
+                  </svg>
+                  <span className="text-xs">Dislike ({dislikeCount})</span>
+                </button>
+                {/* Instagram-style Comments (Speech Bubble) */}
+                <button
+                  className="flex items-center gap-1 text-gray-700 dark:text-gray-200 hover:text-blue-500 transition bg-transparent border-none p-0"
+                  onClick={() => setShowComments((prev) => !prev)}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="22" height="22">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2" fill="none" />
+                  </svg>
+                  <span className="text-xs">Comments ({commentCount})</span>
+                </button>
               </div>
               <div className="flex items-center gap-3 mb-2">
                 <Link to={`/channel/${video.channel?._id || video.channel}`} className="flex items-center gap-2 min-w-0">
