@@ -201,26 +201,34 @@ export default function ChannelProfile() {
                           videoRefs.current[idx].current.currentTime = 0;
                         }
                       }}
+                      onClick={() => {
+                        console.log('[ChannelProfile] Clicked video id:', video._id);
+                        window.location.href = `/watch/${video._id}`;
+                      }}
                     >
                       <div className="relative">
-                        {(!showThumbArr[idx] || hoveredIdx === idx) ? (
-                          <video
-                            ref={videoRefs.current[idx]}
-                            src={video.videoUrl}
-                            poster={video.thumbnailUrl}
-                            muted
-                            controls={false}
-                            className="w-full h-48 object-cover rounded-lg shadow-lg"
-                            onClick={() => window.location.href = `/watch/${video._id}`}
-                          />
-                        ) : (
-                          <img
-                            src={video.thumbnailUrl}
-                            alt={video.title}
-                            className="w-full h-48 object-cover rounded-lg shadow-lg group-hover:scale-105 transition-transform"
-                            onClick={() => window.location.href = `/watch/${video._id}`}
-                          />
-                        )}
+                          {(!showThumbArr[idx] || hoveredIdx === idx) ? (
+                            <video
+                              ref={videoRefs.current[idx]}
+                              src={video.videoUrl}
+                              poster={video.thumbnailUrl}
+                              muted
+                              controls={false}
+                              className="w-full h-48 object-cover rounded-lg shadow-lg"
+                              onClick={() => {
+                                window.location.href = `/watch/${video._id}`;
+                              }}
+                            />
+                          ) : (
+                            <img
+                              src={video.thumbnailUrl}
+                              alt={video.title}
+                              className="w-full h-48 object-cover rounded-lg shadow-lg group-hover:scale-105 transition-transform"
+                              onClick={() => {
+                                window.location.href = `/watch/${video._id}`;
+                              }}
+                            />
+                          )}
                         {/* Hidden video for duration extraction */}
                         <video
                           ref={videoRefs.current[idx]}

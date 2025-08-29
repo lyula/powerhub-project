@@ -1,3 +1,22 @@
+// Get videos by category
+exports.getVideosByCategory = async (req, res) => {
+  try {
+    const category = req.params.category;
+    const videos = await Video.find({ category }).populate('channel', 'name avatar');
+    res.json(videos);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch videos by category', details: err });
+  }
+};
+// Get all videos
+exports.getAllVideos = async (req, res) => {
+  try {
+    const videos = await Video.find().populate('channel', 'name avatar');
+    res.json(videos);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch videos', details: err });
+  }
+};
 const Video = require('../models/Video');
 const Channel = require('../models/Channel');
 const User = require('../models/user');
@@ -180,14 +199,21 @@ exports.replyComment = async (req, res) => {
 // Get video details
 exports.getVideo = async (req, res) => {
   try {
+    console.log('--- Get Video Request ---');
+    console.log('Requested video id:', req.params.id);
     const video = await Video.findById(req.params.id)
       .populate('uploader', 'username')
       .populate('channel', 'name description avatar banner')
       .populate('comments.author', 'username')
       .populate('comments.replies.author', 'username');
-    if (!video) return res.status(404).json({ error: 'Video not found' });
+    if (!video) {
+      console.log('No video found for id:', req.params.id);
+      return res.status(404).json({ error: 'Video not found' });
+    }
+    console.log('Video found:', video);
     res.json(video);
   } catch (err) {
+    console.error('Error fetching video:', err);
     res.status(500).json({ error: 'Get video failed', details: err });
   }
 };
