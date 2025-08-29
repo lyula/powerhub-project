@@ -1,12 +1,51 @@
-# React + Vite
+# PowerHub Client
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This folder contains the React frontend for PowerHub. It provides a modern, responsive UI for video browsing, channel management, and user interaction.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- React (Vite)
+- Tailwind CSS
+- React Router
+- Context API (Auth)
+- Fetch API for backend communication
 
-## Expanding the ESLint configuration
+## Structure
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- `src/`
+  - `components/` — UI components (Header, Sidebar, ProgressBar, etc.)
+  - `pages/` — Main pages (Home, Watch, Profile, ChannelProfile, etc.)
+  - `context/` — Auth context
+  - `theme/` — Theme colors
+  - `utils/` — Utility functions
+- `public/` — Static assets
+- `index.html` — Main HTML entry
+
+## Features
+
+- User registration, login, and profile management
+- Channel creation and editing
+- Video upload, display, and recommendations
+- Like, dislike, comment, and subscribe
+- Filtering and sorting
+- Skeleton loaders and progress bar for smooth UX
+
+## Setup
+
+1. Install dependencies: `pnpm install` 
+2. Start dev server: `pnpm run dev`
+3. Access at `http://localhost:5173`
+
+## Development Notes
+
+- Uses context for authentication state
+- ProgressBar and skeleton UI for loading states
+- Responsive design for desktop and mobile
+
+## Contributing
+
+- Follow code style and add comments for new components/pages
+- Open issues/PRs for bugs or improvements
+
+## License
+Sole rights to this project are owned by Zack Lyula as of August 29, 2025. All rights reserved.
