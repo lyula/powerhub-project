@@ -263,23 +263,9 @@ export default function ChannelProfile() {
                           videoRefs.current[idx].current.currentTime = 0;
                         }
                       }}
-                      onClick={async () => {
-                        setProgressLoading(true);
-                        try {
-                          // Prefetch video data for Watch page
-                          const apiUrl = import.meta.env.VITE_API_URL;
-                          const res = await fetch(`${apiUrl}/videos/${video._id}`);
-                          if (res.ok) {
-                            setTimeout(() => {
-                              setProgressLoading(false);
-                              navigate(`/watch/${video._id}`);
-                            }, 900); // allow progress bar to animate
-                          } else {
-                            setProgressLoading(false);
-                          }
-                        } catch {
-                          setProgressLoading(false);
-                        }
+                      onClick={() => {
+                        // Immediately navigate to Watch page and let skeletons show
+                        navigate(`/watch/${video._id}`, { state: { fromProfile: true } });
                       }}
                     >
                       <div className="relative" style={{ width: '100%', height: '180px' }}>

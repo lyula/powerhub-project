@@ -18,13 +18,13 @@ export default function SimilarContentThumbnail({ video, source, userId, session
   });
 
   return (
-    <div style={{ position: 'relative', width: '8rem', height: '5rem' }}>
+  <div style={{ position: 'relative', width: '8rem', height: '5rem', minHeight: '5rem' }}>
       <img
         ref={impressionRef}
         src={video.thumbnailUrl}
         alt={video.title}
-        className={`object-cover rounded-l-lg w-32 h-20 transition-transform ${props.className || ''}`}
-        style={{ borderRadius: '0.5rem', margin: 0, padding: 0, display: 'block', width: '8rem', height: '5rem', aspectRatio: '16/9' }}
+        className={`object-cover w-32 h-20 transition-transform ${props.className || ''}`}
+        style={{ margin: 0, padding: 0, display: 'block', width: '8rem', height: '5rem', aspectRatio: '16/9' }}
         {...props}
       />
       {video.duration && (

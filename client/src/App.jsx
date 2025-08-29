@@ -1,6 +1,8 @@
 
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import ProgressBar from './components/ProgressBar';
+import useRouteLoader from './hooks/useRouteLoader';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Home from './pages/Home';
@@ -80,8 +82,10 @@ function AppRoutes() {
 }
 
 function App() {
+  const loading = useRouteLoader();
   return (
     <AuthProvider>
+      <ProgressBar loading={loading} />
       <AppRoutes />
     </AuthProvider>
   );

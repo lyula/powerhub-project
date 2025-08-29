@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import Comments from '../components/Comments';
+import DescriptionWithReadMore from './DescriptionWithReadMore';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import SubscribeButton from '../components/SubscribeButton';
@@ -78,8 +79,8 @@ export default function Watch() {
       setVideo(null);
       setChannelDetails(null);
     }
-    setLoading(false);
-    setTimeout(() => setProgressLoading(false), 900); // allow progress bar to animate
+  setLoading(false);
+  setProgressLoading(false); // Remove delay to avoid spinner
   };
 
   useEffect(() => {
@@ -117,7 +118,7 @@ export default function Watch() {
   }
 
   if (loading) {
-    // Show ProgressBar and skeleton UI, no spinner
+    // Show ProgressBar and skeleton UI only, no spinner
     return (
       <div className="w-full min-h-screen bg-gray-100 dark:bg-[#181818]">
         <ProgressBar loading={progressLoading} />
@@ -243,7 +244,10 @@ export default function Watch() {
                 <span className="text-xs text-gray-500 dark:text-gray-400">{video.viewCount || 0} views • {video.postedAgo || ''}</span>
                 {channelDetails && <SubscribeButton channel={channelDetails} />}
               </div>
-              <p className="text-gray-700 dark:text-gray-200 text-base mb-4 pl-8">{video.description}</p>
+              {/* Video Description with Read More/Read Less */}
+              {video.description && (
+                <DescriptionWithReadMore description={video.description} />
+              )}
               {showComments && <Comments onCountChange={handleCommentCountChange} />}
             </div>
           </div>
@@ -253,7 +257,8 @@ export default function Watch() {
             {recommendations.map(rec => (
               <div
                 key={rec._id}
-                className="flex gap-3 items-center bg-white dark:bg-[#222] rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden cursor-pointer hover:bg-gray-100 dark:hover:bg-[#333] transition"
+                className="flex gap-0 items-start bg-white dark:bg-[#222] rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden cursor-pointer hover:bg-gray-100 dark:hover:bg-[#333] transition"
+                style={{ minHeight: '5rem' }}
                 onMouseEnter={() => setHoveredRecId(rec._id)}
                 onMouseLeave={() => setHoveredRecId(null)}
                 onClick={() => fetchVideoAndRecommendations(rec._id)}
@@ -266,7 +271,7 @@ export default function Watch() {
                     muted
                     loop
                     playsInline
-                    style={{ background: '#000' }}
+                    style={{ background: '#000', height: '5rem' }}
                   />
                 ) : (
                   <SimilarContentThumbnail
@@ -274,10 +279,10 @@ export default function Watch() {
                     source="similar"
                     userId={null}
                     sessionId={window.sessionStorage.getItem('sessionId') || undefined}
-                    className="w-32 h-20 object-cover rounded-l-lg"
+                    className={`w-32 h-20 object-cover ${rec.title && rec.title.length > 40 ? 'rounded-tl-lg rounded-bl-none' : 'rounded-l-lg'}`}
                   />
                 )}
-                <div className="flex flex-col flex-1 min-w-0 p-2">
+                <div className="flex flex-col flex-1 min-w-0 p-2 justify-start">
                   <h3 className="text-base font-semibold text-black dark:text-white line-clamp-2 mb-1">{rec.title}</h3>
                   <span
                     className="text-xs text-gray-600 dark:text-gray-400 mb-1 truncate block max-w-[120px]"

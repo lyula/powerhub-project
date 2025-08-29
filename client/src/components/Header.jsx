@@ -104,7 +104,7 @@ export default function Header({ onToggleSidebar }) {
         {/* Notification Bell with Dummy Badge */}
         <div className="relative hidden md:flex items-center justify-center">
           <button
-            className="flex items-center justify-center px-2 py-2 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 shadow hover:shadow-lg transition hover:bg-yellow-400 dark:hover:bg-yellow-700 focus:outline-none"
+            className="flex items-center justify-center px-2 py-2 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 shadow hover:shadow-lg transition hover:bg-gray-200 dark:hover:bg-[#222] focus:outline-none"
             aria-label="Notifications"
             style={{ minWidth: 40, height: 40 }}
           >
