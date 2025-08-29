@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import SubscribeButton from '../components/SubscribeButton';
 import AboutChannelModal from '../components/AboutChannelModal';
+import ProgressBar from '../components/ProgressBar';
 import { FaGithub, FaEnvelope, FaWhatsapp, FaInstagram, FaLinkedin } from 'react-icons/fa';
 import { colors } from '../theme/colors';
 
@@ -20,8 +21,10 @@ function formatDuration(seconds) {
 export default function ChannelProfile() {
   const { user, token } = useAuth();
   const { author } = useParams();
+  const navigate = useNavigate();
   const [channel, setChannel] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [progressLoading, setProgressLoading] = useState(false);
   // Video grid state for hover and thumb
   const [hoveredIdx, setHoveredIdx] = useState(-1);
   const [showThumbArr, setShowThumbArr] = useState([]);
@@ -136,6 +139,7 @@ export default function ChannelProfile() {
 
   return (
     <div className="w-full min-h-screen bg-gray-100 dark:bg-[#181818]">
+      <ProgressBar loading={progressLoading} />
       <Header />
       <div className="flex flex-row w-full" style={{ height: 'calc(100vh - 56px)', maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
         <Sidebar collapsed={true} />
@@ -253,9 +257,23 @@ export default function ChannelProfile() {
                           videoRefs.current[idx].current.currentTime = 0;
                         }
                       }}
-                      onClick={() => {
-                        console.log('[ChannelProfile] Clicked video id:', video._id);
-                        window.location.href = `/watch/${video._id}`;
+                      onClick={async () => {
+                        setProgressLoading(true);
+                        try {
+                          // Prefetch video data for Watch page
+                          const apiUrl = import.meta.env.VITE_API_URL;
+                          const res = await fetch(`${apiUrl}/videos/${video._id}`);
+                          if (res.ok) {
+                            setTimeout(() => {
+                              setProgressLoading(false);
+                              navigate(`/watch/${video._id}`);
+                            }, 900); // allow progress bar to animate
+                          } else {
+                            setProgressLoading(false);
+                          }
+                        } catch {
+                          setProgressLoading(false);
+                        }
                       }}
                     >
                       <div className="relative">

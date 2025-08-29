@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import Comments from '../components/Comments';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import SubscribeButton from '../components/SubscribeButton';
+import ProgressBar from '../components/ProgressBar';
 
 export default function Watch() {
   const { id } = useParams();
@@ -20,9 +20,11 @@ export default function Watch() {
   const [subscribed, setSubscribed] = useState(false);
   const [channelDetails, setChannelDetails] = useState(null);
   const [hoveredRecId, setHoveredRecId] = useState(null);
+  const [progressLoading, setProgressLoading] = useState(false);
 
   // Helper to fetch video and recommendations
   const fetchVideoAndRecommendations = async (videoId) => {
+    setProgressLoading(true);
     setLoading(true);
     try {
       const apiUrl = import.meta.env.VITE_API_URL;
@@ -75,6 +77,7 @@ export default function Watch() {
       setChannelDetails(null);
     }
     setLoading(false);
+    setTimeout(() => setProgressLoading(false), 900); // allow progress bar to animate
   };
 
   useEffect(() => {
@@ -85,9 +88,10 @@ export default function Watch() {
 
 
   if (loading) {
-    // Skeleton UI for watch page loading
+    // Show ProgressBar and skeleton UI, no spinner
     return (
       <div className="w-full min-h-screen bg-gray-100 dark:bg-[#181818]">
+        <ProgressBar loading={progressLoading} />
         <div className="hidden md:block w-full fixed top-0 left-0 z-40">
           <Header />
         </div>
@@ -109,7 +113,7 @@ export default function Watch() {
             </div>
             <div className="w-full max-w-3xl mt-4">
               <div className="h-4 w-1/3 bg-gray-300 dark:bg-gray-800 rounded mb-2 animate-pulse" />
-              <div className="h-4 w-2/3 bg-gray-300 dark:bg-gray-800 rounded animate-pulse" />
+              <div className="h-4 w-2/3 bg-gray-300 dark:bg-gray-800 rounded mb-2 animate-pulse" />
             </div>
           </div>
           <aside className="w-full md:w-96 p-4 bg-transparent flex flex-col gap-4">
