@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FaVolumeMute, FaVolumeUp } from 'react-icons/fa';
 import PostCard from '../components/PostCard';
 import postCardData from '../components/PostCardData';
@@ -8,7 +8,8 @@ import Sidebar from '../components/Sidebar';
 import StudentUtility from '../components/StudentUtility';
 import BottomTabs from '../components/BottomTabs';
 import Filters from '../components/Filters';
-import { fetchThumbnails } from '../utils/fetchThumbnails';
+// import removed: fetchThumbnails
+import HomeThumbnail from '../components/HomeThumbnail';
 
 // Format duration as h:mm:ss or m:ss
 function formatDuration(seconds) {
@@ -35,10 +36,12 @@ export default function Home() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [videoDurations, setVideoDurations] = useState([]);
-  const videoRefs = React.useRef([]);
   const [hoveredIdx, setHoveredIdx] = useState(-1);
   const navigate = useNavigate();
+  // Impression refs for each video
   const location = useLocation();
+  // Fix: Declare videoRefs for video element refs
+  const videoRefs = useRef([]);
 
   const handleToggleSidebar = () => setSidebarOpen((open) => !open);
     const [initialPreview, setInitialPreview] = useState(true);
@@ -67,7 +70,7 @@ export default function Home() {
               }
               return {
                 videoUrl: v.videoUrl,
-                thumbnail: v.thumbnailUrl,
+                thumbnailUrl: v.thumbnailUrl || v.thumbnail || '/vite.svg',
                 title: v.title,
                 author: v.channel?.name || v.author || 'Unknown',
                 profile: v.channel?.avatar || 'https://randomuser.me/api/portraits/men/32.jpg',
@@ -90,6 +93,7 @@ export default function Home() {
         const sampleVideos = [
           // ...existing code...
         ];
+    // Load videos from API only
         setVideos(sampleVideos);
       } catch (err) {
         setVideos([]);
@@ -101,18 +105,11 @@ export default function Home() {
   }, []);
 
   // Extract durations from video elements after metadata loads
+  // Use API duration directly for display
   useEffect(() => {
     if (!videos || videos.length === 0) return;
-    // Only use API duration for display
     console.log('Fetched videos:', videos);
-    setVideoDurations(videos.map((v, idx) => {
-      const dur = Number(v.duration);
-      if (isNaN(dur)) {
-        console.warn(`Video at index ${idx} has invalid duration:`, v.duration, v);
-      }
-      return formatDuration(isNaN(dur) ? 0 : dur);
-    }));
-    // Animation logic for duration can be added here in the future
+  setVideoDurations(videos.map(v => formatDuration(Number(v.duration))));
   }, [videos]);
 
   // Initial preview for first video for 10 seconds
@@ -128,75 +125,8 @@ export default function Home() {
     }
   }, [loading]);
 
-  // Fill up to 6 cards with dummy videos if needed
-  const sampleVideos = [
-    {
-      videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-      thumbnail: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80',
-      title: 'React Hooks Deep Dive',
-      author: 'Alex Kim',
-      profile: 'https://randomuser.me/api/portraits/men/32.jpg',
-      views: 120000,
-      posted: '2 days ago',
-      duration: '10:23',
-    },
-    {
-      videoUrl: 'https://www.w3schools.com/html/movie.mp4',
-      thumbnail: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80',
-      title: 'Building REST APIs with Node.js',
-      author: 'Priya Singh',
-      profile: 'https://randomuser.me/api/portraits/women/44.jpg',
-      views: 98000,
-      posted: '1 week ago',
-      duration: '8:45',
-    },
-    {
-      videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-      thumbnail: 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=400&q=80',
-      title: 'Mastering JavaScript ES6+',
-      author: 'John Doe',
-      profile: 'https://randomuser.me/api/portraits/men/65.jpg',
-      views: 75000,
-      posted: '2 weeks ago',
-      duration: '12:10',
-    },
-    {
-      videoUrl: 'https://www.w3schools.com/html/movie.mp4',
-      thumbnail: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80',
-      title: 'Responsive Web Design with CSS',
-      author: 'Maria Lopez',
-      profile: 'https://randomuser.me/api/portraits/women/68.jpg',
-      views: 60000,
-      posted: '3 weeks ago',
-      duration: '9:32',
-    },
-    {
-      videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-      thumbnail: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80',
-      title: 'Python for Data Science',
-      author: 'Chen Wei',
-      profile: 'https://randomuser.me/api/portraits/men/21.jpg',
-      views: 50000,
-      posted: '4 weeks ago',
-      duration: '7:18',
-    },
-    {
-      videoUrl: 'https://www.w3schools.com/html/movie.mp4',
-      thumbnail: 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=400&q=80',
-      title: 'Debugging MERN Stack Apps',
-      author: 'Fatima Zahra',
-      profile: 'https://randomuser.me/api/portraits/women/12.jpg',
-      views: 42000,
-      posted: '1 month ago',
-      duration: '11:05',
-    },
-  ];
-
+  // Only show database videos, never demo videos
   let displayVideos = videos;
-  if (!loading && videos.length < 6) {
-    // Fill up to 6 cards with dummy videos
-    displayVideos = [...videos, ...sampleVideos.slice(0, 6 - videos.length)];
-  }
 
   return (
     <React.Fragment>
@@ -258,6 +188,7 @@ export default function Home() {
                         <div
                           className="flex flex-row items-center gap-1 md:gap-3 pl-7 sm:pl-14 text-xs text-gray-600 dark:text-gray-400 truncate"
                           style={{ marginBottom: '0' }}
+
                         >
                           <div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-10" />
                           <span>•</span>
@@ -271,15 +202,13 @@ export default function Home() {
                   ))
                 ) : (
                   displayVideos.map((video, i) => {
-                    const showDuration = videoDurations[i];
-                    if (showDuration === '0:00' || !showDuration) {
-                      console.warn('No valid duration for video:', video);
-                    }
+                  const showDuration = videoDurations[i];
                     return (
                       <div
                         key={video._id || i}
                         className="bg-gray-100 dark:bg-[#111111] rounded-lg shadow-md overflow-hidden flex flex-col min-w-0 w-full"
-                        style={{ maxWidth: '100%', minWidth: 0, height: '320px', fontSize: '0.95em' }}
+                        style={{ maxWidth: '100%', minWidth: 0, fontSize: '0.95em', paddingBottom: '0.5rem' }}
+
                       >
                         <div
                           className="w-full bg-gray-300 dark:bg-gray-700 flex items-center justify-center cursor-pointer relative"
@@ -288,20 +217,13 @@ export default function Home() {
                           onMouseEnter={() => { setHoveredIdx(i); setInitialPreview(false); }}
                           onMouseLeave={() => { setHoveredIdx(-1); }}
                         >
-                          {/* Always render a hidden video to extract duration for thumbnail */}
-                          {/* Hidden video for duration extraction, always rendered */}
-                          <video
-                            ref={el => videoRefs.current[i] = el}
-                            src={video.videoUrl}
-                            style={{ display: 'none' }}
-                            preload="metadata"
-                          />
+                          {/* No hidden video for duration extraction needed */}
                           {(hoveredIdx === i || (initialPreview && i === 0)) ? (
-                            <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                            <div style={{ position: 'relative', width: '100%', height: '180px' }}>
                               <video
                                 src={video.videoUrl}
-                                className="object-cover w-full h-full rounded-none"
-                                style={{ borderRadius: 0, margin: 0, padding: 0, display: 'block', width: '100%', height: '100%', aspectRatio: '16/9', minHeight: '180px', maxHeight: '180px' }}
+                                className="object-cover w-full h-[180px] rounded-none"
+                                style={{ borderRadius: 0, margin: 0, padding: 0, display: 'block', width: '100%', height: '180px', aspectRatio: '16/9' }}
                                 autoPlay
                                 muted={!video.unmuted}
                                 loop
@@ -325,17 +247,16 @@ export default function Home() {
                               </button>
                             </div>
                           ) : (
-                            <img
-                              src={video.thumbnail}
-                              alt={video.title}
+                            <HomeThumbnail
+                              video={video}
+                              source="homepage"
+                              userId={video.userId}
+                              sessionId={window.sessionStorage.getItem('sessionId') || undefined}
                               className="object-cover w-full h-full rounded-none hover:scale-[1.03] transition-transform"
                               style={{ borderRadius: 0, margin: 0, padding: 0, display: 'block', width: '100%', height: '100%', aspectRatio: '16/9', minHeight: '180px', maxHeight: '180px' }}
                             />
                           )}
-                          {/* Always show duration, using extracted duration from video element if available */}
-                          <span className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-0.5 rounded">
-                            {showDuration}
-                          </span>
+                          {/* Duration is rendered inside HomeThumbnail, so do not render here */}
                         </div>
                         <div className="block sm:hidden" style={{ height: '12px' }} />
                         <div className="p-0 sm:p-3 flex-1 flex flex-col justify-between pb-1">

@@ -33,6 +33,14 @@ const videoSchema = new Schema({
   viewCount: { type: Number, default: 0 }, // total view count
   comments: [commentSchema],
   duration: { type: Number }, // duration in seconds
+  impressions: { type: Number, default: 0 },
+  watchTime: { type: Number, default: 0 }, // total seconds watched
+  viewSources: {
+    homepage: { type: Number, default: 0 },
+    similar: { type: Number, default: 0 },
+    channel: { type: Number, default: 0 }
+  },
+  analytics: { type: Schema.Types.ObjectId, ref: 'VideoAnalytics' },
   createdAt: { type: Date, default: Date.now }
 });
 

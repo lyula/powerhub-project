@@ -8,6 +8,8 @@ import AboutChannelModal from '../components/AboutChannelModal';
 import ProgressBar from '../components/ProgressBar';
 import { FaGithub, FaEnvelope, FaWhatsapp, FaInstagram, FaLinkedin } from 'react-icons/fa';
 import { colors } from '../theme/colors';
+import ChannelProfileThumbnail from '../components/ChannelProfileThumbnail';
+import { useImpression } from '../hooks/useImpression';
 
 function formatDuration(seconds) {
   if (!seconds || isNaN(seconds)) return '';
@@ -30,6 +32,7 @@ export default function ChannelProfile() {
   const [showThumbArr, setShowThumbArr] = useState([]);
   const videoRefs = useRef([]);
   const [durations, setDurations] = useState([]);
+  // Remove impressionRefs from ChannelProfile; useImpression should only be called inside ChannelProfileThumbnail
   const [aboutOpen, setAboutOpen] = useState(false);
 
   useEffect(() => {
@@ -153,49 +156,52 @@ export default function ChannelProfile() {
             </div>
           </div>
           {/* About this channel link below the banner */}
-          <div className="w-full flex justify-end items-center gap-4 px-8 mt-2 mb-2">
-            <a href="#"
-              className="icon-link"
-              title="GitHub"
-              style={{ fontSize: '1.5em', color: 'var(--icon-color, #888)' }}
-              onMouseEnter={e => e.currentTarget.style.color = colors.primary}
-              onMouseLeave={e => e.currentTarget.style.color = 'var(--icon-color, #888)'}
-            ><FaGithub /></a>
-            <a href="#" 
-              className="icon-link"
-              title="Email"
-              style={{ fontSize: '1.5em', color: 'var(--icon-color, #888)' }}
-              onMouseEnter={e => e.currentTarget.style.color = colors.secondary}
-              onMouseLeave={e => e.currentTarget.style.color = 'var(--icon-color, #888)'}
-            ><FaEnvelope /></a>
-            <a href="#" 
-              className="icon-link"
-              title="WhatsApp"
-              style={{ fontSize: '1.5em', color: 'var(--icon-color, #888)' }}
-              onMouseEnter={e => e.currentTarget.style.color = colors.primary}
-              onMouseLeave={e => e.currentTarget.style.color = 'var(--icon-color, #888)'}
-            ><FaWhatsapp /></a>
-            <a href="#" 
-              className="icon-link"
-              title="Instagram"
-              style={{ fontSize: '1.5em', color: 'var(--icon-color, #888)' }}
-              onMouseEnter={e => e.currentTarget.style.color = colors.secondary}
-              onMouseLeave={e => e.currentTarget.style.color = 'var(--icon-color, #888)'}
-            ><FaInstagram /></a>
-            <a href="#" 
-              className="icon-link"
-              title="LinkedIn"
-              style={{ fontSize: '1.5em', color: 'var(--icon-color, #888)' }}
-              onMouseEnter={e => e.currentTarget.style.color = colors.primary}
-              onMouseLeave={e => e.currentTarget.style.color = 'var(--icon-color, #888)'}
-            ><FaLinkedin /></a>
+          <div className="w-full flex flex-col md:flex-row justify-end items-end gap-2 md:gap-4 px-8 mt-2 mb-2 text-right">
             <button
               type="button"
-              className="text-[#0bb6bc] font-semibold hover:underline bg-transparent border-none p-0 m-0"
+              className="text-[#0bb6bc] font-semibold hover:underline bg-transparent border-none p-0 m-0 order-1 md:order-none"
               onClick={() => setAboutOpen(true)}
+              style={{ width: '100%', textAlign: 'right' }}
             >
               About this channel
             </button>
+            <div className="flex flex-row md:flex-row flex-wrap md:flex-nowrap justify-end items-center gap-3 w-full md:w-auto order-2 md:order-none">
+              <a href="#"
+                className="icon-link"
+                title="GitHub"
+                style={{ fontSize: '1.5em', color: 'var(--icon-color, #888)' }}
+                onMouseEnter={e => e.currentTarget.style.color = colors.primary}
+                onMouseLeave={e => e.currentTarget.style.color = 'var(--icon-color, #888)'}
+              ><FaGithub /></a>
+              <a href="#" 
+                className="icon-link"
+                title="Email"
+                style={{ fontSize: '1.5em', color: 'var(--icon-color, #888)' }}
+                onMouseEnter={e => e.currentTarget.style.color = colors.secondary}
+                onMouseLeave={e => e.currentTarget.style.color = 'var(--icon-color, #888)'}
+              ><FaEnvelope /></a>
+              <a href="#" 
+                className="icon-link"
+                title="WhatsApp"
+                style={{ fontSize: '1.5em', color: 'var(--icon-color, #888)' }}
+                onMouseEnter={e => e.currentTarget.style.color = colors.primary}
+                onMouseLeave={e => e.currentTarget.style.color = 'var(--icon-color, #888)'}
+              ><FaWhatsapp /></a>
+              <a href="#" 
+                className="icon-link"
+                title="Instagram"
+                style={{ fontSize: '1.5em', color: 'var(--icon-color, #888)' }}
+                onMouseEnter={e => e.currentTarget.style.color = colors.secondary}
+                onMouseLeave={e => e.currentTarget.style.color = 'var(--icon-color, #888)'}
+              ><FaInstagram /></a>
+              <a href="#" 
+                className="icon-link"
+                title="LinkedIn"
+                style={{ fontSize: '1.5em', color: 'var(--icon-color, #888)' }}
+                onMouseEnter={e => e.currentTarget.style.color = colors.primary}
+                onMouseLeave={e => e.currentTarget.style.color = 'var(--icon-color, #888)'}
+              ><FaLinkedin /></a>
+            </div>
           </div>
           <AboutChannelModal
             open={aboutOpen}
@@ -204,18 +210,17 @@ export default function ChannelProfile() {
             dateJoined={channel?.dateJoined}
           />
           {/* Channel Info */}
-          <div className="flex flex-col items-start px-8 pt-16 pb-4 gap-2">
+          <div className="flex flex-col items-start px-8 pt-4 md:pt-16 pb-4 gap-2">
             <div className="flex flex-row items-center gap-4">
-              <h1 className="text-3xl font-bold text-black dark:text-white mr-2">{channel.name}</h1>
-              
-              <SubscribeButton channel={channel} />
+              <h1 className="text-xl md:text-2xl font-bold text-black dark:text-white mr-2">{channel.name}</h1>
+              <SubscribeButton channel={channel} className="text-sm md:text-base px-3 py-1" />
             </div>
             <div className="text-gray-600 dark:text-gray-300 text-sm mt-2">
               Subscribers: {channel.subscribers ? channel.subscribers.length : 0}
             </div>
           </div>
           {/* Videos Grid styled like YouTube thumbnails */}
-          <div className="px-8 pb-6">
+          <div className="px-2 md:px-8 pb-6">
             {Array.isArray(channel.videos) && channel.videos.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {channel.videos.map((video, idx) => {
@@ -234,7 +239,7 @@ export default function ChannelProfile() {
                     <div
                       key={video._id}
                       className="relative group cursor-pointer"
-                      style={{ minHeight: '220px' }}
+                      style={{ minHeight: '180px', paddingBottom: '0.5rem' }}
                       onMouseEnter={() => {
                         // Pause all other videos and show their thumbnails
                         setHoveredIdx(idx);
@@ -277,41 +282,39 @@ export default function ChannelProfile() {
                         }
                       }}
                     >
-                      <div className="relative">
-                          {(!showThumbArr[idx] || hoveredIdx === idx) ? (
-                            <video
-                              ref={videoRefs.current[idx]}
-                              src={video.videoUrl}
-                              poster={video.thumbnailUrl}
-                              muted
-                              controls={false}
-                              className="w-full h-48 object-cover rounded-lg shadow-lg"
-                              onClick={() => {
-                                window.location.href = `/watch/${video._id}`;
-                              }}
-                            />
-                          ) : (
-                            <img
-                              src={video.thumbnailUrl}
-                              alt={video.title}
-                              className="w-full h-48 object-cover rounded-lg shadow-lg group-hover:scale-105 transition-transform"
-                              onClick={() => {
-                                window.location.href = `/watch/${video._id}`;
-                              }}
-                            />
-                          )}
-                        {/* Hidden video for duration extraction */}
-                        <video
-                          ref={videoRefs.current[idx]}
-                          src={video.videoUrl}
-                          poster={video.thumbnailUrl}
-                          muted
-                          controls={false}
-                          className="hidden"
-                        />
-                        <div className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
-                          {formattedDuration}
-                        </div>
+                      <div className="relative" style={{ width: '100%', height: '180px' }}>
+                        {(!showThumbArr[idx] || hoveredIdx === idx) ? (
+                          <video
+                            ref={videoRefs.current[idx]}
+                            src={video.videoUrl}
+                            poster={video.thumbnailUrl}
+                            muted
+                            controls={false}
+                            className="w-full h-[180px] object-cover rounded-lg shadow-lg"
+                            onClick={() => {
+                              window.location.href = `/watch/${video._id}`;
+                            }}
+                          />
+                        ) : (
+                          <ChannelProfileThumbnail
+                            video={video}
+                            source="channel-profile"
+                            userId={user?._id}
+                            sessionId={window.sessionStorage.getItem('sessionId') || undefined}
+                            className="w-full h-[180px] object-cover rounded-lg shadow-lg group-hover:scale-105 transition-transform"
+                            onClick={() => {
+                              window.location.href = `/watch/${video._id}`;
+                            }}
+                          />
+                        )}
+                        {video.duration && (
+                          <span
+                            className="absolute right-2 bottom-2 bg-black bg-opacity-70 text-white text-xs px-2 py-0.5 rounded"
+                            style={{ zIndex: 2, pointerEvents: 'none' }}
+                          >
+                            {formatDuration(video.duration)}
+                          </span>
+                        )}
                       </div>
                       <div className="mt-2 text-base font-semibold text-black dark:text-white truncate">{video.title}</div>
                       <div className="flex items-center text-xs text-gray-600 dark:text-gray-300 mt-1 gap-2">

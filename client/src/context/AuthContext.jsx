@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const AuthContext = createContext();
 
@@ -12,9 +13,20 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const location = useLocation();
+  const navigate = useNavigate();
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
   const [serverConnected, setServerConnected] = useState(true);
+  useEffect(() => {
+    if (!loading && !user) {
+      // Only redirect if not already on /login
+      const currentPath = location?.pathname || '';
+      if (currentPath !== '/login') {
+        navigate('/login', { replace: true });
+      }
+    }
+  }, [loading, user, location, navigate]);
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
   const CHANNEL_API_URL = API_BASE_URL + '/channel/me';
@@ -22,23 +34,20 @@ export const AuthProvider = ({ children }) => {
   // Helper function to check server connectivity
   const checkServerConnection = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/me`, {
-        method: 'HEAD', // Use HEAD to check if server is responding
-        headers: { 'Content-Type': 'application/json' }
-      });
-      // Server is connected if we get any HTTP response (even 401 is fine for connectivity check)
-      setServerConnected(true);
-      return true;
-    } catch (error) {
-      // Only network errors (fetch failures) indicate server is down
-      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      // Use public health endpoint for connectivity check
+      const healthUrl = API_BASE_URL.replace(/\/api$/, '') + '/api/health/ping';
+      const response = await fetch(healthUrl);
+      if (response.ok) {
+        setServerConnected(true);
+        return true;
+      } else {
         setServerConnected(false);
-        console.error('Server connectivity check failed - network error:', error);
         return false;
       }
-      // Other errors still mean server is reachable
-      setServerConnected(true);
-      return true;
+    } catch (error) {
+      setServerConnected(false);
+      console.error('Server connectivity check failed - network error:', error);
+      return false;
     }
   };
 
@@ -77,9 +86,17 @@ export const AuthProvider = ({ children }) => {
               setUser(null);
             }
           } else {
-            localStorage.removeItem('token');
-            setToken(null);
-            setUser(null);
+            if (response.status === 401) {
+              // Unauthorized: treat as not logged in
+              setUser(null);
+              setToken(null);
+              localStorage.removeItem('token');
+            } else {
+              // Other errors
+              localStorage.removeItem('token');
+              setToken(null);
+              setUser(null);
+            }
           }
           // Always fetch channel info after user check
           try {

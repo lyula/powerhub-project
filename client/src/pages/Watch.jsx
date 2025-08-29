@@ -5,12 +5,14 @@ import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import SubscribeButton from '../components/SubscribeButton';
 import ProgressBar from '../components/ProgressBar';
+import SimilarContentThumbnail from '../components/SimilarContentThumbnail';
 
 export default function Watch() {
   const { id } = useParams();
   const [video, setVideo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [recommendations, setRecommendations] = useState([]);
+  // Remove impressionRefs logic from here
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [disliked, setDisliked] = useState(false);
@@ -251,7 +253,13 @@ export default function Watch() {
                     style={{ background: '#000' }}
                   />
                 ) : (
-                  <img src={rec.thumbnailUrl} alt={rec.title} className="w-32 h-20 object-cover rounded-l-lg" />
+                  <SimilarContentThumbnail
+                    video={rec}
+                    source="similar"
+                    userId={null}
+                    sessionId={window.sessionStorage.getItem('sessionId') || undefined}
+                    className="w-32 h-20 object-cover rounded-l-lg"
+                  />
                 )}
                 <div className="flex flex-col flex-1 min-w-0 p-2">
                   <h3 className="text-base font-semibold text-black dark:text-white line-clamp-2 mb-1">{rec.title}</h3>
