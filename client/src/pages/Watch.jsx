@@ -280,7 +280,21 @@ export default function Watch() {
                 style={{ minHeight: '5rem' }}
                 onMouseEnter={() => setHoveredRecId(rec._id)}
                 onMouseLeave={() => setHoveredRecId(null)}
-                onClick={() => fetchVideoAndRecommendations(rec._id)}
+                onClick={async () => {
+                  await fetchVideoAndRecommendations(rec._id);
+                  // Send view count to backend for similar content click
+                  try {
+                    const apiUrl = import.meta.env.VITE_API_URL;
+                    await fetch(`${apiUrl}/videos/${rec._id}/view`, {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                    });
+                  } catch (err) {
+                    // Ignore errors for view count
+                  }
+                }}
               >
                 {hoveredRecId === rec._id ? (
                   <video
