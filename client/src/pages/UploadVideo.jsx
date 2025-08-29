@@ -127,11 +127,11 @@ const UploadVideo = () => {
   };
 
   return (
-    <div className="h-screen bg-white dark:bg-[#222] w-full flex flex-col overflow-hidden" style={{ scrollbarWidth: 'none' }}>
+  <div className="h-screen bg-white dark:bg-[#222] w-full flex flex-col overflow-hidden text-[#222] dark:text-[#eee]" style={{ scrollbarWidth: 'none' }}>
       <Header onToggleSidebar={() => setSidebarOpen((open) => !open)} />
       <div className="flex flex-row w-full flex-1 overflow-hidden" style={{ height: 'calc(100vh - 56px)', maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
         <Sidebar collapsed={!sidebarOpen} />
-        <main className="flex-1 flex flex-col items-center justify-start w-full px-2 md:px-0 pt-8 overflow-hidden" style={{ maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
+  <main className="flex-1 flex flex-col items-center justify-start w-full px-2 md:px-0 pt-8 overflow-hidden text-[#222] dark:text-[#eee]" style={{ maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
           <div className="w-full max-w-4xl mx-auto p-8 md:p-12 flex flex-col gap-8 overflow-y-auto scrollbar-hide" style={{ maxHeight: 'calc(100vh - 56px)', scrollbarWidth: 'none' }}>
             <h2 className="text-3xl md:text-4xl font-extrabold mb-4 text-[#0bb6bc] dark:text-[#0bb6bc] text-left">Upload Video</h2>
             {/* Removed duplicate progress bar and message. Only show above upload button. */}
@@ -199,19 +199,19 @@ const UploadVideo = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="flex flex-col gap-4">
                   <label className="font-semibold text-base text-[#222] dark:text-[#eee]">Title</label>
-                  <input type="text" value={title} onChange={e => setTitle(e.target.value)} className="px-4 py-3 border-2 border-[#0bb6bc] rounded-xl bg-white dark:bg-[#222] text-lg" required />
+                  <input type="text" value={title} onChange={e => setTitle(e.target.value)} className="px-4 py-3 border-2 border-[#0bb6bc] rounded-xl bg-white dark:bg-[#222] text-lg text-[#222] dark:text-[#eee]" required />
                 </div>
                 <div className="flex flex-col gap-4">
                   <label className="font-semibold text-base text-[#222] dark:text-[#eee]">Description</label>
-                  <textarea value={description} onChange={e => setDescription(e.target.value)} className="px-4 py-3 border-2 border-[#c42152] rounded-xl bg-white dark:bg-[#222] text-lg resize-none" rows={4} required />
+                  <textarea value={description} onChange={e => setDescription(e.target.value)} className="px-4 py-3 border-2 border-[#c42152] rounded-xl bg-white dark:bg-[#222] text-lg resize-none text-[#222] dark:text-[#eee]" rows={4} required />
                 </div>
                 <div className="flex flex-col gap-4">
                   <label className="font-semibold text-base text-[#222] dark:text-[#eee]">Tags (comma separated)</label>
-                  <input type="text" value={tags} onChange={e => setTags(e.target.value)} className="px-4 py-3 border-2 border-[#0bb6bc] rounded-xl bg-white dark:bg-[#222] text-lg" />
+                  <input type="text" value={tags} onChange={e => setTags(e.target.value)} className="px-4 py-3 border-2 border-[#0bb6bc] rounded-xl bg-white dark:bg-[#222] text-lg text-[#222] dark:text-[#eee]" />
                 </div>
                 <div className="flex flex-col gap-4">
                   <label className="font-semibold text-base text-[#222] dark:text-[#eee]">Category</label>
-                  <select value={category} onChange={e => setCategory(e.target.value)} className="px-4 py-3 border-2 border-[#c42152] rounded-xl bg-white dark:bg-[#222] text-lg" required>
+                  <select value={category} onChange={e => setCategory(e.target.value)} className="px-4 py-3 border-2 border-[#c42152] rounded-xl bg-white dark:bg-[#222] text-lg text-[#222] dark:text-[#eee]" required>
                     <option value="" disabled>{categoriesLoading ? 'Loading...' : 'Select Category'}</option>
                     {categoriesList.map(cat => (
                       <option key={cat} value={cat}>{cat}</option>
@@ -220,11 +220,11 @@ const UploadVideo = () => {
                 </div>
                 <div className="flex flex-col gap-4">
                   <label className="font-semibold text-base text-[#222] dark:text-[#eee]">Specialization</label>
-                  <input type="text" value={specialization} onChange={e => setSpecialization(e.target.value)} className="px-4 py-3 border-2 border-[#0bb6bc] rounded-xl bg-white dark:bg-[#222] text-lg" />
+                  <input type="text" value={specialization} onChange={e => setSpecialization(e.target.value)} className="px-4 py-3 border-2 border-[#0bb6bc] rounded-xl bg-white dark:bg-[#222] text-lg text-[#222] dark:text-[#eee]" />
                 </div>
                 <div className="flex flex-col gap-4">
                   <label className="font-semibold text-base text-[#222] dark:text-[#eee]">Privacy</label>
-                  <select value={privacy} onChange={e => setPrivacy(e.target.value)} className="px-4 py-3 border-2 border-[#c42152] rounded-xl bg-white dark:bg-[#222] text-lg">
+                  <select value={privacy} onChange={e => setPrivacy(e.target.value)} className="px-4 py-3 border-2 border-[#c42152] rounded-xl bg-white dark:bg-[#222] text-lg text-[#222] dark:text-[#eee]">
                     <option value="public">Public</option>
                     <option value="private">Private</option>
                   </select>
