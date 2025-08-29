@@ -165,7 +165,7 @@ export default function Home() {
             </div>
             <main className="flex-1 p-1 sm:p-2 pb-0 overflow-y-auto w-full" style={{ maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
               <div
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 w-full"
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-0 sm:gap-6 w-full"
                 style={{ margin: 0, maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}
               >
                 {loading ? (
@@ -203,83 +203,52 @@ export default function Home() {
                 ) : (
                   displayVideos.map((video, i) => {
                   const showDuration = videoDurations[i];
+                    // Add extra margin-bottom to last video on mobile
+                    const isLast = i === displayVideos.length - 1;
                     return (
                       <div
                         key={video._id || i}
-                        className="bg-gray-100 dark:bg-[#111111] rounded-lg shadow-md overflow-hidden flex flex-col min-w-0 w-full"
-                        style={{ maxWidth: '100%', minWidth: 0, fontSize: '0.95em', paddingBottom: '0.5rem' }}
-
+                        className={`relative group cursor-pointer bg-gray-100 dark:bg-[#111111] flex flex-col min-w-0 w-full rounded-lg${isLast ? ' mb-16 sm:mb-0' : ''}`}
+                        style={{ minHeight: '180px', paddingBottom: '0.5rem' }}
+                        onMouseEnter={() => setHoveredIdx(i)}
+                        onMouseLeave={() => setHoveredIdx(-1)}
+                        onClick={() => navigate(`/watch/${video._id || i + 1}`)}
                       >
-                        <div
-                          className="w-full bg-gray-300 dark:bg-gray-700 flex items-center justify-center cursor-pointer relative"
-                          style={{ borderRadius: '0', margin: 0, padding: 0, height: '180px', minHeight: '180px', maxHeight: '180px', aspectRatio: '16/9' }}
-                          onClick={() => navigate(`/watch/${video._id || i + 1}`)}
-                          onMouseEnter={() => { setHoveredIdx(i); setInitialPreview(false); }}
-                          onMouseLeave={() => { setHoveredIdx(-1); }}
-                        >
-                          {/* No hidden video for duration extraction needed */}
-                          <div style={{ position: 'relative', width: '100%', height: '180px' }}>
-                            {(hoveredIdx === i || (initialPreview && i === 0)) ? (
-                              <>
-                                <video
-                                  src={video.videoUrl}
-                                  className="object-cover w-full h-[180px] rounded-none"
-                                  style={{ borderRadius: 0, margin: 0, padding: 0, display: 'block', width: '100%', height: '180px', aspectRatio: '16/9' }}
-                                  autoPlay
-                                  muted={!video.unmuted}
-                                  loop
-                                  playsInline
-                                  onClick={e => e.preventDefault()}
-                                  ref={el => {
-                                    if (el) {
-                                      el.muted = !video.unmuted;
-                                    }
-                                  }}
-                                />
-                                {/* Always show duration label on video preview */}
-                                {video.duration && (
-                                  <span
-                                    style={{
-                                      position: 'absolute',
-                                      right: 10,
-                                      bottom: 10,
-                                      background: 'rgba(0,0,0,0.7)',
-                                      color: '#fff',
-                                      padding: '2px 6px',
-                                      borderRadius: '4px',
-                                      fontSize: '0.85rem',
-                                      fontWeight: 500,
-                                      zIndex: 2,
-                                      pointerEvents: 'none',
-                                      minWidth: '40px',
-                                      textAlign: 'center',
-                                    }}
-                                  >
-                                    {formatDuration(video.duration)}
-                                  </span>
-                                )}
-                                <button
-                                  type="button"
-                                  className="absolute bottom-2 left-2 bg-black bg-opacity-70 text-white text-xs px-2 py-0.5 rounded z-10 flex items-center justify-center"
-                                  onClick={e => {
-                                    e.stopPropagation();
-                                    setVideos(vs => vs.map((v, idx) => idx === i ? { ...v, unmuted: !v.unmuted } : v));
-                                  }}
-                                >
-                                  {video.unmuted ? <FaVolumeUp /> : <FaVolumeMute />}
-                                </button>
-                              </>
-                            ) : (
-                              <HomeThumbnail
-                                video={video}
-                                source="homepage"
-                                userId={video.userId}
-                                sessionId={window.sessionStorage.getItem('sessionId') || undefined}
-                                className="object-cover w-full h-full rounded-none hover:scale-[1.03] transition-transform"
-                                style={{ borderRadius: 0, margin: 0, padding: 0, display: 'block', width: '100%', height: '100%', aspectRatio: '16/9', minHeight: '180px', maxHeight: '180px' }}
-                              />
-                            )}
-                          </div>
+                        <div className="relative" style={{ width: '100%', height: '180px' }}>
+                          {(hoveredIdx === i || (initialPreview && i === 0)) ? (
+                            <video
+                              src={video.videoUrl}
+                              autoPlay
+                              muted={!video.unmuted}
+                              loop
+                              playsInline
+                              className="w-full h-[180px] object-cover rounded-lg"
+                              style={{ borderRadius: '0.75rem' }}
+                              onClick={e => e.preventDefault()}
+                              ref={el => {
+                                if (el) {
+                                  el.muted = !video.unmuted;
+                                }
+                              }}
+                            />
+                          ) : (
+                            <HomeThumbnail
+                              video={video}
+                              source="homepage"
+                              userId={video.userId}
+                              sessionId={window.sessionStorage.getItem('sessionId') || undefined}
+                              className="w-full h-[180px] object-cover rounded-lg hover:scale-105 transition-transform"
+                              style={{ borderRadius: '0.75rem' }}
+                            />
+                          )}
+                          {video.duration && (
+                            <span
+                              className="absolute right-2 bottom-2 bg-black bg-opacity-70 text-white text-xs px-2 py-0.5 rounded"
+                              style={{ zIndex: 2, pointerEvents: 'none' }}
+                            >
+                              {formatDuration(video.duration)}
+                            </span>
+                          )}
                         </div>
                         <div className="block sm:hidden" style={{ height: '12px' }} />
                         <div className="p-0 sm:p-3 flex-1 flex flex-col justify-between pb-1">
@@ -301,21 +270,35 @@ export default function Home() {
                                 {video.title}
                               </h3>
                               <div className="flex flex-col gap-0">
-                                <button
-                                  type="button"
-                                  onClick={() => navigate(`/channel/${video.channelId}`)}
-                                  className="text-xs font-medium text-gray-600 dark:text-gray-400 truncate hover:underline bg-transparent border-none p-0 m-0"
-                                  style={{ marginBottom: '0', textAlign: 'left' }}
-                                >
-                                  {video.author}
-                                </button>
-                                <div
-                                  className="flex flex-row items-center gap-1 md:gap-3 text-xs text-gray-600 dark:text-gray-400 truncate"
-                                  style={{ marginTop: '0' }}
-                                >
+                                {/* On mobile, channel name and views are on the same line. On PC, channel name is above views. */}
+                                <div className="flex flex-row items-center gap-1 text-xs text-gray-600 dark:text-gray-400 truncate sm:hidden">
+                                  <button
+                                    type="button"
+                                    onClick={() => navigate(`/channel/${video.channelId}`)}
+                                    className="text-xs font-medium text-gray-600 dark:text-gray-400 truncate hover:underline bg-transparent border-none p-0 m-0"
+                                    style={{ textAlign: 'left' }}
+                                  >
+                                    {video.author}
+                                  </button>
+                                  <span>•</span>
                                   <span>{formatViews(video.views)} views</span>
                                   <span>•</span>
                                   <span>{video.posted}</span>
+                                </div>
+                                <div className="hidden sm:flex flex-col gap-0 text-xs text-gray-600 dark:text-gray-400 truncate">
+                                  <button
+                                    type="button"
+                                    onClick={() => navigate(`/channel/${video.channelId}`)}
+                                    className="text-xs font-medium text-gray-600 dark:text-gray-400 truncate hover:underline bg-transparent border-none p-0 m-0"
+                                    style={{ textAlign: 'left' }}
+                                  >
+                                    {video.author}
+                                  </button>
+                                  <div className="flex flex-row items-center gap-3">
+                                    <span>{formatViews(video.views)} views</span>
+                                    <span>•</span>
+                                    <span>{video.posted}</span>
+                                  </div>
                                 </div>
                               </div>
                             </div>
