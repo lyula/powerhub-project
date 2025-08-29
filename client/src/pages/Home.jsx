@@ -75,9 +75,12 @@ export default function Home() {
                 posted: postedAgo,
                 duration: typeof v.duration === 'number' ? v.duration : 0,
                 _id: v._id,
-                channelId: v.channel?._id || v.channel // ensure channelId is present
+                channelId: v.channel?._id || v.channel, // ensure channelId is present
+                createdAt: v.createdAt ? new Date(v.createdAt) : null
               };
             });
+            // Sort by createdAt descending (latest first)
+            formattedVideos.sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
             setVideos(formattedVideos);
             setLoading(false);
             return;
