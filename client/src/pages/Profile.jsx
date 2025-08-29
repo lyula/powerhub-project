@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Header from '../components/Header';
+import MobileHeader from '../components/MobileHeader';
+import { UserIcon } from '../components/icons';
 import Sidebar from '../components/Sidebar';
 import StudentUtility from '../components/StudentUtility';
 import BottomTabs from '../components/BottomTabs';
@@ -148,7 +150,12 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-[#111111] w-full" style={{ overflowX: 'hidden', scrollbarWidth: 'none' }}>
-      <HeaderFixed onToggleSidebar={handleToggleSidebar} />
+      {/* Mobile header for Profile page */}
+      <MobileHeader icon={<UserIcon />} label="Profile" />
+      {/* Desktop header remains unchanged */}
+      <div className="hidden md:block">
+        <HeaderFixed onToggleSidebar={handleToggleSidebar} />
+      </div>
       <div className="flex flex-row w-full" style={{ height: 'calc(100vh - 56px)', maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
         <SidebarFixed sidebarOpen={sidebarOpen} />
         {!sidebarOpen && (
@@ -158,7 +165,7 @@ const Profile = () => {
         )}
         <div className={`flex-1 flex flex-col ${sidebarOpen ? 'ml-0 md:ml-64' : 'ml-0 md:ml-0'} w-full`} style={{ maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
           <div className="p-4 md:p-8">
-            <h2 className="text-2xl font-bold mb-6 text-[#0bb6bc] dark:text-[#0bb6bc] mt-8 pl-12">My Profile</h2>
+            <h2 className="hidden md:block text-2xl font-bold mb-6 text-[#0bb6bc] dark:text-[#0bb6bc] mt-8 pl-12">My Profile</h2>
             
             {message.text && (
               <div className={`mb-6 p-4 rounded-lg border ${
@@ -171,7 +178,7 @@ const Profile = () => {
             )}
 
             <div className="max-w-4xl mx-auto">
-              <div className="bg-white dark:bg-[#1a1a1a] rounded-xl shadow-lg p-6 mb-8 border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-[#1a1a1a] rounded-xl shadow-lg p-6 mb-8 border border-gray-200 dark:border-gray-700 pt-6 md:pt-6 mt-10 md:mt-0">
                 <div className="flex items-center space-x-6">
                   <div className="w-24 h-24 bg-gradient-to-br from-[#0bb6bc] to-[#0a9ba0] rounded-full flex items-center justify-center shadow-lg">
                     <span className="text-3xl font-bold text-white">

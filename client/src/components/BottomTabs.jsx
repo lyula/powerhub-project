@@ -1,11 +1,12 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { HomeIcon, FireIcon, AcademicCapIcon, VideoCameraIcon, UserIcon } from './icons';
+import { HomeIcon, FireIcon, VideoCameraIcon, UserIcon } from './icons';
+import { PlusSquareIcon } from './PlusSquareIcon';
 
 const items = [
   { label: 'Home', icon: <HomeIcon />, path: '/home' },
   { label: 'Trending', icon: <FireIcon />, path: '/trending' },
-  { label: 'Specializations', icon: <AcademicCapIcon />, path: '/specializations' },
+  { label: 'Create', icon: <PlusSquareIcon />, path: '/create-post' },
   { label: 'My Videos', icon: <VideoCameraIcon />, path: '/my-videos' },
   { label: 'Profile', icon: <UserIcon />, path: '/profile' },
 ];

@@ -4,6 +4,8 @@ import Comments from '../components/Comments';
 import DescriptionWithReadMore from './DescriptionWithReadMore';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
+import MobileHeader from '../components/MobileHeader';
+import { VideoCameraIcon } from '../components/icons';
 import SubscribeButton from '../components/SubscribeButton';
 import ProgressBar from '../components/ProgressBar';
 import SimilarContentThumbnail from '../components/SimilarContentThumbnail';
@@ -122,6 +124,9 @@ export default function Watch() {
     return (
       <div className="w-full min-h-screen bg-gray-100 dark:bg-[#181818]">
         <ProgressBar loading={progressLoading} />
+        {/* Mobile header for Watch page */}
+        <MobileHeader icon={<VideoCameraIcon />} label="Watch" />
+        {/* Desktop header remains unchanged */}
         <div className="hidden md:block w-full fixed top-0 left-0 z-40">
           <Header />
         </div>

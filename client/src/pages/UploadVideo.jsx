@@ -303,7 +303,7 @@ const UploadVideo = () => {
                   )}
                 </div>
               )}
-              <button type="submit" className="mt-8 px-6 py-3 bg-[#0bb6bc] text-white rounded-xl font-bold text-lg" disabled={loading}>{loading ? 'Uploading...' : 'Upload Video'}</button>
+              <button type="submit" className="mt-8 px-6 py-3 bg-[#0bb6bc] text-white rounded-xl font-bold text-lg mb-16 md:mb-0" disabled={loading}>{loading ? 'Uploading...' : 'Upload Video'}</button>
             </form>
           </div>
           <BottomTabs />
