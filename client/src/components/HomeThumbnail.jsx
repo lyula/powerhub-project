@@ -17,13 +17,13 @@ export default function HomeThumbnail({ video, source, userId, sessionId, ...pro
   });
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '180px' }}>
+    <div style={{ position: 'relative', width: '100%', height: '180px', minHeight: '180px', maxHeight: '180px', overflow: 'hidden', borderRadius: '0.5rem' }}>
       <img
         ref={impressionRef}
         src={video.thumbnailUrl || video.thumbnail || ''}
         alt={video.title}
-        className={`object-cover w-full h-[180px] rounded-lg transition-transform ${props.className || ''}`}
-        style={{ borderRadius: '0.5rem', margin: 0, padding: 0, display: 'block', width: '100%', height: '180px', aspectRatio: '16/9' }}
+        className={`object-cover w-full h-full rounded-lg transition-transform ${props.className || ''}`}
+        style={{ borderRadius: '0.5rem', margin: 0, padding: 0, display: 'block', width: '100%', height: '100%', aspectRatio: '16/9', objectFit: 'cover' }}
         onError={e => { e.target.onerror = null; e.target.src = '/vite.svg'; }}
         {...props}
       />
@@ -41,6 +41,8 @@ export default function HomeThumbnail({ video, source, userId, sessionId, ...pro
             fontWeight: 500,
             zIndex: 2,
             pointerEvents: 'none',
+            minWidth: '40px',
+            textAlign: 'center',
           }}
         >
           {formatDuration(video.duration)}

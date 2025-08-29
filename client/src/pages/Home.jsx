@@ -218,45 +218,68 @@ export default function Home() {
                           onMouseLeave={() => { setHoveredIdx(-1); }}
                         >
                           {/* No hidden video for duration extraction needed */}
-                          {(hoveredIdx === i || (initialPreview && i === 0)) ? (
-                            <div style={{ position: 'relative', width: '100%', height: '180px' }}>
-                              <video
-                                src={video.videoUrl}
-                                className="object-cover w-full h-[180px] rounded-none"
-                                style={{ borderRadius: 0, margin: 0, padding: 0, display: 'block', width: '100%', height: '180px', aspectRatio: '16/9' }}
-                                autoPlay
-                                muted={!video.unmuted}
-                                loop
-                                playsInline
-                                onClick={e => e.preventDefault()}
-                                ref={el => {
-                                  if (el) {
-                                    el.muted = !video.unmuted;
-                                  }
-                                }}
+                          <div style={{ position: 'relative', width: '100%', height: '180px' }}>
+                            {(hoveredIdx === i || (initialPreview && i === 0)) ? (
+                              <>
+                                <video
+                                  src={video.videoUrl}
+                                  className="object-cover w-full h-[180px] rounded-none"
+                                  style={{ borderRadius: 0, margin: 0, padding: 0, display: 'block', width: '100%', height: '180px', aspectRatio: '16/9' }}
+                                  autoPlay
+                                  muted={!video.unmuted}
+                                  loop
+                                  playsInline
+                                  onClick={e => e.preventDefault()}
+                                  ref={el => {
+                                    if (el) {
+                                      el.muted = !video.unmuted;
+                                    }
+                                  }}
+                                />
+                                {/* Always show duration label on video preview */}
+                                {video.duration && (
+                                  <span
+                                    style={{
+                                      position: 'absolute',
+                                      right: 10,
+                                      bottom: 10,
+                                      background: 'rgba(0,0,0,0.7)',
+                                      color: '#fff',
+                                      padding: '2px 6px',
+                                      borderRadius: '4px',
+                                      fontSize: '0.85rem',
+                                      fontWeight: 500,
+                                      zIndex: 2,
+                                      pointerEvents: 'none',
+                                      minWidth: '40px',
+                                      textAlign: 'center',
+                                    }}
+                                  >
+                                    {formatDuration(video.duration)}
+                                  </span>
+                                )}
+                                <button
+                                  type="button"
+                                  className="absolute bottom-2 left-2 bg-black bg-opacity-70 text-white text-xs px-2 py-0.5 rounded z-10 flex items-center justify-center"
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    setVideos(vs => vs.map((v, idx) => idx === i ? { ...v, unmuted: !v.unmuted } : v));
+                                  }}
+                                >
+                                  {video.unmuted ? <FaVolumeUp /> : <FaVolumeMute />}
+                                </button>
+                              </>
+                            ) : (
+                              <HomeThumbnail
+                                video={video}
+                                source="homepage"
+                                userId={video.userId}
+                                sessionId={window.sessionStorage.getItem('sessionId') || undefined}
+                                className="object-cover w-full h-full rounded-none hover:scale-[1.03] transition-transform"
+                                style={{ borderRadius: 0, margin: 0, padding: 0, display: 'block', width: '100%', height: '100%', aspectRatio: '16/9', minHeight: '180px', maxHeight: '180px' }}
                               />
-                              <button
-                                type="button"
-                                className="absolute bottom-2 left-2 bg-black bg-opacity-70 text-white text-xs px-2 py-0.5 rounded z-10 flex items-center justify-center"
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  setVideos(vs => vs.map((v, idx) => idx === i ? { ...v, unmuted: !v.unmuted } : v));
-                                }}
-                              >
-                                {video.unmuted ? <FaVolumeUp /> : <FaVolumeMute />}
-                              </button>
-                            </div>
-                          ) : (
-                            <HomeThumbnail
-                              video={video}
-                              source="homepage"
-                              userId={video.userId}
-                              sessionId={window.sessionStorage.getItem('sessionId') || undefined}
-                              className="object-cover w-full h-full rounded-none hover:scale-[1.03] transition-transform"
-                              style={{ borderRadius: 0, margin: 0, padding: 0, display: 'block', width: '100%', height: '100%', aspectRatio: '16/9', minHeight: '180px', maxHeight: '180px' }}
-                            />
-                          )}
-                          {/* Duration is rendered inside HomeThumbnail, so do not render here */}
+                            )}
+                          </div>
                         </div>
                         <div className="block sm:hidden" style={{ height: '12px' }} />
                         <div className="p-0 sm:p-3 flex-1 flex flex-col justify-between pb-1">
@@ -267,7 +290,7 @@ export default function Home() {
                               className="p-0 m-0 bg-transparent border-none"
                               style={{ lineHeight: 0 }}
                             >
-                              <img src={video.profile} alt={video.author} className="w-7 h-7 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 dark:border-gray-700 flex-shrink-0 cursor-pointer hover:scale-105 transition-transform" />
+                              <img src={video.profile} alt={video.author} className="w-7 h-7 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 dark:border-gray-700 flex-shrink-0 cursor-pointer hover:scale-105 transition-transform" style={{ width: '40px', height: '40px', objectFit: 'cover', aspectRatio: '1/1', minWidth: '40px', minHeight: '40px', maxWidth: '40px', maxHeight: '40px' }} />
                             </button>
                             <div className="flex flex-col min-w-0">
                               <h3

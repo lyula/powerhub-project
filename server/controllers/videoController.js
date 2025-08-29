@@ -43,101 +43,40 @@ exports.uploadVideo = async (req, res) => {
     console.log('--- Video Upload Request ---');
     console.log('Request body:', req.body);
     console.log('Request user:', req.user);
-    console.log('Request files:', req.files);
-    const { title, description, tags, category, privacy, specialization, channelId } = req.body;
+    const { title, description, tags, category, privacy, specialization, channelId, duration, videoUrl, thumbnailUrl } = req.body;
     const uploader = req.user._id;
     const channel = await Channel.findById(channelId);
     if (!channel) {
       console.error('Channel not found for channelId:', channelId);
       return res.status(404).json({ error: 'Channel not found' });
     }
-
-    // Upload video file to Cloudinary
-    let videoUrl = '';
-    if (req.files && req.files.video) {
-      try {
-        const videoPath = req.files.video[0].path;
-        console.log('Uploading video file:', videoPath);
-        const videoUpload = await cloudinary.uploader.upload(videoPath, {
-          folder: `powerhub/channels/${channel.name}/videos`,
-          resource_type: 'video',
-        });
-        videoUrl = videoUpload.secure_url;
-        console.log('Video uploaded to Cloudinary:', videoUrl);
-        fs.unlink(videoPath, (err) => {
-          if (err) console.error('Failed to delete temp video file:', err);
-        });
-      } catch (videoErr) {
-        console.error('Video upload to Cloudinary failed:', videoErr);
-        return res.status(500).json({ error: 'Video upload to Cloudinary failed', details: videoErr });
-      }
+    let finalDuration = undefined;
+    if (duration !== undefined && duration !== null && duration !== '') {
+      finalDuration = Number(duration);
+      console.log('Received duration from frontend:', duration, '->', finalDuration);
     } else {
-      console.error('No video file found in request');
+      console.log('No duration available from frontend.');
     }
-
-    // Upload thumbnail if provided
-    let thumbnailUrl = '';
-    if (req.files && req.files.thumbnail) {
-      try {
-        const thumbPath = req.files.thumbnail[0].path;
-        console.log('Uploading thumbnail file:', thumbPath);
-        const thumbUpload = await cloudinary.uploader.upload(thumbPath, {
-          folder: `powerhub/channels/${channel.name}/thumbnails`,
-          resource_type: 'image',
-        });
-        thumbnailUrl = thumbUpload.secure_url;
-        console.log('Thumbnail uploaded to Cloudinary:', thumbnailUrl);
-        fs.unlink(thumbPath, (err) => {
-          if (err) console.error('Failed to delete temp thumbnail file:', err);
-        });
-      } catch (thumbErr) {
-        console.error('Thumbnail upload to Cloudinary failed:', thumbErr);
-        return res.status(500).json({ error: 'Thumbnail upload to Cloudinary failed', details: thumbErr });
-      }
-    } else {
-      console.log('No thumbnail file found in request');
-    }
-
-    try {
-      // Extract duration using ffmpeg if video file exists
-      let duration = null;
-      if (req.files && req.files.video) {
-        const videoPath = req.files.video[0].path;
-        try {
-          duration = await new Promise((resolve, reject) => {
-            ffmpeg.ffprobe(videoPath, (err, metadata) => {
-              if (err) return reject(err);
-              resolve(metadata.format.duration);
-            });
-          });
-        } catch (err) {
-          console.error('Failed to extract video duration:', err);
-        }
-      }
-      const video = new Video({
-        title,
-        description,
-        videoUrl,
-        thumbnailUrl,
-        tags: tags ? tags.split(',').map(t => t.trim()) : [],
-        category,
-        privacy,
-        specialization,
-        channel: channel._id,
-        channelName: channel.name,
-        uploader,
-        duration: duration ? Math.round(duration) : undefined,
-      });
-      await video.save();
-      console.log('Video document saved to MongoDB:', video);
-      res.status(201).json(video);
-    } catch (dbErr) {
-      console.error('Failed to save video document to MongoDB:', dbErr);
-      res.status(500).json({ error: 'Failed to save video document', details: dbErr });
-    }
+    const video = new Video({
+      title,
+      description,
+      videoUrl,
+      thumbnailUrl,
+      tags: tags ? tags.split(',').map(t => t.trim()) : [],
+      category,
+      privacy,
+      specialization,
+      channel: channel._id,
+      channelName: channel.name,
+      uploader,
+      duration: finalDuration,
+    });
+    await video.save();
+    console.log('Video document saved to MongoDB with duration:', finalDuration, video);
+    res.status(201).json(video);
   } catch (err) {
-    console.error('General video upload error:', err);
-    res.status(500).json({ error: 'Video upload failed', details: err });
+    console.error('Failed to save video document to MongoDB:', err);
+    res.status(500).json({ error: 'Failed to save video document', details: err });
   }
 };
 

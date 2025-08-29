@@ -21,11 +21,7 @@ mongoose.connect(dbUri, {
   useUnifiedTopology: true,
 }).then(() => console.log('MongoDB connected')).catch(err => console.error('MongoDB connection error:', err));
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir);
-}
+// Removed logic that creates uploads directory
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));

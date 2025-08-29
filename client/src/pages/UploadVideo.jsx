@@ -7,6 +7,12 @@ import BottomTabs from '../components/BottomTabs';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 
+// Cloudinary config from environment variables
+const CLOUDINARY_NAME = import.meta.env.VITE_CLOUDINARY_NAME;
+const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_PRESET;
+const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_NAME}/video/upload`;
+const CLOUDINARY_IMAGE_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_NAME}/image/upload`;
+
 const UploadVideo = () => {
   const { channel } = useAuth();
   const [categoriesList, setCategoriesList] = useState([]);
@@ -18,6 +24,7 @@ const UploadVideo = () => {
   const [message, setMessage] = useState('');
   const [videoFile, setVideoFile] = useState(null);
   const [videoPreview, setVideoPreview] = useState(null);
+  const [videoDuration, setVideoDuration] = useState(null);
   const [thumbnailFile, setThumbnailFile] = useState(null);
   const [thumbnailPreview, setThumbnailPreview] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -51,9 +58,20 @@ const UploadVideo = () => {
     const file = e.target.files[0];
     setVideoFile(file);
     if (file) {
-      setVideoPreview(URL.createObjectURL(file));
+      const url = URL.createObjectURL(file);
+      setVideoPreview(url);
+      // Extract duration using hidden video element
+      const tempVideo = document.createElement('video');
+      tempVideo.preload = 'metadata';
+      tempVideo.src = url;
+      tempVideo.onloadedmetadata = () => {
+        const dur = Math.round(tempVideo.duration);
+        setVideoDuration(dur);
+        URL.revokeObjectURL(url);
+      };
     } else {
       setVideoPreview(null);
+      setVideoDuration(null);
     }
   };
 
@@ -82,32 +100,61 @@ const UploadVideo = () => {
     setMessage('');
     setUploadProgress(0);
     try {
-      const formData = new FormData();
-      formData.append('title', title);
-      formData.append('description', description);
-      formData.append('tags', tags);
-      formData.append('category', category);
-      formData.append('privacy', privacy);
-      formData.append('specialization', specialization);
-      if (videoFile) formData.append('video', videoFile);
-      if (thumbnailFile) formData.append('thumbnail', thumbnailFile);
-      if (channel && channel._id) formData.append('channelId', channel._id);
-      const token = localStorage.getItem('token');
-      await axios.post(`${import.meta.env.VITE_API_URL}/videos/upload`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
-        onUploadProgress: (progressEvent) => {
-          if (progressEvent.total) {
-            const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-            setUploadProgress(percent);
+      // 1. Upload video to Cloudinary
+      let videoUrl = '';
+      if (videoFile) {
+        const videoData = new FormData();
+        videoData.append('file', videoFile);
+        videoData.append('upload_preset', UPLOAD_PRESET);
+        const videoRes = await axios.post(CLOUDINARY_URL, videoData, {
+          onUploadProgress: (progressEvent) => {
+            if (progressEvent.total) {
+              const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+              setUploadProgress(percent);
+            }
           }
+        });
+        videoUrl = videoRes.data.secure_url;
+      }
+      // 2. Upload thumbnail to Cloudinary
+      let thumbnailUrl = '';
+      if (thumbnailFile) {
+        const thumbData = new FormData();
+        thumbData.append('file', thumbnailFile);
+        thumbData.append('upload_preset', UPLOAD_PRESET);
+        const thumbRes = await axios.post(CLOUDINARY_IMAGE_URL, thumbData, {
+          onUploadProgress: (progressEvent) => {
+            if (progressEvent.total) {
+              const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+              setUploadProgress(percent);
+            }
+          }
+        });
+        thumbnailUrl = thumbRes.data.secure_url;
+      }
+      // 3. Send only URLs and metadata to backend
+      const payload = {
+        title,
+        description,
+        tags,
+        category,
+        privacy,
+        specialization,
+        channelId: channel && channel._id,
+        duration: videoDuration,
+        videoUrl,
+        thumbnailUrl
+      };
+      const token = localStorage.getItem('token');
+      await axios.post(`${import.meta.env.VITE_API_URL}/videos/upload`, payload, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
         }
       });
       setLoading(false);
-  setMessage('Video uploaded successfully!');
-  setTimeout(() => setMessage(''), 5000);
+      setMessage('Video uploaded successfully!');
+      setTimeout(() => setMessage(''), 5000);
       setTitle('');
       setDescription('');
       setTags('');

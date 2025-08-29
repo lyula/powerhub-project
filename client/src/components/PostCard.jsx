@@ -9,10 +9,10 @@ export default function PostCard({ post }) {
     >
       <div className="p-3 flex items-start gap-3">
         <Link to={`/channel/${encodeURIComponent(post.author)}`}>
-          <img src={post.profile} alt={post.author} className="w-10 h-10 rounded-full border-2 border-gray-300 dark:border-gray-700 flex-shrink-0 cursor-pointer hover:scale-105 transition-transform" />
+          <img src={post.profile} alt={post.author} className="w-10 h-10 rounded-full border-2 border-gray-300 dark:border-gray-700 flex-shrink-0 cursor-pointer hover:scale-105 transition-transform" style={{ width: '40px', height: '40px', objectFit: 'cover', aspectRatio: '1/1', minWidth: '40px', minHeight: '40px', maxWidth: '40px', maxHeight: '40px' }} />
         </Link>
-        <div className="flex flex-col min-w-0">
-          <h3 className="font-bold text-base text-black dark:text-white mb-1" title={post.title}>{post.title}</h3>
+        <div className="flex flex-col min-w-0" style={{ flex: 1, minWidth: 0 }}>
+          <h3 className="font-bold text-base text-black dark:text-white mb-1 truncate" title={post.title} style={{ maxWidth: '100%' }}>{post.title}</h3>
           <Link to={`/channel/${encodeURIComponent(post.author)}`} className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 hover:underline">
             {post.author}
           </Link>
