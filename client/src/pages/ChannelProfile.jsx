@@ -5,6 +5,8 @@ import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import SubscribeButton from '../components/SubscribeButton';
 import AboutChannelModal from '../components/AboutChannelModal';
+import { FaGithub, FaEnvelope, FaWhatsapp, FaInstagram } from 'react-icons/fa';
+import { colors } from '../theme/colors';
 
 function formatDuration(seconds) {
   if (!seconds || isNaN(seconds)) return '';
@@ -146,7 +148,35 @@ export default function ChannelProfile() {
             </div>
           </div>
           {/* About this channel link below the banner */}
-          <div className="w-full flex justify-end px-8 mt-2 mb-2">
+          <div className="w-full flex justify-end items-center gap-4 px-8 mt-2 mb-2">
+            <a href="#"
+              className="icon-link"
+              title="GitHub"
+              style={{ fontSize: '1.5em', color: 'var(--icon-color, #888)' }}
+              onMouseEnter={e => e.currentTarget.style.color = colors.primary}
+              onMouseLeave={e => e.currentTarget.style.color = 'var(--icon-color, #888)'}
+            ><FaGithub /></a>
+            <a href="#" 
+              className="icon-link"
+              title="Email"
+              style={{ fontSize: '1.5em', color: 'var(--icon-color, #888)' }}
+              onMouseEnter={e => e.currentTarget.style.color = colors.secondary}
+              onMouseLeave={e => e.currentTarget.style.color = 'var(--icon-color, #888)'}
+            ><FaEnvelope /></a>
+            <a href="#" 
+              className="icon-link"
+              title="WhatsApp"
+              style={{ fontSize: '1.5em', color: 'var(--icon-color, #888)' }}
+              onMouseEnter={e => e.currentTarget.style.color = colors.primary}
+              onMouseLeave={e => e.currentTarget.style.color = 'var(--icon-color, #888)'}
+            ><FaWhatsapp /></a>
+            <a href="#" 
+              className="icon-link"
+              title="Instagram"
+              style={{ fontSize: '1.5em', color: 'var(--icon-color, #888)' }}
+              onMouseEnter={e => e.currentTarget.style.color = colors.secondary}
+              onMouseLeave={e => e.currentTarget.style.color = 'var(--icon-color, #888)'}
+            ><FaInstagram /></a>
             <button
               type="button"
               className="text-[#0bb6bc] font-semibold hover:underline bg-transparent border-none p-0 m-0"
