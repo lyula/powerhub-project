@@ -32,6 +32,7 @@ const videoSchema = new Schema({
   views: [{ type: Schema.Types.ObjectId, ref: 'User' }], // users who viewed
   viewCount: { type: Number, default: 0 }, // total view count
   comments: [commentSchema],
+  duration: { type: Number }, // duration in seconds
   createdAt: { type: Date, default: Date.now }
 });
 

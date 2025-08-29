@@ -85,6 +85,21 @@ exports.uploadVideo = async (req, res) => {
     }
 
     try {
+      // Extract duration using ffmpeg if video file exists
+      let duration = null;
+      if (req.files && req.files.video) {
+        const videoPath = req.files.video[0].path;
+        try {
+          duration = await new Promise((resolve, reject) => {
+            ffmpeg.ffprobe(videoPath, (err, metadata) => {
+              if (err) return reject(err);
+              resolve(metadata.format.duration);
+            });
+          });
+        } catch (err) {
+          console.error('Failed to extract video duration:', err);
+        }
+      }
       const video = new Video({
         title,
         description,
@@ -97,6 +112,7 @@ exports.uploadVideo = async (req, res) => {
         channel: channel._id,
         channelName: channel.name,
         uploader,
+        duration: duration ? Math.round(duration) : undefined,
       });
       await video.save();
       console.log('Video document saved to MongoDB:', video);

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { FaVolumeMute, FaVolumeUp } from 'react-icons/fa';
 import PostCard from '../components/PostCard';
 import postCardData from '../components/PostCardData';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -72,7 +73,7 @@ export default function Home() {
                 profile: v.channel?.avatar || 'https://randomuser.me/api/portraits/men/32.jpg',
                 views: v.viewCount || 0,
                 posted: postedAgo,
-                duration: v.duration ? formatDuration(v.duration) : '',
+                duration: typeof v.duration === 'number' ? v.duration : 0,
                 _id: v._id
               };
             });
@@ -98,18 +99,16 @@ export default function Home() {
   // Extract durations from video elements after metadata loads
   useEffect(() => {
     if (!videos || videos.length === 0) return;
-    videos.forEach((video, idx) => {
-      const vidEl = videoRefs.current[idx];
-      if (vidEl && (!video.duration || isNaN(Number(video.duration)))) {
-        vidEl.onloadedmetadata = () => {
-          setVideoDurations(durs => {
-            const newArr = [...durs];
-            newArr[idx] = formatDuration(vidEl.duration);
-            return newArr;
-          });
-        };
+    // Only use API duration for display
+    console.log('Fetched videos:', videos);
+    setVideoDurations(videos.map((v, idx) => {
+      const dur = Number(v.duration);
+      if (isNaN(dur)) {
+        console.warn(`Video at index ${idx} has invalid duration:`, v.duration, v);
       }
-    });
+      return formatDuration(isNaN(dur) ? 0 : dur);
+    }));
+    // Animation logic for duration can be added here in the future
   }, [videos]);
 
   // Initial preview for first video for 10 seconds
@@ -268,7 +267,10 @@ export default function Home() {
                   ))
                 ) : (
                   displayVideos.map((video, i) => {
-                    const showDuration = video.duration && !isNaN(Number(video.duration)) ? video.duration : videoDurations[i];
+                    const showDuration = videoDurations[i];
+                    if (showDuration === '0:00' || !showDuration) {
+                      console.warn('No valid duration for video:', video);
+                    }
                     return (
                       <div
                         key={video._id || i}
@@ -282,17 +284,42 @@ export default function Home() {
                           onMouseEnter={() => { setHoveredIdx(i); setInitialPreview(false); }}
                           onMouseLeave={() => { setHoveredIdx(-1); }}
                         >
+                          {/* Always render a hidden video to extract duration for thumbnail */}
+                          {/* Hidden video for duration extraction, always rendered */}
+                          <video
+                            ref={el => videoRefs.current[i] = el}
+                            src={video.videoUrl}
+                            style={{ display: 'none' }}
+                            preload="metadata"
+                          />
                           {(hoveredIdx === i || (initialPreview && i === 0)) ? (
-                            <video
-                              ref={el => videoRefs.current[i] = el}
-                              src={video.videoUrl}
-                              className="object-cover w-full h-full rounded-none"
-                              style={{ borderRadius: 0, margin: 0, padding: 0, display: 'block', width: '100%', height: '100%', aspectRatio: '16/9', minHeight: '180px', maxHeight: '180px' }}
-                              autoPlay
-                              muted
-                              loop
-                              playsInline
-                            />
+                            <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                              <video
+                                src={video.videoUrl}
+                                className="object-cover w-full h-full rounded-none"
+                                style={{ borderRadius: 0, margin: 0, padding: 0, display: 'block', width: '100%', height: '100%', aspectRatio: '16/9', minHeight: '180px', maxHeight: '180px' }}
+                                autoPlay
+                                muted={!video.unmuted}
+                                loop
+                                playsInline
+                                onClick={e => e.preventDefault()}
+                                ref={el => {
+                                  if (el) {
+                                    el.muted = !video.unmuted;
+                                  }
+                                }}
+                              />
+                              <button
+                                type="button"
+                                className="absolute bottom-2 left-2 bg-black bg-opacity-70 text-white text-xs px-2 py-0.5 rounded z-10 flex items-center justify-center"
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setVideos(vs => vs.map((v, idx) => idx === i ? { ...v, unmuted: !v.unmuted } : v));
+                                }}
+                              >
+                                {video.unmuted ? <FaVolumeUp /> : <FaVolumeMute />}
+                              </button>
+                            </div>
                           ) : (
                             <img
                               src={video.thumbnail}
@@ -301,11 +328,10 @@ export default function Home() {
                               style={{ borderRadius: 0, margin: 0, padding: 0, display: 'block', width: '100%', height: '100%', aspectRatio: '16/9', minHeight: '180px', maxHeight: '180px' }}
                             />
                           )}
-                          {showDuration && (
-                            <span className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-0.5 rounded">
-                              {showDuration}
-                            </span>
-                          )}
+                          {/* Always show duration, using extracted duration from video element if available */}
+                          <span className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-0.5 rounded">
+                            {showDuration}
+                          </span>
                         </div>
                         <div className="block sm:hidden" style={{ height: '12px' }} />
                         <div className="p-0 sm:p-3 flex-1 flex flex-col justify-between pb-1">
