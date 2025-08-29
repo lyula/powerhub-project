@@ -74,7 +74,8 @@ export default function Home() {
                 views: v.viewCount || 0,
                 posted: postedAgo,
                 duration: typeof v.duration === 'number' ? v.duration : 0,
-                _id: v._id
+                _id: v._id,
+                channelId: v.channel?._id || v.channel // ensure channelId is present
               };
             });
             setVideos(formattedVideos);
@@ -338,7 +339,7 @@ export default function Home() {
                           <div className="flex items-start gap-2 sm:gap-3 mb-0">
                             <button
                               type="button"
-                              onClick={() => navigate(`/channel/${encodeURIComponent(video.author)}`)}
+                              onClick={() => navigate(`/channel/${video.channelId}`)}
                               className="p-0 m-0 bg-transparent border-none"
                               style={{ lineHeight: 0 }}
                             >
@@ -355,7 +356,7 @@ export default function Home() {
                               <div className="flex flex-col gap-0">
                                 <button
                                   type="button"
-                                  onClick={() => navigate(`/channel/${encodeURIComponent(video.author)}`)}
+                                  onClick={() => navigate(`/channel/${video.channelId}`)}
                                   className="text-xs font-medium text-gray-600 dark:text-gray-400 truncate hover:underline bg-transparent border-none p-0 m-0"
                                   style={{ marginBottom: '0', textAlign: 'left' }}
                                 >
