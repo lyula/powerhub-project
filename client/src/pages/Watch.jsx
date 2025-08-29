@@ -17,6 +17,7 @@ export default function Watch() {
   const [showComments, setShowComments] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
   const [subscribed, setSubscribed] = useState(false);
+  const [hoveredRecId, setHoveredRecId] = useState(null);
 
   useEffect(() => {
     setLoading(true);
@@ -210,8 +211,25 @@ export default function Watch() {
           <aside className="w-full md:w-96 p-4 bg-transparent flex flex-col gap-4">
             <h2 className="text-lg font-bold text-black dark:text-white mb-2">Similar Content</h2>
             {recommendations.map(rec => (
-              <div key={rec._id} className="flex gap-3 items-center bg-white dark:bg-[#222] rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden cursor-pointer hover:bg-gray-100 dark:hover:bg-[#333] transition">
-                <img src={rec.thumbnailUrl} alt={rec.title} className="w-32 h-20 object-cover rounded-l-lg" />
+              <div
+                key={rec._id}
+                className="flex gap-3 items-center bg-white dark:bg-[#222] rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden cursor-pointer hover:bg-gray-100 dark:hover:bg-[#333] transition"
+                onMouseEnter={() => setHoveredRecId(rec._id)}
+                onMouseLeave={() => setHoveredRecId(null)}
+              >
+                {hoveredRecId === rec._id ? (
+                  <video
+                    src={rec.videoUrl}
+                    className="w-32 h-20 object-cover rounded-l-lg"
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    style={{ background: '#000' }}
+                  />
+                ) : (
+                  <img src={rec.thumbnailUrl} alt={rec.title} className="w-32 h-20 object-cover rounded-l-lg" />
+                )}
                 <div className="flex flex-col flex-1 min-w-0 p-2">
                   <h3 className="text-base font-semibold text-black dark:text-white line-clamp-2 mb-1">{rec.title}</h3>
                   <span className="text-xs text-gray-600 dark:text-gray-400 mb-1">{rec.author}</span>
