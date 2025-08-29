@@ -243,8 +243,9 @@ export default function ChannelProfile() {
                         </div>
                       </div>
                       <div className="mt-2 text-base font-semibold text-black dark:text-white truncate">{video.title}</div>
-                      <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-300 mt-1">
+                      <div className="flex items-center text-xs text-gray-600 dark:text-gray-300 mt-1 gap-2">
                         <span>{video.viewCount || 0} views</span>
+                        <span className="font-bold mx-1" style={{fontWeight:700, fontSize:'1.2em'}}>&bull;</span>
                         <span>{postedAgo}</span>
                       </div>
                     </div>
