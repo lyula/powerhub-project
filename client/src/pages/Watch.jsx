@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom';
 import Comments from '../components/Comments';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
+import SubscribeButton from '../components/SubscribeButton';
 
 export default function Watch() {
   const { id } = useParams();
@@ -17,63 +18,67 @@ export default function Watch() {
   const [showComments, setShowComments] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
   const [subscribed, setSubscribed] = useState(false);
+  const [channelDetails, setChannelDetails] = useState(null);
   const [hoveredRecId, setHoveredRecId] = useState(null);
 
-  useEffect(() => {
+  // Helper to fetch video and recommendations
+  const fetchVideoAndRecommendations = async (videoId) => {
     setLoading(true);
-    // Fetch video by id
-    const fetchVideo = async () => {
-      try {
-        const apiUrl = import.meta.env.VITE_API_URL;
-        console.log('[Watch.jsx] Fetching video with id:', id);
-  const res = await fetch(`${apiUrl}/videos/${id}`);
-        console.log('[Watch.jsx] Fetch response:', res);
-        if (res.ok) {
-          const data = await res.json();
-          console.log('[Watch.jsx] Video data:', data);
-          setVideo(data);
-          setLikeCount(data.likes?.length || 0);
-          setDislikeCount(data.dislikes?.length || 0);
-          // Fetch all videos for recommendations
-          const allVideosRes = await fetch(`${apiUrl}/videos`);
-          if (allVideosRes.ok) {
-            const allVideos = await allVideosRes.json();
-            console.log('[Watch.jsx] All videos fetched for recommendations:', allVideos);
-            // Filter by same category and exclude current video
-            const sameCategory = allVideos.filter(v => v.category === data.category && v._id !== id);
-            console.log('[Watch.jsx] Videos in same category:', sameCategory);
-            // If any have likes or views, sort and show those first
-            const withLikesOrViews = sameCategory.filter(v => (v.likes?.length || 0) > 0 || (v.viewCount || 0) > 0);
-            console.log('[Watch.jsx] Videos in same category with likes/views:', withLikesOrViews);
-            if (withLikesOrViews.length > 0) {
-              withLikesOrViews.sort((a, b) => {
-                const likesA = a.likes?.length || 0;
-                const likesB = b.likes?.length || 0;
-                const viewsA = a.viewCount || 0;
-                const viewsB = b.viewCount || 0;
-                if (likesB !== likesA) return likesB - likesA;
-                return viewsB - viewsA;
-              });
-              console.log('[Watch.jsx] Sorted recommendations:', withLikesOrViews);
-              setRecommendations(withLikesOrViews);
-            } else {
-              // If none have likes/views, just show all from same category
-              console.log('[Watch.jsx] No videos with likes/views, showing all from same category:', sameCategory);
-              setRecommendations(sameCategory);
-            }
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL;
+      const res = await fetch(`${apiUrl}/videos/${videoId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setVideo(data);
+        setLikeCount(data.likes?.length || 0);
+        setDislikeCount(data.dislikes?.length || 0);
+        // Fetch channel details for subscribe button
+        if (data.channel?._id) {
+          const channelRes = await fetch(`${apiUrl}/channel/${data.channel._id}`);
+          if (channelRes.ok) {
+            const channelData = await channelRes.json();
+            setChannelDetails(channelData);
           } else {
-            console.warn('[Watch.jsx] Failed to fetch all videos:', allVideosRes.status);
+            setChannelDetails(data.channel);
           }
         } else {
-          console.warn('[Watch.jsx] Video fetch failed with status:', res.status);
+          setChannelDetails(data.channel);
         }
-      } catch (err) {
-        console.error('[Watch.jsx] Error fetching video:', err);
+        // Fetch all videos for recommendations
+        const allVideosRes = await fetch(`${apiUrl}/videos`);
+        if (allVideosRes.ok) {
+          const allVideos = await allVideosRes.json();
+          // Filter by same category and exclude current video
+          const sameCategory = allVideos.filter(v => v.category === data.category && v._id !== videoId);
+          // If any have likes or views, sort and show those first
+          const withLikesOrViews = sameCategory.filter(v => (v.likes?.length || 0) > 0 || (v.viewCount || 0) > 0);
+          if (withLikesOrViews.length > 0) {
+            withLikesOrViews.sort((a, b) => {
+              const likesA = a.likes?.length || 0;
+              const likesB = b.likes?.length || 0;
+              const viewsA = a.viewCount || 0;
+              const viewsB = b.viewCount || 0;
+              if (likesB !== likesA) return likesB - likesA;
+              return viewsB - viewsA;
+            });
+            setRecommendations(withLikesOrViews);
+          } else {
+            setRecommendations(sameCategory);
+          }
+        }
+      } else {
         setVideo(null);
+        setChannelDetails(null);
       }
-      setLoading(false);
-    };
-    fetchVideo();
+    } catch (err) {
+      setVideo(null);
+      setChannelDetails(null);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchVideoAndRecommendations(id);
   }, [id]);
 
   const handleCommentCountChange = (count) => setCommentCount(count);
@@ -195,13 +200,7 @@ export default function Watch() {
                   <span className="font-semibold text-gray-800 dark:text-gray-200 cursor-pointer truncate max-w-[120px]" title={video.channel?.name}>{video.channel?.name}</span>
                 </Link>
                 <span className="text-xs text-gray-500 dark:text-gray-400">{video.viewCount || 0} views • {video.postedAgo || ''}</span>
-                <button
-                  className={`ml-2 px-4 py-1 rounded-full font-semibold text-xs transition ${subscribed ? 'bg-gray-300 text-gray-700 cursor-default' : 'bg-red-600 text-white hover:bg-red-700'}`}
-                  onClick={() => !subscribed && setSubscribed(true)}
-                  disabled={subscribed}
-                >
-                  {subscribed ? 'Subscribed' : 'Subscribe'}
-                </button>
+                {channelDetails && <SubscribeButton channel={channelDetails} />}
               </div>
               <p className="text-gray-700 dark:text-gray-200 text-base mb-4 pl-8">{video.description}</p>
               {showComments && <Comments onCountChange={handleCommentCountChange} />}
@@ -216,6 +215,7 @@ export default function Watch() {
                 className="flex gap-3 items-center bg-white dark:bg-[#222] rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden cursor-pointer hover:bg-gray-100 dark:hover:bg-[#333] transition"
                 onMouseEnter={() => setHoveredRecId(rec._id)}
                 onMouseLeave={() => setHoveredRecId(null)}
+                onClick={() => fetchVideoAndRecommendations(rec._id)}
               >
                 {hoveredRecId === rec._id ? (
                   <video
