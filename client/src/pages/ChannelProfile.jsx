@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import SubscribeButton from '../components/SubscribeButton';
+import AboutChannelModal from '../components/AboutChannelModal';
 
 function formatDuration(seconds) {
   if (!seconds || isNaN(seconds)) return '';
@@ -24,6 +25,7 @@ export default function ChannelProfile() {
   const [showThumbArr, setShowThumbArr] = useState([]);
   const videoRefs = useRef([]);
   const [durations, setDurations] = useState([]);
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   useEffect(() => {
     const fetchChannel = async () => {
@@ -145,17 +147,30 @@ export default function ChannelProfile() {
           </div>
           {/* About this channel link below the banner */}
           <div className="w-full flex justify-end px-8 mt-2 mb-2">
-            <a href="#about" className="text-[#0bb6bc] font-semibold">About this channel</a>
+            <button
+              type="button"
+              className="text-[#0bb6bc] font-semibold hover:underline bg-transparent border-none p-0 m-0"
+              onClick={() => setAboutOpen(true)}
+            >
+              About this channel
+            </button>
           </div>
+          <AboutChannelModal
+            open={aboutOpen}
+            onClose={() => setAboutOpen(false)}
+            description={channel?.description}
+            dateJoined={channel?.dateJoined}
+          />
           {/* Channel Info */}
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between px-8 pt-16 pb-4">
-            <div>
-              <h1 className="text-3xl font-bold text-black dark:text-white">{channel.name}</h1>
-              <div className="text-gray-600 dark:text-gray-300 text-sm mt-2">
-                Subscribers: {channel.subscribers ? channel.subscribers.length : 0}
-              </div>
+          <div className="flex flex-col items-start px-8 pt-16 pb-4 gap-2">
+            <div className="flex flex-row items-center gap-4">
+              <h1 className="text-3xl font-bold text-black dark:text-white mr-2">{channel.name}</h1>
+              
+              <SubscribeButton channel={channel} />
             </div>
-            <SubscribeButton channel={channel} />
+            <div className="text-gray-600 dark:text-gray-300 text-sm mt-2">
+              Subscribers: {channel.subscribers ? channel.subscribers.length : 0}
+            </div>
           </div>
           {/* Videos Grid styled like YouTube thumbnails */}
           <div className="px-8 pb-6">
