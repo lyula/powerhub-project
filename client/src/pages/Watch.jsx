@@ -164,6 +164,7 @@ export default function Watch() {
             <video
               src={video.videoUrl}
               controls
+              controlsList="nodownload"
               className="w-full max-w-full aspect-video rounded-lg shadow-lg mb-2"
               style={{ border: 'none' }}
             />
