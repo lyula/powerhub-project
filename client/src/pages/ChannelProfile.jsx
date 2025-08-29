@@ -106,9 +106,10 @@ export default function ChannelProfile() {
   }, [channel, showThumbArr]);
 
   if (loading) {
-    // Skeleton UI for channel loading
+    // Skeleton UI for channel loading with ProgressBar
     return (
       <div className="w-full min-h-screen bg-gray-100 dark:bg-[#181818]">
+        <ProgressBar loading={true} />
         <Header />
         <div className="flex flex-row w-full" style={{ height: 'calc(100vh - 56px)', maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
           <Sidebar collapsed={true} />

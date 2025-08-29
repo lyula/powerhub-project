@@ -86,6 +86,17 @@ export default function Watch() {
 
   const handleCommentCountChange = (count) => setCommentCount(count);
 
+  function formatPostedAgo(dateString) {
+    if (!dateString) return '';
+    const posted = new Date(dateString);
+    const now = new Date();
+    const diff = Math.floor((now - posted) / 1000);
+    if (diff < 60) return `${diff}s ago`;
+    if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+    if (diff < 2592000) return `${Math.floor(diff/86400)}d ago`;
+    return posted.toLocaleDateString();
+  }
 
   if (loading) {
     // Show ProgressBar and skeleton UI, no spinner
@@ -243,8 +254,17 @@ export default function Watch() {
                 )}
                 <div className="flex flex-col flex-1 min-w-0 p-2">
                   <h3 className="text-base font-semibold text-black dark:text-white line-clamp-2 mb-1">{rec.title}</h3>
-                  <span className="text-xs text-gray-600 dark:text-gray-400 mb-1">{rec.author}</span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">{rec.viewCount || 0} views</span>
+                  <span
+                    className="text-xs text-gray-600 dark:text-gray-400 mb-1 truncate block max-w-[120px]"
+                    title={rec.channel?.name || rec.author}
+                  >
+                    {rec.channel?.name || rec.author}
+                  </span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {rec.viewCount || 0} views
+                    <span className="font-bold mx-1">&bull;</span>
+                    {formatPostedAgo(rec.createdAt)}
+                  </span>
                 </div>
               </div>
             ))}
