@@ -1,6 +1,6 @@
 # PowerHub Project
 
-PowerHub is a full-stack video sharing and channel management platform with the UI/UX inspired by YouTube, built with a modern React frontend and Node.js/Express backend. It supports user registration, profile management (including profile pictures), video uploads, channel creation, filtering, recommendations, and interactive features like likes, dislikes, comments, and subscriptions.
+PowerHub is a full-stack video sharing and channel management platform for PLP Students with the UI/UX inspired by YouTube, built with a modern React frontend and Node.js/Express backend. It supports user registration, profile management (including profile pictures), video uploads, channel creation, filtering, recommendations, and interactive features like likes, dislikes, comments, and subscriptions.
 
 ## Project Structure
 
