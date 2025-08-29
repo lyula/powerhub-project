@@ -183,9 +183,7 @@ const Profile = () => {
                       {user.firstName} {user.lastName}
                     </h3>
                     <p className="text-gray-600 dark:text-gray-400 mb-2">{user.email}</p>
-                    <span className="inline-block px-4 py-2 bg-gradient-to-r from-[#0bb6bc] to-[#0a9ba0] text-white rounded-full text-sm font-medium shadow-md">
-                      {user.role || 'User'}
-                    </span>
+                    {/* Removed role display */}
                   </div>
                 </div>
               </div>
@@ -324,17 +322,7 @@ const Profile = () => {
                         className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
                       />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Role
-                      </label>
-                      <input
-                        type="text"
-                        value={user.role || 'User'}
-                        disabled
-                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
-                      />
-                    </div>
+                    {/* Removed role field */}
                   </form>
                 )}
               </div>
