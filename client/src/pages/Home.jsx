@@ -210,27 +210,40 @@ export default function Home() {
                         key={video._id || i}
                         className={`relative group cursor-pointer bg-gray-100 dark:bg-[#111111] flex flex-col min-w-0 w-full rounded-lg${isLast ? ' mb-16 sm:mb-0' : ''}`}
                         style={{ minHeight: '180px', paddingBottom: '0.5rem' }}
-                        onMouseEnter={() => setHoveredIdx(i)}
-                        onMouseLeave={() => setHoveredIdx(-1)}
                         onClick={() => navigate(`/watch/${video._id || i + 1}`)}
                       >
-                        <div className="relative" style={{ width: '100%', height: '180px' }}>
+                        <div
+                          className="relative"
+                          style={{ width: '100%', height: '180px' }}
+                          onMouseEnter={() => setHoveredIdx(i)}
+                          onMouseLeave={() => setHoveredIdx(-1)}
+                        >
                           {(hoveredIdx === i || (initialPreview && i === 0)) ? (
-                            <video
-                              src={video.videoUrl}
-                              autoPlay
-                              muted={!video.unmuted}
-                              loop
-                              playsInline
-                              className="w-full h-[180px] object-cover rounded-lg"
-                              style={{ borderRadius: '0.75rem' }}
-                              onClick={e => e.preventDefault()}
-                              ref={el => {
-                                if (el) {
-                                  el.muted = !video.unmuted;
-                                }
-                              }}
-                            />
+                            <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                              <video
+                                src={video.videoUrl}
+                                autoPlay
+                                muted={!video.unmuted}
+                                loop
+                                playsInline
+                                className="w-full h-[180px] object-cover rounded-lg"
+                                style={{ borderRadius: '0.75rem' }}
+                                onClick={e => e.preventDefault()}
+                                ref={el => {
+                                  if (el) {
+                                    el.muted = !video.unmuted;
+                                  }
+                                }}
+                              />
+                              {video.duration && (
+                                <span
+                                  className="absolute right-2 bottom-2 bg-black bg-opacity-70 text-white text-xs px-2 py-0.5 rounded"
+                                  style={{ zIndex: 2, pointerEvents: 'none' }}
+                                >
+                                  {formatDuration(video.duration)}
+                                </span>
+                              )}
+                            </div>
                           ) : (
                             <HomeThumbnail
                               video={video}
@@ -240,14 +253,6 @@ export default function Home() {
                               className="w-full h-[180px] object-cover rounded-lg hover:scale-105 transition-transform"
                               style={{ borderRadius: '0.75rem' }}
                             />
-                          )}
-                          {video.duration && (
-                            <span
-                              className="absolute right-2 bottom-2 bg-black bg-opacity-70 text-white text-xs px-2 py-0.5 rounded"
-                              style={{ zIndex: 2, pointerEvents: 'none' }}
-                            >
-                              {formatDuration(video.duration)}
-                            </span>
                           )}
                         </div>
                         <div className="block sm:hidden" style={{ height: '12px' }} />
