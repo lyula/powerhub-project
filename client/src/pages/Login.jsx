@@ -87,7 +87,11 @@ export default function Login() {
           <button className="flex items-center gap-2 py-3 px-6 rounded-lg bg-white dark:bg-gray-900 text-black dark:text-white font-bold shadow hover:bg-gray-200 dark:hover:bg-gray-800 transition w-full justify-center">
             <GoogleIcon /> Sign in with Google
           </button>
-          <Link to="/register" className="text-sm font-semibold hover:underline" style={{ color: colors.secondary }}>
+          <Link 
+            to="/register" 
+            className="text-sm font-semibold hover:underline" 
+            style={{ color: colors.secondary }}
+          >
             Don't have an account? Register
           </Link>
         </div>

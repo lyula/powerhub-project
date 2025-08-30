@@ -39,7 +39,7 @@ const ProtectedRoute = ({ children }) => {
 // Public Route Component (redirects to home if already authenticated)
 const PublicRoute = ({ children }) => {
   const { isAuthenticated, loading, serverConnected } = useAuth();
-  
+  const location = window.location.pathname;
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#181818]">
@@ -55,8 +55,11 @@ const PublicRoute = ({ children }) => {
       </div>
     );
   }
-  
-  return isAuthenticated ? <Navigate to="/home" replace /> : children;
+  // Only redirect if not on /login or /register
+  if (isAuthenticated && location !== '/login' && location !== '/register') {
+    return <Navigate to="/home" replace />;
+  }
+  return children;
 };
 
 // Dummy hook to check if user has a channel (replace with real logic)
@@ -66,7 +69,7 @@ function AppRoutes() {
   const { channel } = useAuth();
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/" element={<Navigate to="/register" replace />} />
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
       <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
@@ -76,7 +79,7 @@ function AppRoutes() {
       <Route path="/create-post" element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
       <Route path="/channel/:author" element={<ProtectedRoute><ChannelProfile /></ProtectedRoute>} />
       <Route path="/watch/:id" element={<ProtectedRoute><Watch /></ProtectedRoute>} />
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="*" element={<Navigate to="/register" replace />} />
     </Routes>
   );
 }

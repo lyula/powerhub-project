@@ -20,9 +20,9 @@ export const AuthProvider = ({ children }) => {
   const [serverConnected, setServerConnected] = useState(true);
   useEffect(() => {
     if (!loading && !user) {
-      // Only redirect if not already on /login
+      // Only redirect if not already on /login or /register
       const currentPath = location?.pathname || '';
-      if (currentPath !== '/login') {
+      if (currentPath !== '/login' && currentPath !== '/register') {
         navigate('/login', { replace: true });
       }
     }
