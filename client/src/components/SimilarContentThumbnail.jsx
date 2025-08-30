@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useImpression } from '../hooks/useImpression';
 
 export default function SimilarContentThumbnail({ video, source, userId, sessionId, ...props }) {
+  const [showPreview, setShowPreview] = useState(false);
   // Helper to format duration in mm:ss
   function formatDuration(seconds) {
     if (!seconds || isNaN(seconds)) return '';
@@ -18,16 +19,34 @@ export default function SimilarContentThumbnail({ video, source, userId, session
   });
 
   return (
-  <div style={{ position: 'relative', width: '8rem', height: '5rem', minHeight: '5rem' }}>
-      <img
-        ref={impressionRef}
-        src={video.thumbnailUrl}
-        alt={video.title}
-        className={`object-cover w-32 h-20 transition-transform ${props.className || ''}`}
-        style={{ margin: 0, padding: 0, display: 'block', width: '8rem', height: '5rem', aspectRatio: '16/9' }}
-        {...props}
-      />
-      {video.duration && (
+    <div
+      style={{ position: 'relative', width: '8rem', height: '5rem', minHeight: '5rem' }}
+      onMouseEnter={() => setShowPreview(true)}
+      onMouseLeave={() => setShowPreview(false)}
+      onTouchStart={() => setShowPreview(true)}
+      onTouchEnd={() => setShowPreview(false)}
+    >
+      {!showPreview && (
+        <img
+          ref={impressionRef}
+          src={video.thumbnailUrl}
+          alt={video.title}
+          className={`object-cover w-32 h-20 transition-transform ${props.className || ''}`}
+          style={{ margin: 0, padding: 0, display: 'block', width: '8rem', height: '5rem', aspectRatio: '16/9' }}
+          {...props}
+        />
+      )}
+      {showPreview && video.previewUrl && (
+        <video
+          src={video.previewUrl}
+          autoPlay
+          muted
+          loop
+          playsInline
+          style={{ position: 'absolute', top: 0, left: 0, width: '8rem', height: '5rem', borderRadius: '0.75rem', objectFit: 'cover', zIndex: 2 }}
+        />
+      )}
+  {video.duration && (
         <span
           style={{
             position: 'absolute',
