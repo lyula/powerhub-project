@@ -26,6 +26,7 @@ export const AuthProvider = ({ children }) => {
         navigate('/login', { replace: true });
       }
     }
+  // Do not restrict access to login or register pages for authenticated users
   }, [loading, user, location, navigate]);
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
