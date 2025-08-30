@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useImpression } from '../hooks/useImpression';
 
-export default function SimilarContentThumbnail({ video, source, userId, sessionId, ...props }) {
-  const [showPreview, setShowPreview] = useState(false);
+export default function SimilarContentThumbnail({ video, source, userId, sessionId, previewedId, setPreviewedId, id, ...props }) {
   // Helper to format duration in mm:ss
   function formatDuration(seconds) {
     if (!seconds || isNaN(seconds)) return '';
@@ -21,12 +20,12 @@ export default function SimilarContentThumbnail({ video, source, userId, session
   return (
     <div
       style={{ position: 'relative', width: '8rem', height: '5rem', minHeight: '5rem' }}
-      onMouseEnter={() => setShowPreview(true)}
-      onMouseLeave={() => setShowPreview(false)}
-      onTouchStart={() => setShowPreview(true)}
-      onTouchEnd={() => setShowPreview(false)}
+      onMouseEnter={() => setPreviewedId(id)}
+      onMouseLeave={() => setPreviewedId(null)}
+      onTouchStart={() => setPreviewedId(id)}
+      onTouchEnd={() => setPreviewedId(null)}
     >
-      {!showPreview && (
+      {previewedId !== id && (
         <img
           ref={impressionRef}
           src={video.thumbnailUrl}
@@ -36,14 +35,14 @@ export default function SimilarContentThumbnail({ video, source, userId, session
           {...props}
         />
       )}
-      {showPreview && video.previewUrl && (
+      {previewedId === id && video.previewUrl && (
         <video
           src={video.previewUrl}
           autoPlay
           muted
           loop
           playsInline
-          style={{ position: 'absolute', top: 0, left: 0, width: '8rem', height: '5rem', borderRadius: '0.75rem', objectFit: 'cover', zIndex: 2 }}
+          style={{ position: 'absolute', top: 0, left: 0, width: '8rem', height: '5rem', borderRadius: '0.75rem', objectFit: 'cover', zIndex: 2, background: '#000' }}
         />
       )}
   {video.duration && (

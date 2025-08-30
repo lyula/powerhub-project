@@ -37,6 +37,7 @@ export default function Home() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [videoDurations, setVideoDurations] = useState([]);
   const [hoveredIdx, setHoveredIdx] = useState(-1);
+  const [previewedId, setPreviewedId] = useState(null);
   const navigate = useNavigate();
   // Impression refs for each video
   const location = useLocation();
@@ -44,7 +45,7 @@ export default function Home() {
   const videoRefs = useRef([]);
 
   const handleToggleSidebar = () => setSidebarOpen((open) => !open);
-    const [initialPreview, setInitialPreview] = useState(true);
+  const [initialPreview, setInitialPreview] = useState(true);
 
   // Load videos from API or fallback to sample
   useEffect(() => {
@@ -202,7 +203,7 @@ export default function Home() {
                   ))
                 ) : (
                   displayVideos.map((video, i) => {
-                  const showDuration = videoDurations[i];
+                    const showDuration = videoDurations[i];
                     // Add extra margin-bottom to last video on mobile
                     const isLast = i === displayVideos.length - 1;
                     return (
@@ -215,45 +216,18 @@ export default function Home() {
                         <div
                           className="relative"
                           style={{ width: '100%', height: '180px' }}
-                          onMouseEnter={() => setHoveredIdx(i)}
-                          onMouseLeave={() => setHoveredIdx(-1)}
                         >
-                          {(hoveredIdx === i || (initialPreview && i === 0)) ? (
-                            <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-                              <video
-                                src={video.videoUrl}
-                                autoPlay
-                                muted={!video.unmuted}
-                                loop
-                                playsInline
-                                className="w-full h-[180px] object-cover rounded-lg"
-                                style={{ borderRadius: '0.75rem' }}
-                                onClick={e => e.preventDefault()}
-                                ref={el => {
-                                  if (el) {
-                                    el.muted = !video.unmuted;
-                                  }
-                                }}
-                              />
-                              {video.duration && (
-                                <span
-                                  className="absolute right-2 bottom-2 bg-black bg-opacity-70 text-white text-xs px-2 py-0.5 rounded"
-                                  style={{ zIndex: 2, pointerEvents: 'none' }}
-                                >
-                                  {formatDuration(video.duration)}
-                                </span>
-                              )}
-                            </div>
-                          ) : (
-                            <HomeThumbnail
-                              video={video}
-                              source="homepage"
-                              userId={video.userId}
-                              sessionId={window.sessionStorage.getItem('sessionId') || undefined}
-                              className="w-full h-[180px] object-cover rounded-lg hover:scale-105 transition-transform"
-                              style={{ borderRadius: '0.75rem' }}
-                            />
-                          )}
+                          <HomeThumbnail
+                            video={video}
+                            source="homepage"
+                            userId={video.userId}
+                            sessionId={window.sessionStorage.getItem('sessionId') || undefined}
+                            className="w-full h-[180px] object-cover rounded-lg hover:scale-105 transition-transform"
+                            style={{ borderRadius: '0.75rem' }}
+                            id={video._id || i}
+                            previewedId={previewedId}
+                            setPreviewedId={setPreviewedId}
+                          />
                         </div>
                         <div className="block sm:hidden" style={{ height: '12px' }} />
                         <div className="p-0 sm:p-3 flex-1 flex flex-col justify-between pb-1">
