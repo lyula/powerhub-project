@@ -211,7 +211,11 @@ export default function Home() {
                         key={video._id || i}
                         className={`relative group cursor-pointer bg-gray-100 dark:bg-[#111111] flex flex-col min-w-0 w-full rounded-lg${isLast ? ' mb-16 sm:mb-0' : ''}`}
                         style={{ minHeight: '180px', paddingBottom: '0.5rem' }}
-                        onClick={() => navigate(`/watch/${video._id || i + 1}`)}
+                        onClick={(e) => {
+                          // Prevent navigation to watch page if clicking channel name or profile pic
+                          if (e.target.closest('.channel-link')) return;
+                          navigate(`/watch/${video._id || i + 1}`);
+                        }}
                       >
                         <div
                           className="relative"
@@ -225,21 +229,20 @@ export default function Home() {
                             className="w-full h-[180px] object-cover rounded-lg hover:scale-105 transition-transform"
                             style={{ borderRadius: '0.75rem' }}
                             id={video._id || i}
-                            previewedId={previewedId}
-                            setPreviewedId={setPreviewedId}
                           />
                         </div>
                         <div className="block sm:hidden" style={{ height: '12px' }} />
                         <div className="p-0 sm:p-3 flex-1 flex flex-col justify-between pb-1">
                           <div className="flex items-start gap-2 sm:gap-3 mb-0">
-                            <button
-                              type="button"
-                              onClick={() => navigate(`/channel/${video.channelId}`)}
-                              className="p-0 m-0 bg-transparent border-none"
-                              style={{ lineHeight: 0 }}
+                            <Link
+                              to={`/channel/${video.channelId}`}
+                              className="p-0 m-0 bg-transparent border-none channel-link"
+                              style={{ lineHeight: 0, display: 'inline-block' }}
+                              aria-label={`Go to ${video.author} channel`}
+                              onClick={e => e.stopPropagation()}
                             >
-                              <img src={video.profile} alt={video.author} className="w-7 h-7 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 dark:border-gray-700 flex-shrink-0 cursor-pointer hover:scale-105 transition-transform" style={{ width: '40px', height: '40px', objectFit: 'cover', aspectRatio: '1/1', minWidth: '40px', minHeight: '40px', maxWidth: '40px', maxHeight: '40px' }} />
-                            </button>
+                              <img src={video.profile} alt={video.author} className="w-7 h-7 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 dark:border-gray-700 flex-shrink-0 cursor-pointer hover:scale-105 transition-transform" style={{ width: '40px', height: '40px', objectFit: 'cover', aspectRatio: '1/1', minWidth: '40px', minHeight: '40px', maxWidth: '40px', maxHeight: '40px', pointerEvents: 'auto' }} />
+                            </Link>
                             <div className="flex flex-col min-w-0">
                               <h3
                                 className="font-bold text-xs sm:text-base md:text-lg text-black dark:text-white line-clamp-2"
@@ -253,9 +256,10 @@ export default function Home() {
                                 <div className="flex flex-row items-center gap-1 text-xs text-gray-600 dark:text-gray-400 truncate sm:hidden">
                                   <button
                                     type="button"
-                                    onClick={() => navigate(`/channel/${video.channelId}`)}
-                                    className="text-xs font-medium text-gray-600 dark:text-gray-400 truncate hover:underline bg-transparent border-none p-0 m-0"
+                                    onClick={(e) => { e.stopPropagation(); navigate(`/channel/${video.channelId}`); }}
+                                    className="text-xs font-medium text-gray-600 dark:text-gray-400 truncate hover:underline bg-transparent border-none p-0 m-0 channel-link"
                                     style={{ textAlign: 'left' }}
+                                    aria-label={`Go to ${video.author} channel`}
                                   >
                                     {video.author}
                                   </button>

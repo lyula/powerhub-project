@@ -28,10 +28,11 @@ export default function SimilarContentThumbnail({ video, source, userId, session
       {previewedId !== id && (
         <img
           ref={impressionRef}
-          src={video.thumbnailUrl}
+          src={video.thumbnailUrl || video.thumbnail || ''}
           alt={video.title}
           className={`object-cover w-32 h-20 transition-transform ${props.className || ''}`}
           style={{ margin: 0, padding: 0, display: 'block', width: '8rem', height: '5rem', aspectRatio: '16/9' }}
+          onError={e => { e.target.onerror = null; e.target.src = '/vite.svg'; }}
           {...props}
         />
       )}
@@ -43,6 +44,21 @@ export default function SimilarContentThumbnail({ video, source, userId, session
           loop
           playsInline
           style={{ position: 'absolute', top: 0, left: 0, width: '8rem', height: '5rem', borderRadius: '0.75rem', objectFit: 'cover', zIndex: 2, background: '#000' }}
+          onError={e => {
+            e.target.style.display = 'none';
+            if (impressionRef.current) impressionRef.current.style.display = 'block';
+          }}
+        />
+      )}
+      {previewedId === id && !video.previewUrl && (
+        <img
+          ref={impressionRef}
+          src={video.thumbnailUrl || video.thumbnail || ''}
+          alt={video.title}
+          className={`object-cover w-32 h-20 transition-transform ${props.className || ''}`}
+          style={{ margin: 0, padding: 0, display: 'block', width: '8rem', height: '5rem', aspectRatio: '16/9', position: 'absolute', top: 0, left: 0, zIndex: 2 }}
+          onError={e => { e.target.onerror = null; e.target.src = '/vite.svg'; }}
+          {...props}
         />
       )}
   {video.duration && (
