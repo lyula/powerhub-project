@@ -121,9 +121,14 @@ export default function Register() {
           <button 
             type="submit" 
             disabled={loading}
-            className="w-full py-3 rounded-lg bg-blue-600 text-white font-bold hover:bg-blue-700 disabled:bg-blue-400 transition shadow-md mb-2"
+            className="w-full py-3 rounded-lg bg-blue-600 text-white font-bold hover:bg-blue-700 disabled:bg-blue-400 transition shadow-md mb-2 flex items-center justify-center gap-2"
           >
-            {loading ? 'Creating Account...' : 'Sign Up'}
+            {loading ? (
+              <>
+                <span className="inline-block w-5 h-5 border-2 border-white border-t-blue-400 rounded-full animate-spin"></span>
+                <span>Creating Account</span>
+              </>
+            ) : 'Sign Up'}
           </button>
         </form>
         
