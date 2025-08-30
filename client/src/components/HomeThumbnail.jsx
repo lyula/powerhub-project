@@ -1,8 +1,11 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useImpression } from '../hooks/useImpression';
-import { FaVolumeMute } from 'react-icons/fa';
+import { FaVolumeMute, FaVolumeUp } from 'react-icons/fa';
 export default function HomeThumbnail({ video, source, userId, sessionId, previewedId, setPreviewedId, id, ...props }) {
   const [showPreview, setShowPreview] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
+  const [hoveringIcon, setHoveringIcon] = useState(false);
+  const videoRef = useRef(null);
   const timerRef = useRef(null);
   function formatDuration(seconds) {
     if (!seconds || isNaN(seconds)) return '';
@@ -22,17 +25,19 @@ export default function HomeThumbnail({ video, source, userId, sessionId, previe
     setShowPreview(true);
   };
   const handleMouseLeave = () => {
-    setShowPreview(false);
+    setTimeout(() => {
+      if (!hoveringIcon) setShowPreview(false);
+    }, 0);
   };
 
   return (
     <div
       style={{ position: 'relative', width: '100%', height: '180px', minHeight: '180px', maxHeight: '180px', overflow: 'hidden', borderRadius: '0.75rem', margin: 0, padding: 0, background: 'var(--tw-bg-opacity,1)'}}
       className="rounded-lg p-0 bg-gray-100 dark:bg-[#111111]"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      onTouchStart={handleMouseEnter}
-      onTouchEnd={handleMouseLeave}
+  onMouseEnter={handleMouseEnter}
+  onMouseLeave={handleMouseLeave}
+  onTouchStart={handleMouseEnter}
+  onTouchEnd={handleMouseLeave}
     >
       {!showPreview || !(video.previewUrl || video.videoUrl) ? (
         <img
@@ -47,9 +52,10 @@ export default function HomeThumbnail({ video, source, userId, sessionId, previe
       ) : (
         <div style={{ position: 'relative', width: '100%', height: '100%' }}>
           <video
+            ref={videoRef}
             src={video.previewUrl || video.videoUrl}
             autoPlay
-            muted
+            muted={isMuted}
             loop
             playsInline
             style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', borderRadius: '0.75rem', objectFit: 'cover', zIndex: 2, background: '#000' }}
@@ -61,7 +67,7 @@ export default function HomeThumbnail({ video, source, userId, sessionId, previe
           <span
             style={{
               position: 'absolute',
-              top: 10,
+              bottom: 10,
               left: 10,
               zIndex: 3,
               background: 'rgba(0,0,0,0.5)',
@@ -70,9 +76,20 @@ export default function HomeThumbnail({ video, source, userId, sessionId, previe
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              cursor: 'pointer',
             }}
+            onClick={e => {
+              e.stopPropagation();
+              setIsMuted(m => !m);
+              if (videoRef.current) videoRef.current.muted = !isMuted;
+            }}
+            onMouseEnter={e => { e.stopPropagation(); setHoveringIcon(true); }}
+            onMouseLeave={e => { e.stopPropagation(); setHoveringIcon(false); }}
+            onMouseDown={e => e.stopPropagation()}
+            onTouchStart={e => { e.stopPropagation(); setHoveringIcon(true); }}
+            onTouchEnd={e => { e.stopPropagation(); setHoveringIcon(false); }}
           >
-            <FaVolumeMute color="#fff" size={22} />
+            {isMuted ? <FaVolumeMute color="#fff" size={22} /> : <FaVolumeUp color="#fff" size={22} />}
           </span>
         </div>
       )}
