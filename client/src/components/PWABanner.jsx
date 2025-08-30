@@ -46,11 +46,13 @@ export default function PWABanner() {
     }
   };
 
-  if (!showBanner) return null;
+  // Instead of a banner, render a link/button for install
+  if (!deferredPrompt || !showBanner) return null;
   return (
-    <div className="fixed bottom-0 left-0 w-full bg-blue-600 text-white p-4 flex justify-between items-center z-50">
-      <span>Install PowerHub for a better mobile experience!</span>
-      <button onClick={handleInstall} className="bg-white text-blue-600 px-4 py-2 rounded font-bold">Install</button>
+    <div className="w-full flex justify-center items-center mt-4">
+      <button onClick={handleInstall} className="text-blue-600 underline font-semibold bg-transparent border-none cursor-pointer">
+        Get the mobile app experience
+      </button>
     </div>
   );
 }

@@ -98,10 +98,12 @@ export default function Login() {
             >
               Don't have an account? Register
             </Link>
+            {/* PWABanner should always be directly below the register link */}
+            <PWABanner />
           </div>
         </div>
       </div>
-      <PWABanner />
+  {/* Remove duplicate PWABanner to avoid double rendering */}
     </>
   );
 }
