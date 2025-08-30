@@ -12,6 +12,13 @@ import ChannelSetup from './pages/ChannelSetup';
 import CreatePost from './pages/CreatePost';
 import ChannelProfile from './pages/ChannelProfile';
 import Watch from './pages/Watch';
+// import Trending from './pages/Trending';
+import Specializations from './pages/Specializations';
+import Subscriptions from './pages/Subscriptions';
+import SavedVideos from './pages/SavedVideos';
+import LikedVideos from './pages/LikedVideos';
+import CourseVideos from './pages/CourseVideos';
+import WatchHistory from './pages/WatchHistory';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -79,6 +86,14 @@ function AppRoutes() {
       <Route path="/create-post" element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
       <Route path="/channel/:author" element={<ProtectedRoute><ChannelProfile /></ProtectedRoute>} />
       <Route path="/watch/:id" element={<ProtectedRoute><Watch /></ProtectedRoute>} />
+      {/* Sidebar Placeholder Pages */}
+    {/* <Route path="/trending" element={<ProtectedRoute><Trending /></ProtectedRoute>} /> */}
+      <Route path="/specializations" element={<ProtectedRoute><Specializations /></ProtectedRoute>} />
+      <Route path="/subscriptions" element={<ProtectedRoute><Subscriptions /></ProtectedRoute>} />
+      <Route path="/saved-videos" element={<ProtectedRoute><SavedVideos /></ProtectedRoute>} />
+      <Route path="/liked-videos" element={<ProtectedRoute><LikedVideos /></ProtectedRoute>} />
+      <Route path="/course-videos" element={<ProtectedRoute><CourseVideos /></ProtectedRoute>} />
+      <Route path="/watch-history" element={<ProtectedRoute><WatchHistory /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );

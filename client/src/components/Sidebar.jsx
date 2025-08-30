@@ -5,14 +5,14 @@ import { HomeIcon, FireIcon, AcademicCapIcon, VideoCameraIcon, UserIcon, Bookmar
 
 const items = [
   { label: 'Home', icon: <HomeIcon />, path: '/home' },
-  { label: 'Trending', icon: <FireIcon /> },
-  { label: 'Specializations', icon: <AcademicCapIcon /> },
+  { label: 'Trending', icon: <FireIcon />, path: '/home' },
+  { label: 'Specializations', icon: <AcademicCapIcon />, path: '/specializations' },
   { label: 'My Channel', icon: <VideoCameraIcon />, isChannel: true },
-  { label: 'Subscriptions', icon: <SubscriptionsIcon /> },
-  { label: 'Saved Videos', icon: <BookmarkIcon /> },
-  { label: 'Liked Videos', icon: <HeartIcon /> },
-  { label: 'Course Videos', icon: <PlayCircleIcon /> },
-  { label: 'Watch History', icon: <ClockIcon /> },
+  { label: 'Subscriptions', icon: <SubscriptionsIcon />, path: '/subscriptions' },
+  { label: 'Saved Videos', icon: <BookmarkIcon />, path: '/saved-videos' },
+  { label: 'Liked Videos', icon: <HeartIcon />, path: '/liked-videos' },
+  { label: 'Course Videos', icon: <PlayCircleIcon />, path: '/course-videos' },
+  { label: 'Watch History', icon: <ClockIcon />, path: '/watch-history' },
   { label: 'Profile', icon: <UserIcon />, path: '/profile' },
 ];
 
