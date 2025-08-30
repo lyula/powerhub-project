@@ -10,19 +10,39 @@ export default function PWABanner() {
 
   useEffect(() => {
     if (!isMobile()) return;
+    // Check if app is already installed
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    if (isStandalone) {
+      setShowBanner(false);
+      return;
+    }
     let handler = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
       setShowBanner(true);
     };
     window.addEventListener('beforeinstallprompt', handler);
+    // Always show banner if not installed and prompt is available
+    if (deferredPrompt) setShowBanner(true);
     return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, [deferredPrompt]);
+
+  // Hide banner if app is installed
+  useEffect(() => {
+    const checkInstalled = () => {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+      if (isStandalone) setShowBanner(false);
+    };
+    window.addEventListener('appinstalled', checkInstalled);
+    return () => window.removeEventListener('appinstalled', checkInstalled);
   }, []);
 
   const handleInstall = () => {
     if (deferredPrompt) {
       deferredPrompt.prompt();
-      deferredPrompt.userChoice.then(() => setShowBanner(false));
+      deferredPrompt.userChoice.then(() => {
+        // Banner will hide automatically if app is installed
+      });
     }
   };
 
