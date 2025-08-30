@@ -17,11 +17,22 @@ export default function LikedVideos() {
         <div className={`flex-1 flex flex-col ${sidebarOpen ? 'ml-64' : 'ml-20'} w-full`} style={{ maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
           <div className="p-2 md:p-4">
             <h2 className="text-lg md:text-xl font-bold mb-2 text-[#0bb6bc] dark:text-[#0bb6bc]">Liked Videos</h2>
-            <div className="mt-4 md:mt-6">
-              <div className="flex flex-col items-center justify-center h-96">
-                <h1 className="text-3xl font-bold text-black dark:text-white">Liked Videos (Placeholder)</h1>
-                <p className="mt-2 text-gray-500 dark:text-gray-400">This is a template for the Liked Videos page.</p>
-              </div>
+            <div className="mt-4 md:mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Dummy liked videos */}
+              {[1,2,3,4,5].map((id) => (
+                <div key={id} className="bg-white dark:bg-[#222] rounded-lg shadow-md overflow-hidden flex flex-col">
+                  <img
+                    src="https://via.placeholder.com/400x225?text=Video+Thumbnail"
+                    alt="Video Thumbnail"
+                    className="w-full h-48 object-cover"
+                  />
+                  <div className="p-4 flex-1 flex flex-col justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Sample Video Title {id}</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Channel Name {id}</p>
+                    <span className="text-xs text-gray-400">1.2M views • 2 days ago</span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
