@@ -16,14 +16,14 @@ export default defineConfig({
         theme_color: '#0bb6bc',
         icons: [
           {
-            src: '/app-logo.jpg',
+            src: '/app-logotwo.png',
             sizes: '192x192',
-            type: 'image/jpeg'
+            type: 'image/png'
           },
           {
-            src: '/app-logo.jpg',
+            src: '/app-logotwo.png',
             sizes: '512x512',
-            type: 'image/jpeg'
+            type: 'image/png'
           }
         ]
       }
