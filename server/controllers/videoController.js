@@ -33,7 +33,7 @@ exports.getAllVideos = async (req, res) => {
 };
 const Video = require('../models/Video');
 const Channel = require('../models/Channel');
-const User = require('../models/user');
+const User = require('../models/User');
 const cloudinary = require('../config/cloudinary');
 const fs = require('fs');
 
