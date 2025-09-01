@@ -252,69 +252,127 @@ export default function VideoComments({ videoId, onCountChange }) {
     return `${Math.floor(diff/31536000)}yr ago`;
   }
 
+  // Track which comments have replies expanded and how many replies are shown
+  const [expandedReplies, setExpandedReplies] = useState({}); // { [commentId]: number }
+
+  function handleViewReplies(commentId, totalReplies) {
+    setExpandedReplies((prev) => ({ ...prev, [commentId]: Math.min(4, totalReplies) }));
+  }
+
+  function handleShowMoreReplies(commentId, totalReplies) {
+    setExpandedReplies((prev) => ({ ...prev, [commentId]: Math.min((prev[commentId] || 4) + 4, totalReplies) }));
+  }
+
+  function handleHideReplies(commentId) {
+    setExpandedReplies((prev) => {
+      const copy = { ...prev };
+      delete copy[commentId];
+      return copy;
+    });
+  }
+
   function renderComments(commentsList) {
-    return commentsList.map((comment) => (
-      <div key={comment._id} className="flex gap-3 items-start">
-        <img src={getAvatar(comment.author)} alt={getDisplayName(comment.author)} className="w-8 h-8 rounded-full border" />
-        <div className="flex flex-col flex-1">
-          <span className="font-semibold text-black dark:text-white">
-            {getDisplayName(comment.author)}
-            <span className="text-xs text-gray-400 font-normal ml-2">{formatRelativeTime(comment.createdAt)}</span>
-          </span>
-          <span className="text-gray-800 dark:text-gray-200 mb-2">{comment.text}</span>
-          <div className="flex items-center gap-6 mb-1">
-            <button
-              className="flex items-center gap-1 text-gray-700 dark:text-gray-200 hover:text-pink-500 transition bg-transparent border-none p-0"
-              onClick={() => handleLikeComment(comment._id, comment.likes?.includes(user?._id))}
-              disabled={!!likeLoading[comment._id]}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill={comment.likes?.includes(user?._id) ? '#c42152' : 'none'} stroke={comment.likes?.includes(user?._id) ? '#c42152' : 'currentColor'} strokeWidth="2">
-                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41 1.01 4.5 2.09C13.09 4.01 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-              </svg>
-              <span className="text-xs">{comment.likes?.length || 0}</span>
-            </button>
-            <button className="flex items-center gap-1 text-gray-700 dark:text-gray-200 hover:text-blue-500 transition bg-transparent border-none p-0" onClick={() => handleReply(comment._id)}>
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2" fill="none" />
-              </svg>
-              <span className="text-xs">Reply ({comment.replies?.length || 0})</span>
-            </button>
-          </div>
-          {replyingTo === comment._id && (
-            <form onSubmit={(e) => handleAddReply(e, comment._id)} className="flex gap-2 mb-2">
-              <input type="text" className="flex-1 border rounded px-2 py-1 text-black dark:text-white bg-gray-100 dark:bg-gray-800" placeholder="Write a reply..." value={replyText} onChange={(e) => setReplyText(e.target.value)} />
-              <button type="submit" className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition">Reply</button>
-            </form>
-          )}
-          {/* Replies */}
-          {comment.replies && comment.replies.length > 0 && (
-            <div className="ml-8 mt-2 flex flex-col gap-2">
-              {comment.replies.map((reply) => (
-                <div key={reply._id} className="flex gap-2 items-start">
-                  <img src={getAvatar(reply.author)} alt={getDisplayName(reply.author)} className="w-7 h-7 rounded-full border" />
-                  <div className="flex flex-col flex-1">
-                    <span className="font-semibold text-black dark:text-white">
-                      {getDisplayName(reply.author)}
-                      <span className="text-xs text-gray-400 font-normal ml-2">{formatRelativeTime(reply.createdAt)}</span>
-                    </span>
-                    <span className="text-gray-800 dark:text-gray-200">{reply.text}</span>
-                    <button
-                      className="flex items-center gap-1 text-gray-700 dark:text-gray-200 hover:text-pink-500 transition bg-transparent border-none p-0 mt-1"
-                      onClick={() => handleLikeReply(comment._id, reply._id, reply.likes?.includes(user?._id))}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill={reply.likes?.includes(user?._id) ? '#c42152' : 'none'} stroke={reply.likes?.includes(user?._id) ? '#c42152' : 'currentColor'} strokeWidth="2">
-                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41 1.01 4.5 2.09C13.09 4.01 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                      </svg>
-                      <span className="text-xs">{reply.likes?.length || 0}</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
+    return commentsList.map((comment) => {
+      const totalReplies = comment.replies?.length || 0;
+      const shownReplies = expandedReplies[comment._id] || 0;
+      return (
+        <div key={comment._id} className="flex gap-3 items-start">
+          <img src={getAvatar(comment.author)} alt={getDisplayName(comment.author)} className="w-8 h-8 rounded-full border" />
+          <div className="flex flex-col flex-1">
+            <span className="font-semibold text-black dark:text-white">
+              {getDisplayName(comment.author)}
+              <span className="text-xs text-gray-400 font-normal ml-2">{formatRelativeTime(comment.createdAt)}</span>
+            </span>
+            <span className="text-gray-800 dark:text-gray-200 mb-2">{comment.text}</span>
+            <div className="flex items-center gap-6 mb-1">
+              <button
+                className="flex items-center gap-1 text-gray-700 dark:text-gray-200 hover:text-pink-500 transition bg-transparent border-none p-0"
+                onClick={() => handleLikeComment(comment._id, comment.likes?.includes(user?._id))}
+                disabled={!!likeLoading[comment._id]}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill={comment.likes?.includes(user?._id) ? '#c42152' : 'none'} stroke={comment.likes?.includes(user?._id) ? '#c42152' : 'currentColor'} strokeWidth="2">
+                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41 1.01 4.5 2.09C13.09 4.01 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                </svg>
+                <span className="text-xs">{comment.likes?.length || 0}</span>
+              </button>
+              <button className="flex items-center gap-1 text-gray-700 dark:text-gray-200 hover:text-blue-500 transition bg-transparent border-none p-0" onClick={() => handleReply(comment._id)}>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2" fill="none" />
+                </svg>
+                <span className="text-xs">Reply ({comment.replies?.length || 0})</span>
+              </button>
             </div>
-          )}
+            {replyingTo === comment._id && (
+              <form onSubmit={(e) => handleAddReply(e, comment._id)} className="flex gap-2 mb-2">
+                <input type="text" className="flex-1 border rounded px-2 py-1 text-black dark:text-white bg-gray-100 dark:bg-gray-800" placeholder="Write a reply..." value={replyText} onChange={(e) => setReplyText(e.target.value)} />
+                <button type="submit" className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition">Reply</button>
+              </form>
+            )}
+            {/* Replies */}
+            {totalReplies > 0 && (
+              <div className="ml-8 mt-2 flex flex-col gap-2">
+                {shownReplies === 0 ? (
+                  <button className="text-xs text-blue-500 hover:underline w-fit" onClick={() => handleViewReplies(comment._id, totalReplies)}>
+                    View replies ({totalReplies})
+                  </button>
+                ) : (
+                  <>
+                    {comment.replies.slice(0, shownReplies).map((reply) => (
+                      <div key={reply._id} className="flex gap-2 items-start">
+                        <img src={getAvatar(reply.author)} alt={getDisplayName(reply.author)} className="w-7 h-7 rounded-full border" />
+                        <div className="flex flex-col flex-1">
+                          <span className="font-semibold text-black dark:text-white">
+                            {getDisplayName(reply.author)}
+                            <span className="text-xs text-gray-400 font-normal ml-2">{formatRelativeTime(reply.createdAt)}</span>
+                          </span>
+                          <span className="text-gray-800 dark:text-gray-200">{reply.text}</span>
+                          <div className="flex items-center gap-4 mt-1">
+                            <button
+                              className="flex items-center gap-1 text-gray-700 dark:text-gray-200 hover:text-pink-500 transition bg-transparent border-none p-0"
+                              onClick={() => handleLikeReply(comment._id, reply._id, reply.likes?.includes(user?._id))}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill={reply.likes?.includes(user?._id) ? '#c42152' : 'none'} stroke={reply.likes?.includes(user?._id) ? '#c42152' : 'currentColor'} strokeWidth="2">
+                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41 1.01 4.5 2.09C13.09 4.01 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                              </svg>
+                              <span className="text-xs">{reply.likes?.length || 0}</span>
+                            </button>
+                            <button
+                              className="flex items-center gap-1 text-gray-700 dark:text-gray-200 hover:text-blue-500 transition bg-transparent border-none p-0"
+                              onClick={() => handleReply(reply._id)}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2" fill="none" />
+                              </svg>
+                              <span className="text-xs">Reply</span>
+                            </button>
+                          </div>
+                          {replyingTo === reply._id && (
+                            <form onSubmit={(e) => handleAddReply(e, reply._id)} className="flex gap-2 mb-2 mt-1">
+                              <input type="text" className="flex-1 border rounded px-2 py-1 text-black dark:text-white bg-gray-100 dark:bg-gray-800" placeholder="Write a reply..." value={replyText} onChange={(e) => setReplyText(e.target.value)} />
+                              <button type="submit" className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition">Reply</button>
+                            </form>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    <div className="flex gap-2 mt-1">
+                      {shownReplies < totalReplies && (
+                        <button className="text-xs text-blue-500 hover:underline w-fit" onClick={() => handleShowMoreReplies(comment._id, totalReplies)}>
+                          Show more replies
+                        </button>
+                      )}
+                      <button className="text-xs text-gray-500 hover:underline w-fit" onClick={() => handleHideReplies(comment._id)}>
+                        Hide replies
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    ));
+      );
+    });
   }
 
   return (
