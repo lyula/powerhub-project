@@ -8,7 +8,7 @@ router.post('/login', userController.login);
 
 // Authenticated user info
 const jwt = require('jsonwebtoken');
-const User = require('../models/user');
+const User = require('../models/User');
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
 
 router.get('/me', async (req, res) => {

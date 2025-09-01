@@ -1,19 +1,19 @@
-const User = require('../models/user');
+const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
 
 exports.register = async (req, res) => {
   try {
-    const { username, email, password, firstName, lastName, role } = req.body;
-    if (!username || !email || !password || !firstName || !lastName) {
+    const { username, email, password, firstName, lastName, gender } = req.body;
+    if (!username || !email || !password || !firstName || !lastName || !gender) {
       return res.status(400).json({ message: 'All fields are required.' });
     }
     const existingUser = await User.findOne({ $or: [{ email }, { username }] });
     if (existingUser) {
       return res.status(409).json({ message: 'User already exists.' });
     }
-    const user = new User({ username, email, password, firstName, lastName, role });
+  const user = new User({ username, email, password, firstName, lastName, gender });
     await user.save();
     const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '7d' });
     res.status(201).json({ data: { user, token } });

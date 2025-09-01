@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from '../components/Header';
+import MobileHeader from '../components/MobileHeader';
+import { AcademicCapIcon } from '../components/icons';
 import Sidebar from '../components/Sidebar';
 import StudentUtility from '../components/StudentUtility';
 import BottomTabs from '../components/BottomTabs';
@@ -94,7 +96,12 @@ export default function ChannelSetup({ onChannelCreated }) {
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-[#111111] w-full" style={{ overflowX: 'hidden', scrollbarWidth: 'none', maxWidth: '100vw' }}>
-      <HeaderFixed onToggleSidebar={handleToggleSidebar} />
+      {/* Mobile header for Channel Setup page */}
+      <MobileHeader icon={<AcademicCapIcon />} label="Channel Setup" />
+      {/* Desktop header remains unchanged */}
+      <div className="hidden md:block">
+        <HeaderFixed onToggleSidebar={handleToggleSidebar} />
+      </div>
       <div className="flex flex-row w-full" style={{ height: 'calc(100vh - 44px)', maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
         <SidebarFixed sidebarOpen={sidebarOpen} />
         {!sidebarOpen && (

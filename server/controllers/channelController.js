@@ -146,7 +146,11 @@ exports.getChannelById = async (req, res) => {
     if (!channel) {
       return res.status(404).json({ error: 'Channel not found.' });
     }
-    res.json(channel);
+    // Fetch videos for this channel
+    const Video = require('../models/Video');
+    const videos = await Video.find({ channel: channel._id }).sort({ createdAt: -1 });
+    // Return channel info plus videos
+    res.json({ ...channel.toObject(), videos });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

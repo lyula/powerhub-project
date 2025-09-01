@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
+import MobileHeader from '../components/MobileHeader';
+import { AcademicCapIcon } from '../components/icons';
 import Sidebar from '../components/Sidebar';
 import BottomTabs from '../components/BottomTabs';
 
@@ -14,6 +17,7 @@ const CreatePost = () => {
   const [specialization, setSpecialization] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const navigate = useNavigate();
 
   const handleImageChange = (e) => {
     setImages(Array.from(e.target.files));
@@ -29,21 +33,38 @@ const CreatePost = () => {
       setMessage('Post created successfully!');
       setTitle('');
       setDescription('');
-  setImages([]);
-  setLink('');
-  setPrivacy('public');
-  setSpecialization('');
+      setImages([]);
+      setLink('');
+      setPrivacy('public');
+      setSpecialization('');
     }, 1500);
   };
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-[#111111] w-full" style={{ overflowX: 'hidden', scrollbarWidth: 'none' }}>
-      <Header onToggleSidebar={handleToggleSidebar} />
+      {/* Mobile header for Create Post page */}
+      <MobileHeader icon={<AcademicCapIcon />} label="Create Post" />
+      {/* Desktop header remains unchanged */}
+      <div className="hidden md:block">
+        <Header onToggleSidebar={handleToggleSidebar} />
+      </div>
       <div className="flex flex-row w-full" style={{ height: 'calc(100vh - 56px)', maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
         <Sidebar collapsed={!sidebarOpen} />
         <main className="flex-1 flex flex-col items-center justify-start w-full px-2 md:px-0 pt-8" style={{ maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
           <div className="w-full max-w-3xl mx-auto">
-            <h2 className="text-2xl md:text-3xl font-bold mb-8 text-[#c42152] dark:text-[#c42152] text-left pl-8">Create Post</h2>
+            {/* Removed duplicate Upload Video button */}
+            {/* Mobile only: Switch to Upload Video replaces title */}
+            <div className="md:hidden w-full flex justify-start pt-12 mb-8">
+              <button
+                type="button"
+                className="px-4 py-2 bg-[#0bb6bc] text-white rounded-lg font-semibold shadow hover:bg-[#0a9ba0] transition"
+                onClick={() => navigate('/upload')}
+              >
+                Upload Video
+              </button>
+            </div>
+            {/* Desktop only: Show title */}
+            <h2 className="hidden md:block text-2xl md:text-3xl font-bold mb-8 text-[#c42152] dark:text-[#c42152] text-left pl-8">Create Post</h2>
             {message && <div className="mb-4 text-green-600 dark:text-green-400 w-full max-w-2xl">{message}</div>}
             <form onSubmit={handleSubmit} className="bg-white dark:bg-[#1a1a1a] rounded-xl shadow-lg p-6 md:p-10 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
               <div className="flex flex-col">

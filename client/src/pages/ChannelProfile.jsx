@@ -1,15 +1,39 @@
-import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import SubscribeButton from '../components/SubscribeButton';
+import AboutChannelModal from '../components/AboutChannelModal';
+import ProgressBar from '../components/ProgressBar';
+import { FaGithub, FaEnvelope, FaWhatsapp, FaInstagram, FaLinkedin } from 'react-icons/fa';
+import { colors } from '../theme/colors';
+import ChannelProfileThumbnail from '../components/ChannelProfileThumbnail';
+import { useImpression } from '../hooks/useImpression';
+
+function formatDuration(seconds) {
+  if (!seconds || isNaN(seconds)) return '';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
 
 export default function ChannelProfile() {
   const { user, token } = useAuth();
   const { author } = useParams();
+  const navigate = useNavigate();
   const [channel, setChannel] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [progressLoading, setProgressLoading] = useState(false);
+  // Video grid state for hover and thumb
+  const [hoveredIdx, setHoveredIdx] = useState(-1);
+  const [showThumbArr, setShowThumbArr] = useState([]);
+  const videoRefs = useRef([]);
+  const [durations, setDurations] = useState([]);
+  // Remove impressionRefs from ChannelProfile; useImpression should only be called inside ChannelProfileThumbnail
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   useEffect(() => {
     const fetchChannel = async () => {
@@ -20,6 +44,12 @@ export default function ChannelProfile() {
         if (response.ok) {
           const data = await response.json();
           setChannel(data);
+          // Initialize thumb state and refs for videos
+          if (Array.isArray(data.videos)) {
+            setShowThumbArr(data.videos.map((_, idx) => idx === 0 ? false : true));
+            videoRefs.current = data.videos.map(() => React.createRef());
+            setDurations(data.videos.map(v => v.duration || null));
+          }
         } else {
           setChannel(null);
         }
@@ -31,10 +61,58 @@ export default function ChannelProfile() {
     fetchChannel();
   }, [author]);
 
+  // Extract durations from video elements after metadata loads
+  useEffect(() => {
+    if (!channel || !Array.isArray(channel.videos)) return;
+    const listeners = [];
+    channel.videos.forEach((video, idx) => {
+      const vidEl = videoRefs.current[idx]?.current;
+      if (vidEl && (durations[idx] == null || isNaN(durations[idx]))) {
+        const handler = () => {
+          setDurations(durs => {
+            const newArr = [...durs];
+            newArr[idx] = vidEl.duration;
+            return newArr;
+          });
+        };
+        vidEl.addEventListener('loadedmetadata', handler);
+        listeners.push({ vidEl, handler });
+        // If metadata already loaded, set immediately
+        if (vidEl.readyState >= 1 && vidEl.duration && !isNaN(vidEl.duration)) {
+          setDurations(durs => {
+            const newArr = [...durs];
+            newArr[idx] = vidEl.duration;
+            return newArr;
+          });
+        }
+      }
+    });
+    return () => {
+      listeners.forEach(({ vidEl, handler }) => {
+        vidEl.removeEventListener('loadedmetadata', handler);
+      });
+    };
+    // eslint-disable-next-line
+  }, [channel, videoRefs, durations]);
+
+  // First video: autoplay for 15s then show thumb
+  useEffect(() => {
+    if (channel && Array.isArray(channel.videos) && channel.videos.length > 0 && !showThumbArr[0] && videoRefs.current[0]?.current) {
+      videoRefs.current[0].current.currentTime = 0;
+      videoRefs.current[0].current.play();
+      const timer = setTimeout(() => {
+        videoRefs.current[0].current.pause();
+        setShowThumbArr(arr => arr.map((v, idx) => idx === 0 ? true : v));
+      }, 15000);
+      return () => clearTimeout(timer);
+    }
+  }, [channel, showThumbArr]);
+
   if (loading) {
-    // Skeleton UI for channel loading
+    // Skeleton UI for channel loading with ProgressBar
     return (
       <div className="w-full min-h-screen bg-gray-100 dark:bg-[#181818]">
+        <ProgressBar loading={true} />
         <Header />
         <div className="flex flex-row w-full" style={{ height: 'calc(100vh - 56px)', maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
           <Sidebar collapsed={true} />
@@ -65,6 +143,7 @@ export default function ChannelProfile() {
 
   return (
     <div className="w-full min-h-screen bg-gray-100 dark:bg-[#181818]">
+      <ProgressBar loading={progressLoading} />
       <Header />
       <div className="flex flex-row w-full" style={{ height: 'calc(100vh - 56px)', maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
         <Sidebar collapsed={true} />
@@ -76,22 +155,172 @@ export default function ChannelProfile() {
               <img src={channel.avatar} alt="Channel Avatar" className="w-28 h-28 rounded-full border-4 border-white dark:border-[#222] shadow-lg" />
             </div>
           </div>
-          {/* Channel Info */}
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between px-8 pt-16 pb-4">
-            <div>
-              <h1 className="text-3xl font-bold text-black dark:text-white">{channel.name}</h1>
-              <div className="text-gray-600 dark:text-gray-300 text-sm mt-2">
-                Subscribers: {channel.subscribers ? channel.subscribers.length : 0}
-              </div>
+          {/* About this channel link below the banner */}
+          <div className="w-full flex flex-col md:flex-row justify-end items-end gap-2 md:gap-4 px-8 mt-2 mb-2 text-right">
+            <button
+              type="button"
+              className="text-[#0bb6bc] font-semibold hover:underline bg-transparent border-none p-0 m-0 order-1 md:order-none"
+              onClick={() => setAboutOpen(true)}
+              style={{ width: '100%', textAlign: 'right' }}
+            >
+              About this channel
+            </button>
+            <div className="flex flex-row md:flex-row flex-wrap md:flex-nowrap justify-end items-center gap-3 w-full md:w-auto order-2 md:order-none">
+              <a href="#"
+                className="icon-link"
+                title="GitHub"
+                style={{ fontSize: '1.5em', color: 'var(--icon-color, #888)' }}
+                onMouseEnter={e => e.currentTarget.style.color = colors.primary}
+                onMouseLeave={e => e.currentTarget.style.color = 'var(--icon-color, #888)'}
+              ><FaGithub /></a>
+              <a href="#" 
+                className="icon-link"
+                title="Email"
+                style={{ fontSize: '1.5em', color: 'var(--icon-color, #888)' }}
+                onMouseEnter={e => e.currentTarget.style.color = colors.secondary}
+                onMouseLeave={e => e.currentTarget.style.color = 'var(--icon-color, #888)'}
+              ><FaEnvelope /></a>
+              <a href="#" 
+                className="icon-link"
+                title="WhatsApp"
+                style={{ fontSize: '1.5em', color: 'var(--icon-color, #888)' }}
+                onMouseEnter={e => e.currentTarget.style.color = colors.primary}
+                onMouseLeave={e => e.currentTarget.style.color = 'var(--icon-color, #888)'}
+              ><FaWhatsapp /></a>
+              <a href="#" 
+                className="icon-link"
+                title="Instagram"
+                style={{ fontSize: '1.5em', color: 'var(--icon-color, #888)' }}
+                onMouseEnter={e => e.currentTarget.style.color = colors.secondary}
+                onMouseLeave={e => e.currentTarget.style.color = 'var(--icon-color, #888)'}
+              ><FaInstagram /></a>
+              <a href="#" 
+                className="icon-link"
+                title="LinkedIn"
+                style={{ fontSize: '1.5em', color: 'var(--icon-color, #888)' }}
+                onMouseEnter={e => e.currentTarget.style.color = colors.primary}
+                onMouseLeave={e => e.currentTarget.style.color = 'var(--icon-color, #888)'}
+              ><FaLinkedin /></a>
             </div>
-            <SubscribeButton channel={channel} />
           </div>
-          {/* Description */}
-          <div className="px-8 pb-6">
-            <p className="text-gray-700 dark:text-gray-200 text-base">{channel.description}</p>
+          <AboutChannelModal
+            open={aboutOpen}
+            onClose={() => setAboutOpen(false)}
+            description={channel?.description}
+            dateJoined={channel?.dateJoined}
+          />
+          {/* Channel Info */}
+          <div className="flex flex-col items-start px-8 pt-4 md:pt-16 pb-4 gap-2">
+            <div className="flex flex-row items-center gap-4">
+              <h1 className="text-xl md:text-2xl font-bold text-black dark:text-white mr-2">{channel.name}</h1>
+              <SubscribeButton channel={channel} className="text-sm md:text-base px-3 py-1" />
+            </div>
+            <div className="text-gray-600 dark:text-gray-300 text-sm mt-2">
+              Subscribers: {channel.subscribers ? channel.subscribers.length : 0}
+            </div>
           </div>
           {/* Videos Grid styled like YouTube thumbnails */}
-          {/* You can add channel.videos here if available */}
+          <div className="px-2 md:px-8 pb-6">
+            {Array.isArray(channel.videos) && channel.videos.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {channel.videos.map((video, idx) => {
+                  const postedAgo = (() => {
+                    const posted = new Date(video.createdAt);
+                    const now = new Date();
+                    const diff = Math.floor((now - posted) / 1000);
+                    if (diff < 60) return `${diff}s ago`;
+                    if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+                    if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+                    if (diff < 2592000) return `${Math.floor(diff/86400)}d ago`;
+                    return posted.toLocaleDateString();
+                  })();
+                  const formattedDuration = formatDuration(durations[idx] || video.duration);
+                  return (
+                    <div
+                      key={video._id}
+                      className="relative group cursor-pointer"
+                      style={{ minHeight: '180px', paddingBottom: '0.5rem' }}
+                      onMouseEnter={() => {
+                        // Pause all other videos and show their thumbnails
+                        setHoveredIdx(idx);
+                        setShowThumbArr(arr => arr.map((v, i) => i === idx ? false : true));
+                        videoRefs.current.forEach((ref, i) => {
+                          if (ref?.current && i !== idx) {
+                            ref.current.pause();
+                            ref.current.currentTime = 0;
+                          }
+                        });
+                        if (videoRefs.current[idx]?.current) {
+                          videoRefs.current[idx].current.currentTime = 0;
+                          videoRefs.current[idx].current.play();
+                        }
+                      }}
+                      onMouseLeave={() => {
+                        setHoveredIdx(-1);
+                        setShowThumbArr(arr => arr.map((v, i) => i === idx ? true : v));
+                        if (videoRefs.current[idx]?.current) {
+                          videoRefs.current[idx].current.pause();
+                          videoRefs.current[idx].current.currentTime = 0;
+                        }
+                      }}
+                      onClick={() => {
+                        // Immediately navigate to Watch page and let skeletons show
+                        navigate(`/watch/${video._id}`, { state: { fromProfile: true } });
+                      }}
+                    >
+                      <div className="relative" style={{ width: '100%', height: '180px' }}>
+                        {(!showThumbArr[idx] || hoveredIdx === idx) ? (
+                          <video
+                            ref={videoRefs.current[idx]}
+                            src={video.videoUrl}
+                            poster={video.thumbnailUrl}
+                            muted
+                            controls={false}
+                            className="w-full h-[180px] object-cover rounded-lg shadow-lg"
+                            onClick={() => {
+                              window.location.href = `/watch/${video._id}`;
+                            }}
+                          />
+                        ) : (
+                          <ChannelProfileThumbnail
+                            video={video}
+                            source="channel-profile"
+                            userId={user?._id}
+                            sessionId={window.sessionStorage.getItem('sessionId') || undefined}
+                            className="w-full h-[180px] object-cover rounded-lg shadow-lg group-hover:scale-105 transition-transform"
+                            onClick={() => {
+                              window.location.href = `/watch/${video._id}`;
+                            }}
+                          />
+                        )}
+                        {video.duration && (
+                          <span
+                            className="absolute right-2 bottom-2 bg-black bg-opacity-70 text-white text-xs px-2 py-0.5 rounded"
+                            style={{ zIndex: 2, pointerEvents: 'none' }}
+                          >
+                            {formatDuration(video.duration)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-2 text-base font-semibold text-black dark:text-white truncate">{video.title}</div>
+                      <div className="flex items-center text-xs text-gray-600 dark:text-gray-300 mt-1 gap-2">
+                        <span>{video.viewCount || 0} views</span>
+                        <span className="font-bold mx-1" style={{fontWeight:700, fontSize:'1.2em'}}>&bull;</span>
+                        <span>{postedAgo}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-gray-500 dark:text-gray-300">No videos yet.</div>
+            )}
+          </div>
+          {/* About section, hidden by default, shown when link is clicked */}
+          <div id="about" className="px-8 pb-6 hidden">
+            <h2 className="text-xl font-bold mb-2 text-black dark:text-white">About this channel</h2>
+            <p className="text-gray-700 dark:text-gray-200 text-base">{channel.description}</p>
+          </div>
         </div>
       </div>
     </div>

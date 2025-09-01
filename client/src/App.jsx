@@ -1,6 +1,8 @@
 
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import ProgressBar from './components/ProgressBar';
+import useRouteLoader from './hooks/useRouteLoader';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Home from './pages/Home';
@@ -10,6 +12,13 @@ import ChannelSetup from './pages/ChannelSetup';
 import CreatePost from './pages/CreatePost';
 import ChannelProfile from './pages/ChannelProfile';
 import Watch from './pages/Watch';
+// import Trending from './pages/Trending';
+import Specializations from './pages/Specializations';
+import Subscriptions from './pages/Subscriptions';
+import SavedVideos from './pages/SavedVideos';
+import LikedVideos from './pages/LikedVideos';
+import CourseVideos from './pages/CourseVideos';
+import WatchHistory from './pages/WatchHistory';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -37,7 +46,7 @@ const ProtectedRoute = ({ children }) => {
 // Public Route Component (redirects to home if already authenticated)
 const PublicRoute = ({ children }) => {
   const { isAuthenticated, loading, serverConnected } = useAuth();
-  
+  const location = window.location.pathname;
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#181818]">
@@ -53,8 +62,11 @@ const PublicRoute = ({ children }) => {
       </div>
     );
   }
-  
-  return isAuthenticated ? <Navigate to="/home" replace /> : children;
+  // Only redirect if not on /login or /register
+  if (isAuthenticated && location !== '/login' && location !== '/register') {
+    return <Navigate to="/home" replace />;
+  }
+  return children;
 };
 
 // Dummy hook to check if user has a channel (replace with real logic)
@@ -74,17 +86,25 @@ function AppRoutes() {
       <Route path="/create-post" element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
       <Route path="/channel/:author" element={<ProtectedRoute><ChannelProfile /></ProtectedRoute>} />
       <Route path="/watch/:id" element={<ProtectedRoute><Watch /></ProtectedRoute>} />
+      {/* Sidebar Placeholder Pages */}
+    {/* <Route path="/trending" element={<ProtectedRoute><Trending /></ProtectedRoute>} /> */}
+      <Route path="/specializations" element={<ProtectedRoute><Specializations /></ProtectedRoute>} />
+      <Route path="/subscriptions" element={<ProtectedRoute><Subscriptions /></ProtectedRoute>} />
+      <Route path="/saved-videos" element={<ProtectedRoute><SavedVideos /></ProtectedRoute>} />
+      <Route path="/liked-videos" element={<ProtectedRoute><LikedVideos /></ProtectedRoute>} />
+      <Route path="/course-videos" element={<ProtectedRoute><CourseVideos /></ProtectedRoute>} />
+      <Route path="/watch-history" element={<ProtectedRoute><WatchHistory /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
 }
 
 function App() {
+  const loading = useRouteLoader();
   return (
     <AuthProvider>
-      <Router>
-        <AppRoutes />
-      </Router>
+      <ProgressBar loading={loading} />
+      <AppRoutes />
     </AuthProvider>
   );
 }
