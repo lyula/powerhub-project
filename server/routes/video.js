@@ -25,7 +25,8 @@ router.post('/:id/comment/like', auth, videoController.likeComment);
 router.post('/:id/comment/unlike', auth, videoController.unlikeComment);
 // Reply to comment
 router.post('/:id/comment/reply', auth, videoController.replyComment);
-// Unlike reply
+// Like/unlike reply
+router.post('/:id/comment/reply/like', auth, videoController.likeReply);
 router.post('/:id/comment/reply/unlike', auth, videoController.unlikeReply);
 
 // Get all videos
