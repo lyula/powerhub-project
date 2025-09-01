@@ -378,17 +378,17 @@ const Profile = () => {
                         className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
                       />
                     </div>
-                                         <div>
-                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                         Email
-                       </label>
-                       <input
-                         type="email"
-                         value={user.email || ''}
-                         disabled
-                         className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
-                       />
-                     </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        value={user.email || ''}
+                        disabled
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
+                      />
+                    </div>
                      <div>
                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                          Github
@@ -429,21 +429,21 @@ const Profile = () => {
                        <input
                          type="text"
                          value={user.instagram || ''}
-                         disabled
-                         className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
-                       />
-                     </div>
-                     <div>
-                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                         Role
-                       </label>
-                       <input
-                         type="text"
-                         value={user.role || 'User'}
-                         disabled
-                         className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
-                       />
-                     </div>
+                        disabled
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Role
+                      </label>
+                      <input
+                        type="text"
+                        value={user.role || 'User'}
+                        disabled
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
+                      />
+                    </div>
                   </form>
                 )}
               </div>
