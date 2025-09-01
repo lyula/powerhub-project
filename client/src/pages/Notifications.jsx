@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bell, Heart, MessageCircle, UserPlus, MoreVertical, Check, X, Trash2, Settings } from 'lucide-react';
 import Header from "../components/Header";
 
@@ -20,6 +21,7 @@ const MobileHeader = ({ icon, label, rightAction }) => (
 );
 
 export default function Notifications() {
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([
     {
       id: 1,
@@ -205,7 +207,7 @@ export default function Notifications() {
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-2">
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-2 transition-all duration-200 group-hover:opacity-60">
                 <span className="font-semibold">{notification.user}</span>{' '}
                 <span className="font-normal">{notification.action}</span>
                 {notification.target && (
@@ -249,7 +251,7 @@ export default function Notifications() {
                 e.stopPropagation();
                 markAsRead(notification.id);
               }}
-              className="text-xs px-2 py-1 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 rounded transition-colors"
+              className="text-xs px-2 py-1 text-blue-600 bg-transparent hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 rounded transition-colors"
             >
               Mark as read
             </button>
@@ -282,7 +284,7 @@ export default function Notifications() {
     <div className="min-h-screen bg-white dark:bg-[#181818] text-black dark:text-white">
       <MobileHeader 
         icon={
-          <div className="relative">
+          <div className="relative cursor-pointer" onClick={() => navigate('/home')}>
             <Bell className="w-6 h-6" />
             {unreadCount > 0 && (
               <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">

@@ -47,6 +47,12 @@ export default function Sidebar({ collapsed }) {
                 key={item.label}
                 to={item.path}
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-900 transition ${collapsed ? 'justify-center' : ''}`}
+                onClick={e => {
+                  if (item.path === '/notifications' && window.location.pathname === '/notifications') {
+                    e.preventDefault();
+                    navigate('/home');
+                  }
+                }}
               >
                 <span className="w-6 h-6">{item.icon}</span>
                 {!collapsed && <span>{item.label}</span>}
