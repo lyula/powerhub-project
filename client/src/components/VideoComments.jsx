@@ -202,22 +202,42 @@ export default function VideoComments({ videoId, onCountChange }) {
   };
 
   // Like or unlike a reply
-  const handleLikeReply = async (commentId, replyId, liked) => {
+  const handleLikeReply = async (commentId, replyId, liked, parentReplyId = null) => {
     // Optimistic UI update
+    function updateReplyLikes(replies) {
+      return replies.map(reply => {
+        if (parentReplyId && reply._id === parentReplyId && reply.replies && reply.replies.length > 0) {
+          return {
+            ...reply,
+            replies: reply.replies.map(subReply => {
+              if (subReply._id === replyId) {
+                let likesArr = Array.isArray(subReply.likes) ? subReply.likes : [];
+                let newLikes = liked
+                  ? likesArr.filter(id => id !== user._id)
+                  : [...new Set([...likesArr, user._id])];
+                return { ...subReply, likes: newLikes };
+              }
+              return subReply;
+            })
+          };
+        } else if (!parentReplyId && reply._id === replyId) {
+          let likesArr = Array.isArray(reply.likes) ? reply.likes : [];
+          let newLikes = liked
+            ? likesArr.filter(id => id !== user._id)
+            : [...new Set([...likesArr, user._id])];
+          return { ...reply, likes: newLikes };
+        } else if (reply.replies && reply.replies.length > 0) {
+          return { ...reply, replies: updateReplyLikes(reply.replies) };
+        } else {
+          return reply;
+        }
+      });
+    }
     setComments((prevComments) => prevComments.map(comment => {
       if (comment._id === commentId) {
         return {
           ...comment,
-          replies: comment.replies.map(reply => {
-            if (reply._id === replyId) {
-              let likesArr = Array.isArray(reply.likes) ? reply.likes : [];
-              let newLikes = liked
-                ? likesArr.filter(id => id !== user._id)
-                : [...new Set([...likesArr, user._id])];
-              return { ...reply, likes: newLikes };
-            }
-            return reply;
-          })
+          replies: updateReplyLikes(comment.replies)
         };
       }
       return comment;
@@ -227,7 +247,7 @@ export default function VideoComments({ videoId, onCountChange }) {
       const url = endpoint === 'like'
         ? `${API_BASE_URL}/videos/${videoId}/comment/reply/like`
         : `${API_BASE_URL}/videos/${videoId}/comment/reply/unlike`;
-      const body = { commentId, replyId };
+      const body = parentReplyId ? { commentId, replyId, parentReplyId } : { commentId, replyId };
       const res = await fetch(url, {
         method: 'POST',
         headers: {
@@ -239,13 +259,32 @@ export default function VideoComments({ videoId, onCountChange }) {
       if (res.ok) {
         const data = await res.json();
         // Always sync likes with backend response
+        function updateReplyLikesFromBackend(replies) {
+          return replies.map(reply => {
+            if (parentReplyId && reply._id === parentReplyId && reply.replies && reply.replies.length > 0) {
+              return {
+                ...reply,
+                replies: reply.replies.map(subReply => {
+                  if (subReply._id === replyId) {
+                    return { ...subReply, likes: Array.isArray(data.likes) ? data.likes : [] };
+                  }
+                  return subReply;
+                })
+              };
+            } else if (!parentReplyId && reply._id === replyId) {
+              return { ...reply, likes: Array.isArray(data.likes) ? data.likes : [] };
+            } else if (reply.replies && reply.replies.length > 0) {
+              return { ...reply, replies: updateReplyLikesFromBackend(reply.replies) };
+            } else {
+              return reply;
+            }
+          });
+        }
         setComments((prevComments) => prevComments.map(comment => {
           if (comment._id === commentId) {
             return {
               ...comment,
-              replies: comment.replies.map(reply =>
-                reply._id === replyId ? { ...reply, likes: Array.isArray(data.likes) ? data.likes : [] } : reply
-              )
+              replies: updateReplyLikesFromBackend(comment.replies)
             };
           }
           return comment;
@@ -397,7 +436,7 @@ export default function VideoComments({ videoId, onCountChange }) {
                                     <div className="flex items-center gap-4 mt-1">
                                       <button
                                         className="flex items-center gap-1 text-gray-700 dark:text-gray-200 hover:text-pink-500 transition bg-transparent border-none p-0"
-                                        onClick={() => handleLikeReply(comment._id, subReply._id, subReply.likes?.includes(user?._id))}
+                                        onClick={() => handleLikeReply(comment._id, subReply._id, subReply.likes?.includes(user?._id), reply._id)}
                                       >
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill={subReply.likes?.includes(user?._id) ? '#c42152' : 'none'} stroke={subReply.likes?.includes(user?._id) ? '#c42152' : 'currentColor'} strokeWidth="2">
                                           <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41 1.01 4.5 2.09C13.09 4.01 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
