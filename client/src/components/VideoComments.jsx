@@ -90,8 +90,13 @@ export default function VideoComments({ videoId, onCountChange }) {
   };
 
   const handleReply = (commentId) => {
-    setReplyingTo(commentId);
-    setReplyText("");
+    if (replyingTo === commentId) {
+      setReplyingTo(null);
+      setReplyText("");
+    } else {
+      setReplyingTo(commentId);
+      setReplyText("");
+    }
   };
 
   const handleAddReply = async (e, commentId) => {
