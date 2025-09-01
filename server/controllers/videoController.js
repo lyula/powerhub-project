@@ -1,3 +1,22 @@
+// Like a reply
+exports.likeReply = async (req, res) => {
+  try {
+    const video = await Video.findById(req.params.id);
+    if (!video) return res.status(404).json({ error: 'Video not found' });
+    const { commentId, replyId } = req.body;
+    const userId = req.user._id;
+    const comment = video.comments.id(commentId);
+    if (!comment) return res.status(404).json({ error: 'Comment not found' });
+    const reply = comment.replies.id(replyId);
+    if (!reply) return res.status(404).json({ error: 'Reply not found' });
+    if (!reply.likes.includes(userId)) reply.likes.push(userId);
+    if (video.uploader.toString() === userId.toString()) reply.authorLiked = true;
+    await video.save();
+    res.json({ likes: reply.likes });
+  } catch (err) {
+    res.status(500).json({ error: 'Like reply failed', details: err });
+  }
+}
 // Unlike a comment
 exports.unlikeComment = async (req, res) => {
   try {

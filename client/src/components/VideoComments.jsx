@@ -180,7 +180,6 @@ export default function VideoComments({ videoId, onCountChange }) {
   // Like or unlike a reply
   const handleLikeReply = async (commentId, replyId, liked) => {
     // Optimistic UI update
-    // Optimistically update UI
     setComments((prevComments) => prevComments.map(comment => {
       if (comment._id === commentId) {
         return {
@@ -202,11 +201,9 @@ export default function VideoComments({ videoId, onCountChange }) {
     try {
       const endpoint = liked ? 'unlike' : 'like';
       const url = endpoint === 'like'
-        ? `${API_BASE_URL}/videos/${videoId}/comment/like`
+        ? `${API_BASE_URL}/videos/${videoId}/comment/reply/like`
         : `${API_BASE_URL}/videos/${videoId}/comment/reply/unlike`;
-      const body = endpoint === 'like'
-        ? { commentId: replyId }
-        : { commentId, replyId };
+      const body = { commentId, replyId };
       const res = await fetch(url, {
         method: 'POST',
         headers: {
