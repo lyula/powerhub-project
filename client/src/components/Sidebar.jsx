@@ -6,7 +6,6 @@ import { HomeIcon, FireIcon, AcademicCapIcon, VideoCameraIcon, UserIcon, Bookmar
 const items = [
   { label: 'Home', icon: <HomeIcon />, path: '/home' },
   { label: 'Trending', icon: <FireIcon />, path: '/home' },
-  { label: 'Specializations', icon: <AcademicCapIcon />, path: '/specializations' },
   { label: 'My Channel', icon: <VideoCameraIcon />, isChannel: true },
   { label: 'Subscriptions', icon: <SubscriptionsIcon />, path: '/subscriptions' },
   { label: 'Saved Videos', icon: <BookmarkIcon />, path: '/saved-videos' },
