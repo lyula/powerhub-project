@@ -39,6 +39,7 @@ export default function VideoComments({ videoId, onCountChange }) {
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState("");
   const [replyText, setReplyText] = useState("");
+  // replyingTo: { commentId, replyId } or null
   const [replyingTo, setReplyingTo] = useState(null);
   const [likeLoading, setLikeLoading] = useState({}); // { [commentId]: boolean }
   const API_BASE_URL = import.meta.env.VITE_API_URL;
@@ -89,19 +90,35 @@ export default function VideoComments({ videoId, onCountChange }) {
     } catch (err) {}
   };
 
-  const handleReply = (commentId) => {
-    if (replyingTo === commentId) {
+  // If replyId is provided, it's a reply to a reply
+  const handleReply = (commentId, replyId = null) => {
+    if (replyingTo && replyingTo.commentId === commentId && replyingTo.replyId === replyId) {
       setReplyingTo(null);
       setReplyText("");
     } else {
-      setReplyingTo(commentId);
+      setReplyingTo({ commentId, replyId });
       setReplyText("");
     }
   };
 
-  const handleAddReply = async (e, commentId) => {
+  const handleAddReply = async (e) => {
     e.preventDefault();
-    if (!replyText.trim()) return;
+    if (!replyText.trim() || !replyingTo) return;
+    const { commentId, replyId } = replyingTo;
+    let textToSend = replyText;
+    if (replyId) {
+      // Prepend @username for replies to replies
+      const parentComment = comments.find(c => c._id === commentId);
+      const parentReply = parentComment?.replies?.find(r => r._id === replyId);
+      if (parentReply) {
+        const username = parentReply.author?.username || 'user';
+        if (!replyText.startsWith(`@${username}`)) {
+          textToSend = `@${username} ${replyText}`;
+        }
+      }
+    }
+    const payload = replyId ? { commentId, replyId, text: textToSend } : { commentId, text: textToSend };
+    console.log('Sending reply:', payload);
     try {
       const res = await fetch(`${API_BASE_URL}/videos/${videoId}/comment/reply`, {
         method: 'POST',
@@ -109,7 +126,7 @@ export default function VideoComments({ videoId, onCountChange }) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ commentId, text: replyText })
+        body: JSON.stringify(payload)
       });
       if (res.ok) {
         const data = await res.json();
@@ -118,7 +135,9 @@ export default function VideoComments({ videoId, onCountChange }) {
         setReplyingTo(null);
         if (onCountChange) onCountChange((data.comments || []).length);
       }
-    } catch (err) {}
+    } catch (err) {
+      console.error('Reply error:', err);
+    }
   };
 
   // Like or unlike a comment
@@ -302,8 +321,8 @@ export default function VideoComments({ videoId, onCountChange }) {
                 <span className="text-xs">Reply ({comment.replies?.length || 0})</span>
               </button>
             </div>
-            {replyingTo === comment._id && (
-              <form onSubmit={(e) => handleAddReply(e, comment._id)} className="flex gap-2 mb-2">
+            {replyingTo && replyingTo.commentId === comment._id && !replyingTo.replyId && (
+              <form onSubmit={handleAddReply} className="flex gap-2 mb-2">
                 <input type="text" className="flex-1 border rounded px-2 py-1 text-black dark:text-white bg-gray-100 dark:bg-gray-800" placeholder="Write a reply..." value={replyText} onChange={(e) => setReplyText(e.target.value)} />
                 <button type="submit" className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition">Reply</button>
               </form>
@@ -338,7 +357,7 @@ export default function VideoComments({ videoId, onCountChange }) {
                             </button>
                             <button
                               className="flex items-center gap-1 text-gray-700 dark:text-gray-200 hover:text-blue-500 transition bg-transparent border-none p-0"
-                              onClick={() => handleReply(reply._id)}
+                              onClick={() => handleReply(comment._id, reply._id)}
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
                                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2" fill="none" />
@@ -346,11 +365,47 @@ export default function VideoComments({ videoId, onCountChange }) {
                               <span className="text-xs">Reply</span>
                             </button>
                           </div>
-                          {replyingTo === reply._id && (
-                            <form onSubmit={(e) => handleAddReply(e, reply._id)} className="flex gap-2 mb-2 mt-1">
-                              <input type="text" className="flex-1 border rounded px-2 py-1 text-black dark:text-white bg-gray-100 dark:bg-gray-800" placeholder="Write a reply..." value={replyText} onChange={(e) => setReplyText(e.target.value)} />
+                          {replyingTo && replyingTo.commentId === comment._id && replyingTo.replyId === reply._id && (
+                            <form onSubmit={handleAddReply} className="flex gap-2 mb-2 mt-1">
+                              <input
+                                type="text"
+                                className="flex-1 border rounded px-2 py-1 text-black dark:text-white bg-gray-100 dark:bg-gray-800"
+                                placeholder={`Reply to @${getDisplayName(reply.author)}`}
+                                value={replyText}
+                                onChange={(e) => setReplyText(e.target.value)}
+                              />
                               <button type="submit" className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition">Reply</button>
                             </form>
+                          )}
+                          {/* Render replies to replies (second level only, same indentation) */}
+                          {reply.replies && reply.replies.length > 0 && (
+                            reply.replies.map((subReply) => (
+                              <div key={subReply._id} className="flex gap-2 items-start">
+                                <img src={getAvatar(subReply.author)} alt={getDisplayName(subReply.author)} className="w-7 h-7 rounded-full border" />
+                                <div className="flex flex-col flex-1">
+                                  <span className="font-semibold text-black dark:text-white">
+                                    {getDisplayName(subReply.author)}
+                                    <span className="text-xs text-gray-400 font-normal ml-2">{formatRelativeTime(subReply.createdAt)}</span>
+                                  </span>
+                                  <span className="text-gray-800 dark:text-gray-200">
+                                    {/* Always show @username for replies to replies */}
+                                    {reply.author && <span className="text-blue-500 font-semibold mr-1">@{getDisplayName(reply.author)}</span>}
+                                    {subReply.text.replace(new RegExp(`^@${getDisplayName(reply.author)}\s*`), '')}
+                                  </span>
+                                  <div className="flex items-center gap-4 mt-1">
+                                    <button
+                                      className="flex items-center gap-1 text-gray-700 dark:text-gray-200 hover:text-pink-500 transition bg-transparent border-none p-0"
+                                      onClick={() => handleLikeReply(comment._id, subReply._id, subReply.likes?.includes(user?._id))}
+                                    >
+                                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill={subReply.likes?.includes(user?._id) ? '#c42152' : 'none'} stroke={subReply.likes?.includes(user?._id) ? '#c42152' : 'currentColor'} strokeWidth="2">
+                                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41 1.01 4.5 2.09C13.09 4.01 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                                      </svg>
+                                      <span className="text-xs">{subReply.likes?.length || 0}</span>
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))
                           )}
                         </div>
                       </div>
