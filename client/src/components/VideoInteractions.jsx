@@ -13,9 +13,9 @@ const DislikeIcon = ({ disliked }) => (
   </span>
 );
 
-const CommentIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="32" height="32">
-    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2" fill="none" />
+const CommentIcon = ({ active }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke={active ? '#2563eb' : 'currentColor'} width="32" height="32">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke={active ? '#2563eb' : 'currentColor'} strokeWidth="2" fill="none" />
   </svg>
 );
 
@@ -54,11 +54,11 @@ const VideoInteractions = ({
       <span className="text-sm">Dislike ({Math.max(0, dislikeCount)})</span>
     </button>
     <button
-      className="flex items-center gap-2 text-gray-700 dark:text-gray-200 hover:text-blue-500 transition bg-transparent border-none p-0"
+      className={`flex items-center gap-2 transition bg-transparent border-none p-0 ${showComments ? 'text-blue-600' : 'text-gray-700 dark:text-gray-200 hover:text-blue-500'}`}
       style={{ minHeight: 40 }}
       onClick={() => setShowComments((prev) => !prev)}
     >
-      <CommentIcon />
+      <CommentIcon active={showComments} />
       <span className="text-sm">Comments ({commentCount})</span>
     </button>
     <button
