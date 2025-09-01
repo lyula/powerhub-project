@@ -1,3 +1,40 @@
+// Unlike a comment
+exports.unlikeComment = async (req, res) => {
+  try {
+    const video = await Video.findById(req.params.id);
+    if (!video) return res.status(404).json({ error: 'Video not found' });
+    const { commentId } = req.body;
+    const userId = req.user._id;
+    const comment = video.comments.id(commentId);
+    if (!comment) return res.status(404).json({ error: 'Comment not found' });
+    comment.likes = comment.likes.filter(id => id.toString() !== userId.toString());
+    if (video.uploader.toString() === userId.toString()) comment.authorLiked = false;
+    await video.save();
+    res.json(video);
+  } catch (err) {
+    res.status(500).json({ error: 'Unlike comment failed', details: err });
+  }
+};
+
+// Unlike a reply
+exports.unlikeReply = async (req, res) => {
+  try {
+    const video = await Video.findById(req.params.id);
+    if (!video) return res.status(404).json({ error: 'Video not found' });
+    const { commentId, replyId } = req.body;
+    const userId = req.user._id;
+    const comment = video.comments.id(commentId);
+    if (!comment) return res.status(404).json({ error: 'Comment not found' });
+    const reply = comment.replies.id(replyId);
+    if (!reply) return res.status(404).json({ error: 'Reply not found' });
+    reply.likes = reply.likes.filter(id => id.toString() !== userId.toString());
+    if (video.uploader.toString() === userId.toString()) reply.authorLiked = false;
+    await video.save();
+    res.json(video);
+  } catch (err) {
+    res.status(500).json({ error: 'Unlike reply failed', details: err });
+  }
+};
 // Add a view to a video
 exports.addView = async (req, res) => {
   try {
@@ -141,8 +178,8 @@ exports.likeComment = async (req, res) => {
     if (!comment.likes.includes(userId)) comment.likes.push(userId);
     // If video author likes, set authorLiked
     if (video.uploader.toString() === userId.toString()) comment.authorLiked = true;
-    await video.save();
-    res.json(video);
+  await video.save();
+  res.json({ likes: comment.likes });
   } catch (err) {
     res.status(500).json({ error: 'Like comment failed', details: err });
   }
@@ -158,8 +195,8 @@ exports.replyComment = async (req, res) => {
     const comment = video.comments.id(commentId);
     if (!comment) return res.status(404).json({ error: 'Comment not found' });
     comment.replies.push({ author, text });
-    await video.save();
-    res.json(video);
+  await video.save();
+  res.json({ likes: comment.likes });
   } catch (err) {
     res.status(500).json({ error: 'Reply failed', details: err });
   }

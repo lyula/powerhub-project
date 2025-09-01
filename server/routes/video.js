@@ -20,10 +20,13 @@ router.post('/:id/dislike', auth, videoController.dislikeVideo);
 
 // Add comment
 router.post('/:id/comment', auth, videoController.addComment);
-// Like comment
+// Like/unlike comment
 router.post('/:id/comment/like', auth, videoController.likeComment);
+router.post('/:id/comment/unlike', auth, videoController.unlikeComment);
 // Reply to comment
 router.post('/:id/comment/reply', auth, videoController.replyComment);
+// Unlike reply
+router.post('/:id/comment/reply/unlike', auth, videoController.unlikeReply);
 
 // Get all videos
 router.get('/', videoController.getAllVideos);

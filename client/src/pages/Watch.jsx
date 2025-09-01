@@ -215,6 +215,14 @@ export default function Watch() {
               >
                 {video.title}
               </h1>
+              <div className="flex items-center gap-3 mb-2">
+                <Link to={`/channel/${video.channel?._id || video.channel}`} className="flex items-center gap-2 min-w-0">
+                  <img src={video.channel?.avatar} alt={video.channel?.name} className="w-10 h-10 rounded-full border-2 border-gray-300 dark:border-gray-700 cursor-pointer" />
+                  <span className="font-semibold text-gray-800 dark:text-gray-200 cursor-pointer truncate max-w-[120px]" title={video.channel?.name}>{video.channel?.name}</span>
+                </Link>
+                <span className="text-xs text-gray-500 dark:text-gray-400">{video.viewCount || 0} views • {video.postedAgo || ''}</span>
+                {channelDetails && <SubscribeButton channel={channelDetails} />}
+              </div>
               <VideoInteractions
                 liked={liked}
                 setLiked={l => { setLiked(l); setLikeCount(count => l ? count + 1 : count - 1); }}
@@ -233,14 +241,6 @@ export default function Watch() {
                 }}
                 commentCount={commentCount}
               />
-              <div className="flex items-center gap-3 mb-2">
-                <Link to={`/channel/${video.channel?._id || video.channel}`} className="flex items-center gap-2 min-w-0">
-                  <img src={video.channel?.avatar} alt={video.channel?.name} className="w-10 h-10 rounded-full border-2 border-gray-300 dark:border-gray-700 cursor-pointer" />
-                  <span className="font-semibold text-gray-800 dark:text-gray-200 cursor-pointer truncate max-w-[120px]" title={video.channel?.name}>{video.channel?.name}</span>
-                </Link>
-                <span className="text-xs text-gray-500 dark:text-gray-400">{video.viewCount || 0} views • {video.postedAgo || ''}</span>
-                {channelDetails && <SubscribeButton channel={channelDetails} />}
-              </div>
               {/* Video Description with Read More/Read Less */}
               {video.description && !showComments && (
                 <DescriptionWithReadMore description={video.description} />
