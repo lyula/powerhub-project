@@ -335,7 +335,7 @@ export default function VideoComments({ videoId, onCountChange }) {
                     View replies ({totalReplies})
                   </button>
                 ) : (
-                  <>
+                  <React.Fragment>
                     {comment.replies.slice(0, shownReplies).map((reply) => (
                       <div key={reply._id} className="flex gap-2 items-start">
                         <img src={getAvatar(reply.author)} alt={getDisplayName(reply.author)} className="w-7 h-7 rounded-full border" />
@@ -379,33 +379,36 @@ export default function VideoComments({ videoId, onCountChange }) {
                           )}
                           {/* Render replies to replies (second level only, same indentation) */}
                           {reply.replies && reply.replies.length > 0 && (
-                            reply.replies.map((subReply) => (
-                              <div key={subReply._id} className="flex gap-2 items-start">
-                                <img src={getAvatar(subReply.author)} alt={getDisplayName(subReply.author)} className="w-7 h-7 rounded-full border" />
-                                <div className="flex flex-col flex-1">
-                                  <span className="font-semibold text-black dark:text-white">
-                                    {getDisplayName(subReply.author)}
-                                    <span className="text-xs text-gray-400 font-normal ml-2">{formatRelativeTime(subReply.createdAt)}</span>
-                                  </span>
-                                  <span className="text-gray-800 dark:text-gray-200">
-                                    {/* Always show @username for replies to replies */}
-                                    {reply.author && <span className="text-blue-500 font-semibold mr-1">@{getDisplayName(reply.author)}</span>}
-                                    {subReply.text.replace(new RegExp(`^@${getDisplayName(reply.author)}\s*`), '')}
-                                  </span>
-                                  <div className="flex items-center gap-4 mt-1">
-                                    <button
-                                      className="flex items-center gap-1 text-gray-700 dark:text-gray-200 hover:text-pink-500 transition bg-transparent border-none p-0"
-                                      onClick={() => handleLikeReply(comment._id, subReply._id, subReply.likes?.includes(user?._id))}
-                                    >
-                                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill={subReply.likes?.includes(user?._id) ? '#c42152' : 'none'} stroke={subReply.likes?.includes(user?._id) ? '#c42152' : 'currentColor'} strokeWidth="2">
-                                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41 1.01 4.5 2.09C13.09 4.01 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                                      </svg>
-                                      <span className="text-xs">{subReply.likes?.length || 0}</span>
-                                    </button>
+                            reply.replies.map((subReply, subIdx) => {
+                              console.log('Reply to reply author:', subReply?.author, 'Full subReply:', subReply);
+                              return (
+                                <div key={subReply._id || subIdx} className="flex gap-2 items-start">
+                                  <img src={getAvatar(subReply.author)} alt={getDisplayName(subReply.author)} className="w-7 h-7 rounded-full border" />
+                                  <div className="flex flex-col flex-1">
+                                    <span className="font-semibold text-black dark:text-white">
+                                      {getDisplayName(subReply.author)}
+                                      <span className="text-xs text-gray-400 font-normal ml-2">{formatRelativeTime(subReply.createdAt)}</span>
+                                    </span>
+                                    <span className="text-gray-800 dark:text-gray-200">
+                                      {/* Always show @username for replies to replies */}
+                                      {reply.author && <span className="text-blue-500 font-semibold mr-1">@{getDisplayName(reply.author)}</span>}
+                                      {subReply.text.replace(new RegExp(`^@${getDisplayName(reply.author)}\s*`), '')}
+                                    </span>
+                                    <div className="flex items-center gap-4 mt-1">
+                                      <button
+                                        className="flex items-center gap-1 text-gray-700 dark:text-gray-200 hover:text-pink-500 transition bg-transparent border-none p-0"
+                                        onClick={() => handleLikeReply(comment._id, subReply._id, subReply.likes?.includes(user?._id))}
+                                      >
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill={subReply.likes?.includes(user?._id) ? '#c42152' : 'none'} stroke={subReply.likes?.includes(user?._id) ? '#c42152' : 'currentColor'} strokeWidth="2">
+                                          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41 1.01 4.5 2.09C13.09 4.01 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                                        </svg>
+                                        <span className="text-xs">{subReply.likes?.length || 0}</span>
+                                      </button>
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            ))
+                              );
+                            })
                           )}
                         </div>
                       </div>
@@ -420,7 +423,7 @@ export default function VideoComments({ videoId, onCountChange }) {
                         Hide replies
                       </button>
                     </div>
-                  </>
+                  </React.Fragment>
                 )}
               </div>
             )}
