@@ -46,16 +46,8 @@ exports.login = async (req, res) => {
 // Update user profile
 exports.updateProfile = async (req, res) => {
   try {
-    const { firstName, lastName, username, email } = req.body;
+    const { firstName, lastName, username, github, whatsapp, linkedin, instagram } = req.body;
     const userId = req.user.id; // From auth middleware
-
-    // Check if email is already taken by another user
-    if (email) {
-      const existingUser = await User.findOne({ email, _id: { $ne: userId } });
-      if (existingUser) {
-        return res.status(409).json({ message: 'Email already exists.' });
-      }
-    }
 
     // Check if username is already taken by another user
     if (username) {
@@ -67,7 +59,7 @@ exports.updateProfile = async (req, res) => {
 
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      { firstName, lastName, username, email },
+      { firstName, lastName, username, github, whatsapp, linkedin, instagram },
       { new: true, runValidators: true }
     ).select('-password');
 

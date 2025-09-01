@@ -17,7 +17,10 @@ const Profile = () => {
     firstName: '',
     lastName: '',
     username: '',
-    email: ''
+    github: '',
+    whatsapp: '',
+    linkedin: '',
+    instagram: ''
   });
 
   const [passwordForm, setPasswordForm] = useState({
@@ -32,7 +35,10 @@ const Profile = () => {
         firstName: user.firstName || '',
         lastName: user.lastName || '',
         username: user.username || '',
-        email: user.email || ''
+        github: user.github || '',
+        whatsapp: user.whatsapp || '',
+        linkedin: user.linkedin || '',
+        instagram: user.instagram || ''
       });
     }
   }, [user]);
@@ -120,7 +126,10 @@ const Profile = () => {
       firstName: user.firstName || '',
       lastName: user.lastName || '',
       username: user.username || '',
-      email: user.email || ''
+      github: user.github || '',
+      whatsapp: user.whatsapp || '',
+      linkedin: user.linkedin || '',
+      instagram: user.instagram || ''
     });
     setMessage({ type: '', text: '' });
   };
@@ -253,12 +262,63 @@ const Profile = () => {
                       <input
                         type="email"
                         name="email"
-                        value={profileForm.email}
-                        onChange={handleProfileChange}
-                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0bb6bc] focus:border-transparent bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
-                        required
+                        value={user.email || ''}
+                        disabled
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
                       />
                     </div>
+                                         <div>
+                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                         Github
+                       </label>
+                       <input
+                         type="text"
+                         name="github"
+                         value={profileForm.github}
+                         onChange={handleProfileChange}
+                         placeholder="username or github.com/username"
+                         className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0bb6bc] focus:border-transparent bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
+                       />
+                     </div>
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                         Whatsapp
+                       </label>
+                       <input
+                         type="tel"
+                         name="whatsapp"
+                         value={profileForm.whatsapp}
+                         onChange={handleProfileChange}
+                         placeholder="+1234567890"
+                         className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0bb6bc] focus:border-transparent bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
+                       />
+                     </div>
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                         LinkedIn
+                       </label>
+                       <input
+                         type="text"
+                         name="linkedin"
+                         value={profileForm.linkedin}
+                         onChange={handleProfileChange}
+                         placeholder="username or linkedin.com/in/username"
+                         className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0bb6bc] focus:border-transparent bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
+                       />
+                     </div>
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                         Instagram
+                       </label>
+                       <input
+                         type="text"
+                         name="instagram"
+                         value={profileForm.instagram}
+                         onChange={handleProfileChange}
+                         placeholder="username or instagram.com/username"
+                         className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0bb6bc] focus:border-transparent bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
+                       />
+                     </div>
                     <div className="flex space-x-4">
                       <button
                         type="submit"
@@ -324,6 +384,50 @@ const Profile = () => {
                         className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
                       />
                     </div>
+                                         <div>
+                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                         Github
+                       </label>
+                       <input
+                         type="text"
+                         value={user.github || ''}
+                         disabled
+                         className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
+                       />
+                     </div>
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                         Whatsapp
+                       </label>
+                       <input
+                         type="tel"
+                         value={user.whatsapp || ''}
+                         disabled
+                         className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
+                       />
+                     </div>
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                         LinkedIn
+                       </label>
+                       <input
+                         type="text"
+                         value={user.linkedin || ''}
+                         disabled
+                         className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
+                       />
+                     </div>
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                         Instagram
+                       </label>
+                       <input
+                         type="text"
+                         value={user.instagram || ''}
+                         disabled
+                         className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
+                       />
+                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Role
