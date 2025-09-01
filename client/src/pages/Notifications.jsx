@@ -303,7 +303,10 @@ export default function Notifications() {
       />
   <Header />
   {/* Increased spacing below header */}
-  <div className="pt-20 md:pt-8 px-4 py-6 max-w-4xl mx-auto">
+  <div
+    className="pt-20 md:pt-8 px-4 py-6 max-w-4xl mx-auto overflow-y-auto scrollbar-hide"
+    style={{ maxHeight: 'calc(100vh - 80px)' }}
+  >
         {/* Desktop Header */}
         <div className="hidden md:flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
