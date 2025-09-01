@@ -114,6 +114,13 @@ export default function Watch() {
 
   const handleCommentCountChange = (count) => setCommentCount(count);
 
+  // Fetch comment count immediately when video is loaded
+  useEffect(() => {
+    if (video && Array.isArray(video.comments)) {
+      setCommentCount(video.comments.length);
+    }
+  }, [video]);
+
   function formatPostedAgo(dateString) {
     if (!dateString) return '';
     const posted = new Date(dateString);
