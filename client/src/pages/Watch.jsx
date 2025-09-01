@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import Comments from '../components/Comments';
+import VideoComments from '../components/VideoComments';
 import VideoInteractions from '../components/VideoInteractions';
 import DescriptionWithReadMore from './DescriptionWithReadMore';
 import Sidebar from '../components/Sidebar';
@@ -27,6 +27,7 @@ export default function Watch() {
   const [channelDetails, setChannelDetails] = useState(null);
   const [hoveredRecId, setHoveredRecId] = useState(null);
   const [progressLoading, setProgressLoading] = useState(false);
+  const commentsRef = React.useRef(null);
 
   // Helper to fetch video and recommendations
   const fetchVideoAndRecommendations = async (videoId) => {
@@ -215,7 +216,14 @@ export default function Watch() {
                 setDisliked={d => { setDisliked(d); setDislikeCount(count => d ? count + 1 : count - 1); }}
                 dislikeCount={dislikeCount}
                 showComments={showComments}
-                setShowComments={setShowComments}
+                setShowComments={(val) => {
+                  setShowComments(val);
+                  if (val && commentsRef.current) {
+                    setTimeout(() => {
+                      commentsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 100);
+                  }
+                }}
                 commentCount={commentCount}
               />
               <div className="flex items-center gap-3 mb-2">
@@ -227,10 +235,19 @@ export default function Watch() {
                 {channelDetails && <SubscribeButton channel={channelDetails} />}
               </div>
               {/* Video Description with Read More/Read Less */}
-              {video.description && (
+              {video.description && !showComments && (
                 <DescriptionWithReadMore description={video.description} />
               )}
-              {showComments && <Comments onCountChange={handleCommentCountChange} />}
+              {showComments && (
+                <div ref={commentsRef}>
+                  <VideoComments
+                    videoId={video._id}
+                    user={null} // TODO: pass current user object
+                    channel={channelDetails}
+                    onCountChange={handleCommentCountChange}
+                  />
+                </div>
+              )}
             </div>
           </div>
           {/* Recommendations Section */}
