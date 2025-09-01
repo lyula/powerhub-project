@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Bell, Heart, MessageCircle, UserPlus, MoreVertical, Check, X, Trash2, Settings } from 'lucide-react';
+import Header from "../components/Header";
 
 // Mock MobileHeader component
 const MobileHeader = ({ icon, label, rightAction }) => (
@@ -300,8 +301,9 @@ export default function Notifications() {
           </button>
         }
       />
-
-      <div className="pt-16 md:pt-0 px-4 py-6 max-w-4xl mx-auto">
+  <Header />
+  {/* Increased spacing below header */}
+  <div className="pt-20 md:pt-8 px-4 py-6 max-w-4xl mx-auto">
         {/* Desktop Header */}
         <div className="hidden md:flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
