@@ -19,6 +19,7 @@ import SavedVideos from './pages/SavedVideos';
 import LikedVideos from './pages/LikedVideos';
 import CourseVideos from './pages/CourseVideos';
 import WatchHistory from './pages/WatchHistory';
+import Notifications from './pages/Notifications';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -94,6 +95,7 @@ function AppRoutes() {
       <Route path="/liked-videos" element={<ProtectedRoute><LikedVideos /></ProtectedRoute>} />
       <Route path="/course-videos" element={<ProtectedRoute><CourseVideos /></ProtectedRoute>} />
       <Route path="/watch-history" element={<ProtectedRoute><WatchHistory /></ProtectedRoute>} />
+      <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );

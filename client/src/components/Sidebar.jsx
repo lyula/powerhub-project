@@ -1,7 +1,7 @@
 
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { HomeIcon, FireIcon, AcademicCapIcon, VideoCameraIcon, UserIcon, BookmarkIcon, HeartIcon, PlayCircleIcon, ClockIcon, SubscriptionsIcon } from './icons';
+import { HomeIcon, FireIcon, AcademicCapIcon, VideoCameraIcon, UserIcon, BookmarkIcon, HeartIcon, PlayCircleIcon, ClockIcon, SubscriptionsIcon, NotificationBellIcon } from './icons';
 
 const items = [
   { label: 'Home', icon: <HomeIcon />, path: '/home' },
@@ -13,6 +13,7 @@ const items = [
   { label: 'Liked Videos', icon: <HeartIcon />, path: '/liked-videos' },
   { label: 'Course Videos', icon: <PlayCircleIcon />, path: '/course-videos' },
   { label: 'Watch History', icon: <ClockIcon />, path: '/watch-history' },
+  { label: 'Notifications', icon: <NotificationBellIcon />, path: '/notifications' },
   { label: 'Profile', icon: <UserIcon />, path: '/profile' },
 ];
 
