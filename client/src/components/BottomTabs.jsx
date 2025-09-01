@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { HomeIcon, AcademicCapIcon, VideoCameraIcon, UserIcon } from './icons';
+import { HomeIcon, AcademicCapIcon, VideoCameraIcon, UserIcon, NotificationBellIcon } from './icons';
 import { PlusSquareIcon } from './PlusSquareIcon';
 
 export default function BottomTabs() {
@@ -15,7 +15,7 @@ export default function BottomTabs() {
       getPath: () => (channel && channel._id ? `/channel/${channel._id}` : '/channel-setup'),
     },
     { label: 'Create', icon: <PlusSquareIcon />, path: '/create-post' },
-    { label: 'Course Videos', icon: <AcademicCapIcon />, path: '/trending' },
+    { label: 'Notifications', icon: <NotificationBellIcon />, path: '/notifications' },
     { label: 'Profile', icon: <UserIcon />, path: '/profile' },
   ];
   return (

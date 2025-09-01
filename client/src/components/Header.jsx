@@ -101,17 +101,18 @@ export default function Header({ onToggleSidebar }) {
               )}
             </div>
 
-        {/* Notification Bell with Dummy Badge */}
-        <div className="relative hidden md:flex items-center justify-center">
-          <button
-            className="flex items-center justify-center px-2 py-2 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 shadow hover:shadow-lg transition hover:bg-gray-200 dark:hover:bg-[#222] focus:outline-none"
-            aria-label="Notifications"
-            style={{ minWidth: 40, height: 40 }}
-          >
-            <NotificationBellIcon />
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5" style={{ minWidth: 18, minHeight: 18, lineHeight: '18px' }}>3</span>
-          </button>
-        </div>
+          {/* Notification Bell with Dummy Badge */}
+          <div className="relative hidden md:flex items-center justify-center">
+            <button
+              className="flex items-center justify-center px-2 py-2 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 shadow hover:shadow-lg transition hover:bg-gray-200 dark:hover:bg-[#222] focus:outline-none"
+              aria-label="Notifications"
+              style={{ minWidth: 40, height: 40 }}
+              onClick={() => navigate('/notifications')}
+            >
+              <NotificationBellIcon />
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5" style={{ minWidth: 18, minHeight: 18, lineHeight: '18px' }}>3</span>
+            </button>
+          </div>
 
         <button
           className="hidden md:flex items-center justify-center px-2 py-2 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 shadow hover:shadow-lg transition hover:bg-[#c42152] dark:hover:bg-[#222] focus:outline-none"
