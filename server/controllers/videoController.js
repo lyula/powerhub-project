@@ -3,18 +3,26 @@ exports.likeReply = async (req, res) => {
   try {
     const video = await Video.findById(req.params.id);
     if (!video) return res.status(404).json({ error: 'Video not found' });
-    const { commentId, replyId } = req.body;
+  const { commentId, replyId, parentReplyId } = req.body;
     const userId = req.user._id;
     const comment = video.comments.id(commentId);
     if (!comment) return res.status(404).json({ error: 'Comment not found' });
-    const reply = comment.replies.id(replyId);
-    if (!reply) return res.status(404).json({ error: 'Reply not found' });
-    if (!reply.likes.includes(userId)) reply.likes.push(userId);
-    if (video.uploader.toString() === userId.toString()) reply.authorLiked = true;
-    await video.save();
-    res.json({ likes: reply.likes });
+    let reply;
+    if (parentReplyId) {
+      const parentReply = comment.replies.id(parentReplyId);
+      if (!parentReply || !parentReply.replies) return res.status(404).json({ error: 'Parent reply not found' });
+      reply = parentReply.replies.find(r => r._id && r._id.toString() === replyId);
+    } else {
+      reply = comment.replies.id(replyId);
+    }
+  if (!reply) return res.status(404).json({ error: 'Reply not found' });
+  if (!reply.likes.includes(userId)) reply.likes.push(userId);
+  if (video.uploader.toString() === userId.toString()) reply.authorLiked = true;
+  await video.save();
+  res.json({ likes: reply.likes });
   } catch (err) {
-    res.status(500).json({ error: 'Like reply failed', details: err });
+    console.error('Like reply failed:', err);
+    res.status(500).json({ error: 'Like reply failed', details: err?.message || err });
   }
 }
 // Unlike a comment
@@ -40,18 +48,26 @@ exports.unlikeReply = async (req, res) => {
   try {
     const video = await Video.findById(req.params.id);
     if (!video) return res.status(404).json({ error: 'Video not found' });
-    const { commentId, replyId } = req.body;
+  const { commentId, replyId, parentReplyId } = req.body;
     const userId = req.user._id;
     const comment = video.comments.id(commentId);
     if (!comment) return res.status(404).json({ error: 'Comment not found' });
-    const reply = comment.replies.id(replyId);
-    if (!reply) return res.status(404).json({ error: 'Reply not found' });
-    reply.likes = reply.likes.filter(id => id.toString() !== userId.toString());
-    if (video.uploader.toString() === userId.toString()) reply.authorLiked = false;
-    await video.save();
-    res.json(video);
+    let reply;
+    if (parentReplyId) {
+      const parentReply = comment.replies.id(parentReplyId);
+      if (!parentReply || !parentReply.replies) return res.status(404).json({ error: 'Parent reply not found' });
+      reply = parentReply.replies.find(r => r._id && r._id.toString() === replyId);
+    } else {
+      reply = comment.replies.id(replyId);
+    }
+  if (!reply) return res.status(404).json({ error: 'Reply not found' });
+  reply.likes = reply.likes.filter(id => id.toString() !== userId.toString());
+  if (video.uploader.toString() === userId.toString()) reply.authorLiked = false;
+  await video.save();
+  res.json(video);
   } catch (err) {
-    res.status(500).json({ error: 'Unlike reply failed', details: err });
+    console.error('Unlike reply failed:', err);
+    res.status(500).json({ error: 'Unlike reply failed', details: err?.message || err });
   }
 };
 // Add a view to a video
@@ -209,13 +225,56 @@ exports.replyComment = async (req, res) => {
   try {
     const video = await Video.findById(req.params.id);
     if (!video) return res.status(404).json({ error: 'Video not found' });
-    const { commentId, text } = req.body;
+    const { commentId, replyId, text } = req.body;
     const author = req.user._id;
     const comment = video.comments.id(commentId);
     if (!comment) return res.status(404).json({ error: 'Comment not found' });
-    comment.replies.push({ author, text });
-  await video.save();
-  res.json({ likes: comment.likes });
+    if (replyId) {
+      // Replying to a reply (second level only)
+      const parentReply = comment.replies.id(replyId);
+      if (!parentReply) return res.status(404).json({ error: 'Reply not found' });
+      if (!parentReply.replies) parentReply.replies = [];
+      parentReply.replies.push({ author, text, createdAt: Date.now() });
+    } else {
+      // Replying to a comment (first level)
+      comment.replies.push({ author, text, createdAt: Date.now() });
+    }
+    await video.save();
+    // Return the updated video with populated authors for comments and replies
+    // Helper to recursively populate author for replies to replies
+    async function deepPopulateReplies(replies) {
+      if (!replies) return [];
+      return Promise.all(replies.map(async reply => {
+        if (reply.author && typeof reply.author === 'object' && reply.author.username) {
+          // Already populated
+          reply.author = reply.author;
+        } else if (reply.author) {
+          const user = await require('../models/User').findById(reply.author).select('username avatar firstName lastName');
+          reply.author = user || { username: 'Unknown', avatar: '', firstName: '', lastName: '' };
+        }
+        if (reply.replies && reply.replies.length > 0) {
+          reply.replies = await deepPopulateReplies(reply.replies);
+        }
+        return reply;
+      }));
+    }
+
+    let updatedVideo = await Video.findById(video._id)
+      .populate('uploader', 'username')
+      .populate('channel', 'name description avatar banner')
+      .populate('comments.author', 'username')
+      .populate('comments.replies.author', 'username')
+      .lean();
+
+    // Deep populate author for replies to replies
+    if (updatedVideo && updatedVideo.comments) {
+      for (const comment of updatedVideo.comments) {
+        if (comment.replies && comment.replies.length > 0) {
+          comment.replies = await deepPopulateReplies(comment.replies);
+        }
+      }
+    }
+    res.json(updatedVideo);
   } catch (err) {
     res.status(500).json({ error: 'Reply failed', details: err });
   }
@@ -226,16 +285,44 @@ exports.getVideo = async (req, res) => {
   try {
     console.log('--- Get Video Request ---');
     console.log('Requested video id:', req.params.id);
-    const video = await Video.findById(req.params.id)
+    let video = await Video.findById(req.params.id)
       .populate('uploader', 'username')
       .populate('channel', 'name description avatar banner')
       .populate('comments.author', 'username')
-      .populate('comments.replies.author', 'username');
+      .populate('comments.replies.author', 'username')
+      .lean();
+
     if (!video) {
       console.log('No video found for id:', req.params.id);
       return res.status(404).json({ error: 'Video not found' });
     }
-    console.log('Video found:', video);
+
+    // Deep populate author for replies to replies
+    async function deepPopulateReplies(replies) {
+      if (!replies) return [];
+      return Promise.all(replies.map(async reply => {
+        if (reply.author && typeof reply.author === 'object' && reply.author.username) {
+          reply.author = reply.author;
+        } else if (reply.author) {
+          const user = await require('../models/User').findById(reply.author).select('username avatar firstName lastName');
+          reply.author = user || { username: 'Unknown', avatar: '', firstName: '', lastName: '' };
+        }
+        if (reply.replies && reply.replies.length > 0) {
+          reply.replies = await deepPopulateReplies(reply.replies);
+        }
+        return reply;
+      }));
+    }
+
+    if (video && video.comments) {
+      for (const comment of video.comments) {
+        if (comment.replies && comment.replies.length > 0) {
+          comment.replies = await deepPopulateReplies(comment.replies);
+        }
+      }
+    }
+
+    console.log('Video found:', JSON.stringify(video, null, 2));
     res.json(video);
   } catch (err) {
     console.error('Error fetching video:', err);

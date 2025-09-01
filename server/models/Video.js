@@ -2,16 +2,32 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const commentSchema = new Schema({
+  _id: { type: Schema.Types.ObjectId, default: () => new mongoose.Types.ObjectId() },
   author: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   text: { type: String, required: true },
   likes: [{ type: Schema.Types.ObjectId, ref: 'User' }], // users who liked
   authorLiked: { type: Boolean, default: false }, // if video author liked
-  replies: [{
-    author: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    text: { type: String, required: true },
-    likes: [{ type: Schema.Types.ObjectId, ref: 'User' }],
-    authorLiked: { type: Boolean, default: false }
-  }],
+  replies: [
+    new Schema({
+      _id: { type: Schema.Types.ObjectId, default: () => new mongoose.Types.ObjectId() },
+      author: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+      text: { type: String, required: true },
+      likes: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+      authorLiked: { type: Boolean, default: false },
+      createdAt: { type: Date, default: Date.now },
+      replies: [
+        new Schema({
+          _id: { type: Schema.Types.ObjectId, default: () => new mongoose.Types.ObjectId() },
+          author: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+          text: { type: String, required: true },
+          likes: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+          authorLiked: { type: Boolean, default: false },
+          createdAt: { type: Date, default: Date.now },
+          replies: []
+        })
+      ]
+    })
+  ],
   createdAt: { type: Date, default: Date.now }
 });
 
