@@ -32,9 +32,12 @@ const VideoInteractions = ({
   liked, setLiked, likeCount,
   disliked, setDisliked, dislikeCount,
   showComments, setShowComments, commentCount,
-  videoUrl // Add videoUrl prop for sharing
+  videoUrl,
+  shareCount: initialShareCount
 }) => {
   const [shareOpen, setShareOpen] = useState(false);
+  const [shareCount, setShareCount] = useState(initialShareCount);
+  const handleShare = () => setShareCount(count => count + 1);
   return (
     <div className="flex flex-wrap gap-4 w-full justify-start items-center mt-2">
     <button
@@ -71,9 +74,9 @@ const VideoInteractions = ({
       onClick={() => setShareOpen(true)}
     >
       <ShareIcon />
-      <span className="text-sm">Share</span>
+      <span className="text-sm">Share ({shareCount})</span>
     </button>
-    <VideoShareModal open={shareOpen} onClose={() => setShareOpen(false)} videoUrl={videoUrl || window.location.href} />
+  <VideoShareModal open={shareOpen} onClose={() => setShareOpen(false)} videoUrl={videoUrl || window.location.href} onShare={handleShare} />
   </div>
   );
 };

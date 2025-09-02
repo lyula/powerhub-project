@@ -45,22 +45,57 @@ const SOCIALS = [
   },
 ];
 
-export default function VideoShareModal({ open, onClose, videoUrl }) {
-  const [copied, setCopied] = useState(false);
 
-  const handleCopy = () => {
+export default function VideoShareModal({ open, onClose, videoUrl, onShare }) {
+  const [copied, setCopied] = useState(false);
+  // Extract videoId from videoUrl (assumes /watch/:id)
+  // Robust videoId extraction (handles trailing slashes, query params)
+  let videoId = '';
+  if (videoUrl) {
+    const match = videoUrl.match(/\/watch\/(\w+)/);
+    if (match && match[1]) videoId = match[1];
+  }
+
+  const incrementShare = async () => {
+    if (!videoId) {
+      console.error('No videoId found for share increment');
+      return;
+    }
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      // Ensure /api/ is present if needed
+  const endpoint = apiUrl.endsWith('/') ? `${apiUrl}videos/${videoId}/share` : `${apiUrl}/videos/${videoId}/share`;
+      const res = await fetch(endpoint, { method: 'POST' });
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error('Share count API error:', errText);
+      }
+    } catch (err) {
+      console.error('Share count increment failed:', err);
+    }
+  };
+
+  const handleCopy = async () => {
     navigator.clipboard.writeText(videoUrl);
     setCopied(true);
+    await incrementShare();
+    if (onShare) onShare();
     setTimeout(() => setCopied(false), 1500);
+  };
+
+  const handleSocialShare = async (url) => {
+    await incrementShare();
+    if (onShare) onShare();
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 dark:bg-black dark:bg-opacity-70">
-  <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-8 w-full max-w-md relative border border-gray-200 dark:border-gray-800">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-8 w-full max-w-md relative border border-gray-200 dark:border-gray-800">
         <button className="absolute top-3 right-3 text-gray-400 dark:text-gray-500 hover:text-red-500 text-2xl" onClick={onClose} aria-label="Close">&times;</button>
-  <h2 className="text-xl font-bold mb-4 text-center text-[#0bb6bc] dark:text-[#fc3a57]">Share Video</h2>
+        <h2 className="text-xl font-bold mb-4 text-center text-[#0bb6bc] dark:text-[#fc3a57]">Share Video</h2>
         <div className="mb-4">
           <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded px-2 py-1">
             <input
@@ -79,16 +114,15 @@ export default function VideoShareModal({ open, onClose, videoUrl }) {
         </div>
         <div className="flex justify-between gap-2 mt-2">
           {SOCIALS.map(social => (
-            <a
+            <button
               key={social.name}
-              href={social.url(videoUrl)}
-              target="_blank"
-              rel="noopener noreferrer"
+              onClick={() => handleSocialShare(social.url(videoUrl))}
               className="flex flex-col items-center gap-1 text-xs font-medium group w-1/4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
             >
               <span className="mx-auto">{social.icon}</span>
               <span className="text-gray-700 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400">{social.name}</span>
-            </a>
+            </button>
           ))}
         </div>
       </div>

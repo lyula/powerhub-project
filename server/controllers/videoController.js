@@ -1,3 +1,15 @@
+// Increment share count for a video
+exports.incrementShareCount = async (req, res) => {
+  try {
+    const video = await require('../models/Video').findById(req.params.id);
+    if (!video) return res.status(404).json({ error: 'Video not found' });
+    video.shareCount = (video.shareCount || 0) + 1;
+    await video.save();
+    res.json({ success: true, shareCount: video.shareCount });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to increment share count', details: err?.message || err });
+  }
+};
 // Like a reply
 exports.likeReply = async (req, res) => {
   try {

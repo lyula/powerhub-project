@@ -38,4 +38,6 @@ router.post('/:id/view', videoController.addView);
 // Get video details
 router.get('/:id', videoController.getVideo);
 
+// Increment share count
+router.post('/:id/share', videoController.incrementShareCount);
 module.exports = router;

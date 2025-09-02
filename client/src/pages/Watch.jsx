@@ -263,6 +263,7 @@ export default function Watch() {
                 }}
                 commentCount={commentCount}
                 videoUrl={`${window.location.origin}/watch/${video._id}`}
+                shareCount={video.shareCount || 0}
               />
               {/* Video Description with Read More/Read Less */}
               {video.description && !showComments && (
