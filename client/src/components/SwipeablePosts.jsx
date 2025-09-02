@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import SharePostModal from './SharePostModal';
 import { useAuth } from '../context/AuthContext';
-import { FaRegHeart, FaHeart, FaRegThumbsDown, FaRegCommentDots, FaShare } from 'react-icons/fa';
+import { FaRegHeart, FaHeart, FaRegThumbsDown, FaThumbsDown, FaRegCommentDots, FaShare } from 'react-icons/fa';
 
 // Fetch actual posts from backend
 
@@ -12,14 +13,14 @@ function formatCount(n) {
 }
 
 const ExpandablePostCard = ({ post }) => {
+  const [shareOpen, setShareOpen] = useState(false);
   const { user, token } = useAuth();
   const userId = user?._id;
   const [liked, setLiked] = React.useState(Array.isArray(post.likes) && userId ? post.likes.includes(userId) : false);
   const [likeCount, setLikeCount] = React.useState(Array.isArray(post.likes) ? post.likes.length : (typeof post.likes === 'number' ? post.likes : 0));
-  // Default counts to 0 if missing
-  const dislikesCount = typeof post.dislikes === 'number' ? post.dislikes : 0;
   const commentsCount = typeof post.comments === 'number' ? post.comments : (Array.isArray(post.comments) ? post.comments.length : 0);
   const sharesCount = typeof post.shares === 'number' ? post.shares : (typeof post.shareCount === 'number' ? post.shareCount : 0);
+  const postUrl = `${window.location.origin}/post/${post._id || post.id}`;
 
   const handleLike = () => {
     if (!userId || !token) return;
@@ -53,6 +54,7 @@ const ExpandablePostCard = ({ post }) => {
         });
     }
   };
+
 
   return (
     <div
@@ -105,21 +107,18 @@ const ExpandablePostCard = ({ post }) => {
             {liked ? <FaHeart className="text-[20px]" /> : <FaRegHeart className="text-[20px]" />}
             <span className="text-xs font-medium">{formatCount(likeCount)}</span>
           </button>
-          <button className="text-gray-600 dark:text-gray-400 hover:text-[#0bb6bc] flex items-center gap-1">
-            <FaRegThumbsDown className="text-[20px]" />
-            <span className="text-xs font-medium">{formatCount(dislikesCount)}</span>
-          </button>
         </div>
         <div className="flex gap-2 items-center">
           <button className="text-gray-600 dark:text-gray-400 hover:text-[#0bb6bc] flex items-center gap-1">
             <FaRegCommentDots className="text-[20px]" />
             <span className="text-xs font-medium">{formatCount(commentsCount)}</span>
           </button>
-          <button className="text-gray-600 dark:text-gray-400 hover:text-[#0bb6bc] flex items-center gap-1">
+          <button className="text-gray-600 dark:text-gray-400 hover:text-[#0bb6bc] flex items-center gap-1" onClick={() => setShareOpen(true)} title="Share post">
             <FaShare className="text-[20px]" />
             <span className="text-xs font-medium">{formatCount(sharesCount)}</span>
           </button>
         </div>
+        <SharePostModal open={shareOpen} onClose={() => setShareOpen(false)} postUrl={postUrl} />
       </div>
     </div>
   );
