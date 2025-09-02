@@ -13,7 +13,10 @@ export default function ProfilePictureZoomModal({ open, onClose, profilePicture,
           className="object-cover w-80 h-80 shadow-2xl"
           style={{ aspectRatio: '1/1', background: '#222' }}
         />
-        <div className="absolute bottom-0 left-0 w-full flex flex-row justify-between items-end px-4 py-3" style={{background: 'rgba(0,0,0,0.95)'}}>
+        <div
+          className={`absolute bottom-0 left-0 w-full flex flex-row px-4 py-3 items-end ${hasChannel ? 'justify-between' : 'justify-center'}`}
+          style={{background: 'rgba(0,0,0,0.95)'}}
+        >
           {hasChannel && (
             <div
               className="text-white font-semibold text-base px-0 py-0 w-fit cursor-pointer hover:underline transition"
