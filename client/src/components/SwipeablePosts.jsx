@@ -108,10 +108,16 @@ const ExpandablePostCard = ({ post }) => {
     }
   };
 
+  // Navigation to post details
+  const navigateToPostDetails = () => {
+    window.location.href = `/post/${post._id || post.id}`;
+  };
+
   return (
     <div
-      className="min-w-[370px] max-w-[400px] h-[260px] bg-white dark:bg-[#222] rounded-lg shadow-sm flex-shrink-0 border border-gray-200 dark:border-gray-700 flex flex-col justify-between font-sans"
+      className="min-w-[370px] max-w-[400px] h-[260px] bg-white dark:bg-[#222] rounded-lg shadow-sm flex-shrink-0 border border-gray-200 dark:border-gray-700 flex flex-col justify-between font-sans cursor-pointer"
       style={{ fontFamily: 'Roboto, Arial, sans-serif' }}
+      onClick={navigateToPostDetails}
     >
       <div className="flex flex-row items-start px-4 pt-3 pb-2 gap-3 flex-1 relative">
         <div className="flex flex-col flex-1 min-w-0">
@@ -120,7 +126,7 @@ const ExpandablePostCard = ({ post }) => {
               src={post.author?.profilePicture || post.author?.avatar || post.author?.profile || '/default-avatar.png'}
               alt={post.author?.username || 'User'}
               className="w-8 h-8 rounded-full object-cover border border-gray-300 dark:border-gray-700 cursor-pointer"
-              onClick={() => handleProfilePictureClick(post.author)}
+              onClick={e => { e.stopPropagation(); handleProfilePictureClick(post.author); }}
               title="View profile picture"
             />
             <span className="text-[18px] font-semibold text-gray-900 dark:text-gray-100 leading-tight truncate">{post.author?.username || 'Unknown'}</span>
@@ -138,6 +144,7 @@ const ExpandablePostCard = ({ post }) => {
               target="_blank"
               rel="noopener noreferrer"
               className="text-[#0bb6bc] dark:text-[#0bb6bc] font-medium underline hover:text-[#099ca1] text-[15px] mt-1"
+              onClick={e => e.stopPropagation()}
             >
               Learn more
             </a>
@@ -150,6 +157,7 @@ const ExpandablePostCard = ({ post }) => {
               alt={post.content?.slice(0, 20) || 'Post image'}
               className="w-32 h-32 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
               style={{ minWidth: '8rem', minHeight: '8rem' }}
+              onClick={e => e.stopPropagation()}
             />
           </div>
         ) : null}
@@ -158,7 +166,7 @@ const ExpandablePostCard = ({ post }) => {
         <div className="flex gap-2 items-center">
           <button
             className={`flex items-center gap-1 ${liked ? 'text-pink-500' : 'text-gray-600 dark:text-gray-400 hover:text-[#0bb6bc]'}`}
-            onClick={handleLike}
+            onClick={e => { e.stopPropagation(); handleLike(); }}
             disabled={!userId || !token}
             title={!userId || !token ? 'Login to like posts' : liked ? 'Unlike' : 'Like'}
           >
@@ -167,11 +175,11 @@ const ExpandablePostCard = ({ post }) => {
           </button>
         </div>
         <div className="flex gap-2 items-center">
-          <button className="text-gray-600 dark:text-gray-400 hover:text-[#0bb6bc] flex items-center gap-1">
+          <button className="text-gray-600 dark:text-gray-400 hover:text-[#0bb6bc] flex items-center gap-1" onClick={e => { e.stopPropagation(); navigateToPostDetails(); }}>
             <FaRegCommentDots className="text-[20px]" />
             <span className="text-xs font-medium">{formatCount(commentsCount)}</span>
           </button>
-          <button className="text-gray-600 dark:text-gray-400 hover:text-[#0bb6bc] flex items-center gap-1" onClick={() => setShareOpen(true)} title="Share post">
+          <button className="text-gray-600 dark:text-gray-400 hover:text-[#0bb6bc] flex items-center gap-1" onClick={e => { e.stopPropagation(); setShareOpen(true); }} title="Share post">
             <FaShare className="text-[20px]" />
             <span className="text-xs font-medium">{formatCount(sharesCount)}</span>
           </button>

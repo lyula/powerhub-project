@@ -30,6 +30,9 @@ router.post('/', auth, postController.createPost);
 // Get all posts
 router.get('/', postController.getAllPosts);
 
+// Get a post by ID
+router.get('/:id', postController.getPostById);
+
 // Get posts by user id
 router.get('/user/:userId', postController.getPostsByUser);
 
