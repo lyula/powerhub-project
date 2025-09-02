@@ -24,4 +24,7 @@ router.post('/:id/unsubscribe', auth, channelController.unsubscribeChannel);
 // Get channel by id
 router.get('/:id', channelController.getChannelById);
 
+// Get channel by owner user ID
+router.get('/by-owner/:ownerId', channelController.getChannelByOwner);
+
 module.exports = router;

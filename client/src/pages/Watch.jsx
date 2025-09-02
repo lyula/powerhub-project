@@ -11,6 +11,28 @@ import SubscribeButton from '../components/SubscribeButton';
 import ProgressBar from '../components/ProgressBar';
 import SimilarContentThumbnail from '../components/SimilarContentThumbnail';
 
+// Helper to count all comments, replies to comments, and replies to replies
+function getTotalCommentCount(comments) {
+  let count = 0;
+  function countReplies(replies) {
+    let replyCount = 0;
+    for (const reply of replies || []) {
+      replyCount++;
+      if (reply.replies && reply.replies.length > 0) {
+        replyCount += countReplies(reply.replies);
+      }
+    }
+    return replyCount;
+  }
+  for (const comment of comments || []) {
+    count++;
+    if (comment.replies && comment.replies.length > 0) {
+      count += countReplies(comment.replies);
+    }
+  }
+  return count;
+}
+
 export default function Watch() {
   const { id } = useParams();
   const [video, setVideo] = useState(null);
@@ -112,14 +134,14 @@ export default function Watch() {
     sendView();
   }, [id]);
 
-  const handleCommentCountChange = (count) => setCommentCount(count);
-
   // Fetch comment count immediately when video is loaded
   useEffect(() => {
     if (video && Array.isArray(video.comments)) {
-      setCommentCount(video.comments.length);
+      setCommentCount(getTotalCommentCount(video.comments));
     }
   }, [video]);
+
+  const handleCommentCountChange = (count) => setCommentCount(count);
 
   function formatPostedAgo(dateString) {
     if (!dateString) return '';
@@ -240,6 +262,8 @@ export default function Watch() {
                   }
                 }}
                 commentCount={commentCount}
+                videoUrl={`${window.location.origin}/watch/${video._id}`}
+                shareCount={video.shareCount || 0}
               />
               {/* Video Description with Read More/Read Less */}
               {video.description && !showComments && (
@@ -249,7 +273,7 @@ export default function Watch() {
                 <div ref={commentsRef}>
                   <VideoComments
                     videoId={video._id}
-                    user={null} // TODO: pass current user object
+                    user={null}
                     channel={channelDetails}
                     onCountChange={handleCommentCountChange}
                   />

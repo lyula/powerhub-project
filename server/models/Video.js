@@ -2,16 +2,32 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const commentSchema = new Schema({
+  _id: { type: Schema.Types.ObjectId, default: () => new mongoose.Types.ObjectId() },
   author: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   text: { type: String, required: true },
   likes: [{ type: Schema.Types.ObjectId, ref: 'User' }], // users who liked
   authorLiked: { type: Boolean, default: false }, // if video author liked
-  replies: [{
-    author: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    text: { type: String, required: true },
-    likes: [{ type: Schema.Types.ObjectId, ref: 'User' }],
-    authorLiked: { type: Boolean, default: false }
-  }],
+  replies: [
+    new Schema({
+      _id: { type: Schema.Types.ObjectId, default: () => new mongoose.Types.ObjectId() },
+      author: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+      text: { type: String, required: true },
+      likes: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+      authorLiked: { type: Boolean, default: false },
+      createdAt: { type: Date, default: Date.now },
+      replies: [
+        new Schema({
+          _id: { type: Schema.Types.ObjectId, default: () => new mongoose.Types.ObjectId() },
+          author: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+          text: { type: String, required: true },
+          likes: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+          authorLiked: { type: Boolean, default: false },
+          createdAt: { type: Date, default: Date.now },
+          replies: []
+        })
+      ]
+    })
+  ],
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -32,6 +48,7 @@ const videoSchema = new Schema({
   views: [{ type: Schema.Types.ObjectId, ref: 'User' }], // users who viewed
   viewCount: { type: Number, default: 0 }, // total view count
   comments: [commentSchema],
+  shareCount: { type: Number, default: 0 }, // number of times video is shared
   duration: { type: Number }, // duration in seconds
   impressions: { type: Number, default: 0 },
   watchTime: { type: Number, default: 0 }, // total seconds watched
@@ -41,6 +58,7 @@ const videoSchema = new Schema({
     channel: { type: Number, default: 0 }
   },
   analytics: { type: Schema.Types.ObjectId, ref: 'VideoAnalytics' },
+  shareCount: { type: Number, default: 0 }, // number of times video is shared
   createdAt: { type: Date, default: Date.now }
 });
 
