@@ -2,6 +2,8 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { MdHome, MdWhatshot, MdVideoLibrary, MdSubscriptions, MdBookmark, MdFavoriteBorder, MdPlayCircleOutline, MdHistory, MdNotificationsNone, MdPersonOutline, MdLogout } from 'react-icons/md';
+import React, { useRef, useState, useEffect } from 'react';
+import NotificationModal from './NotificationModal';
 
 const items = [
   { label: 'Home', icon: <MdHome size={24} />, path: '/home' },
@@ -20,6 +22,7 @@ const items = [
 export default function Sidebar({ collapsed }) {
   const navigate = useNavigate();
   const { channel, logout } = useAuth();
+
   return (
     <aside className={`hidden md:flex flex-col min-h-screen bg-gray-100 dark:bg-[#111111] border-r border-gray-200 dark:border-gray-900 py-6 ${collapsed ? 'w-20 px-2' : 'w-64 px-4'}`}>
       <nav className="flex flex-col gap-2 overflow-y-auto max-h-[calc(100vh-48px)]">
@@ -63,12 +66,6 @@ export default function Sidebar({ collapsed }) {
                 key={item.label}
                 to={item.path}
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-900 transition ${collapsed ? 'justify-center' : ''}`}
-                onClick={e => {
-                  if (item.path === '/notifications' && window.location.pathname === '/notifications') {
-                    e.preventDefault();
-                    navigate('/home');
-                  }
-                }}
               >
                 <span className="w-6 h-6">{item.icon}</span>
                 {!collapsed && <span>{item.label}</span>}

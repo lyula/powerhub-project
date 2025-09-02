@@ -5,9 +5,11 @@ import { MdMenu, MdNotificationsNone, MdLogout } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ThemeToggle from './ThemeToggle';
+import NotificationModal from './NotificationModal';
 
 export default function Header({ onToggleSidebar }) {
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showNotifModal, setShowNotifModal] = useState(false);
   const modalRoot = typeof window !== 'undefined' ? document.body : null;
   const navigate = useNavigate();
   const { user, logout, channel } = useAuth();
@@ -51,7 +53,24 @@ export default function Header({ onToggleSidebar }) {
             </span>
       </div>
   <div className="flex items-center gap-4 w-full justify-center min-w-0">
-        <input type="text" placeholder="Search videos..." className="px-3 py-2 rounded-lg bg-gray-200 dark:bg-gray-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0bb6bc] placeholder-gray-400 w-full max-w-md text-center text-base" style={{ height: '36px' }} />
+  <div className="relative w-full max-w-2xl">
+          <input
+            type="text"
+            placeholder="Search"
+            className="pl-4 pr-12 py-2 rounded-full bg-gray-200 dark:bg-gray-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0bb6bc] placeholder-gray-400 w-full text-base border border-gray-300 dark:border-gray-700"
+            style={{ height: '40px' }}
+          />
+          <button
+            type="button"
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-gray-300 dark:hover:bg-gray-700 transition"
+            aria-label="Search"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-5 h-5 text-gray-600 dark:text-gray-300">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </button>
+        </div>
             <div className="relative" style={{ position: 'relative', zIndex: 100 }}>
               <button
                 className="hidden md:inline flex flex-row items-center gap-3 px-4 py-2 rounded-lg bg-[#c42152] text-white font-semibold hover:bg-[#0bb6bc] transition text-base"
@@ -97,26 +116,41 @@ export default function Header({ onToggleSidebar }) {
               )}
             </div>
 
-          {/* Notification Bell with Dummy Badge */}
+          {/* Notification Bell with Modal */}
           <div className="relative hidden md:flex items-center justify-center">
             <button
-              className={`flex items-center justify-center px-2 py-2 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 shadow hover:shadow-lg transition hover:bg-gray-200 dark:hover:bg-[#222] focus:outline-none ${window.location.pathname === '/notifications' ? 'ring-2 ring-[#0bb6bc] bg-[#e0f7fa] dark:bg-[#0bb6bc]/20' : ''}`}
+              className={`flex items-center justify-center px-2 py-2 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 shadow hover:shadow-lg transition hover:bg-gray-200 dark:hover:bg-[#222] focus:outline-none`}
               aria-label="Notifications"
               style={{ minWidth: 40, height: 40, position: 'relative' }}
               onClick={() => {
                 if (window.location.pathname === '/notifications') {
+                  setShowNotifModal(false);
                   navigate('/home');
                 } else {
-                  navigate('/notifications');
+                  setShowNotifModal((prev) => !prev);
                 }
               }}
+              type="button"
             >
               <MdNotificationsNone size={26} color="#0bb6bc" />
               <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5" style={{ minWidth: 18, minHeight: 18, lineHeight: '18px' }}>3</span>
-              {window.location.pathname === '/notifications' && (
-                <span className="absolute inset-0 rounded-full bg-[#0bb6bc] opacity-10 pointer-events-none"></span>
-              )}
             </button>
+            {showNotifModal && modalRoot && createPortal(
+              <div style={{ position: 'absolute', top: '48px', right: 0, zIndex: 9999 }}>
+                <NotificationModal
+                  notifications={[
+                    { id: 1, title: 'New comment on your video', body: 'Someone commented: "Great video!"' },
+                    { id: 2, title: 'New subscriber', body: 'You have a new subscriber!' },
+                    { id: 3, title: 'Video approved', body: 'Your video "React Basics" is now live.' },
+                    { id: 4, title: 'Mentioned in a post', body: 'You were mentioned in a post.' },
+                    { id: 5, title: 'Channel milestone', body: 'Congrats! 1000 subscribers.' },
+                    { id: 6, title: 'Update available', body: 'A new feature is available.' },
+                  ]}
+                  onClose={() => setShowNotifModal(false)}
+                />
+              </div>,
+              modalRoot
+            )}
           </div>
 
         <button
