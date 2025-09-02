@@ -22,6 +22,58 @@ const ExpandablePostCard = ({ post }) => {
   const [sharesCount, setSharesCount] = useState(typeof post.shares === 'number' ? post.shares : (typeof post.shareCount === 'number' ? post.shareCount : 0));
   const postUrl = `${window.location.origin}/post/${post._id || post.id}`;
 
+  // Profile picture modal logic
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalData, setModalData] = useState({
+    profilePicture: '',
+    channelName: '',
+    socialLinks: {},
+    authorId: '',
+    hasChannel: false
+  });
+
+  // Helper to open modal with profile picture and channel info (copied from VideoComments)
+  const handleProfilePictureClick = async (author) => {
+    const authorId = author._id || author.id;
+    let hasChannel = false;
+    if (authorId) {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL;
+        const res = await fetch(`${apiUrl}/channel/by-owner/${authorId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data._id) {
+            hasChannel = true;
+          }
+        }
+      } catch (err) {}
+    }
+    setModalData({
+      profilePicture: author.profilePicture || author.avatar || author.profile || '/default-avatar.png',
+      channelName: author.username || author.firstName || 'Unknown',
+      socialLinks: author.socialLinks || {},
+      authorId,
+      hasChannel
+    });
+    setModalOpen(true);
+  };
+
+  const handleViewChannel = async () => {
+    setModalOpen(false);
+    if (modalData.authorId) {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL;
+        const res = await fetch(`${apiUrl}/channel/by-owner/${modalData.authorId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data._id) {
+            window.location.href = `/channel/${data._id}`;
+            return;
+          }
+        }
+      } catch (err) {}
+    }
+  };
 
   const handleLike = () => {
     if (!userId || !token) return;
@@ -56,7 +108,6 @@ const ExpandablePostCard = ({ post }) => {
     }
   };
 
-
   return (
     <div
       className="min-w-[370px] max-w-[400px] h-[260px] bg-white dark:bg-[#222] rounded-lg shadow-sm flex-shrink-0 border border-gray-200 dark:border-gray-700 flex flex-col justify-between font-sans"
@@ -65,7 +116,13 @@ const ExpandablePostCard = ({ post }) => {
       <div className="flex flex-row items-start px-4 pt-3 pb-2 gap-3 flex-1 relative">
         <div className="flex flex-col flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <img src={post.author?.profilePicture || '/default-avatar.png'} alt={post.author?.username || 'User'} className="w-8 h-8 rounded-full object-cover border border-gray-300 dark:border-gray-700" />
+            <img
+              src={post.author?.profilePicture || post.author?.avatar || post.author?.profile || '/default-avatar.png'}
+              alt={post.author?.username || 'User'}
+              className="w-8 h-8 rounded-full object-cover border border-gray-300 dark:border-gray-700 cursor-pointer"
+              onClick={() => handleProfilePictureClick(post.author)}
+              title="View profile picture"
+            />
             <span className="text-[18px] font-semibold text-gray-900 dark:text-gray-100 leading-tight truncate">{post.author?.username || 'Unknown'}</span>
           </div>
           <span
@@ -119,7 +176,19 @@ const ExpandablePostCard = ({ post }) => {
             <span className="text-xs font-medium">{formatCount(sharesCount)}</span>
           </button>
         </div>
-  <SharePostModal open={shareOpen} onClose={() => setShareOpen(false)} postUrl={postUrl} onShare={(newCount) => { if (typeof newCount === 'number') setSharesCount(newCount); }} />
+        <SharePostModal open={shareOpen} onClose={() => setShareOpen(false)} postUrl={postUrl} onShare={(newCount) => { if (typeof newCount === 'number') setSharesCount(newCount); }} />
+        {/* Profile picture zoom modal */}
+        {modalOpen && (
+          <ProfilePictureZoomModal
+            open={modalOpen}
+            onClose={() => setModalOpen(false)}
+            profilePicture={modalData.profilePicture}
+            channelName={modalData.channelName}
+            socialLinks={modalData.socialLinks}
+            hasChannel={modalData.hasChannel}
+            onViewChannel={handleViewChannel}
+          />
+        )}
       </div>
     </div>
   );
@@ -168,4 +237,5 @@ const SwipeablePosts = () => {
   );
 };
 
+import ProfilePictureZoomModal from './ProfilePictureZoomModal';
 export default SwipeablePosts;
