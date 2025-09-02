@@ -525,12 +525,27 @@ export default function VideoComments({ videoId, onCountChange, channel }) {
   }
 
   // Helper to open modal with profile picture and channel info
-  function handleProfilePictureClick(author) {
+  async function handleProfilePictureClick(author) {
+    const authorId = author._id || author.id;
+    let hasChannel = false;
+    if (authorId) {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL;
+        const res = await fetch(`${apiUrl}/channel/by-owner/${authorId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data._id) {
+            hasChannel = true;
+          }
+        }
+      } catch (err) {}
+    }
     setModalData({
       profilePicture: author.profilePicture || author.avatar || 'https://randomuser.me/api/portraits/lego/1.jpg',
       channelName: author.username || author.firstName || 'Unknown',
       socialLinks: author.socialLinks || channel?.socialLinks || {},
-      authorId: author._id || author.id // store author user id for modal
+      authorId,
+      hasChannel
     });
     setModalOpen(true);
   }
@@ -543,6 +558,7 @@ export default function VideoComments({ videoId, onCountChange, channel }) {
         profilePicture={modalData.profilePicture}
         channelName={modalData.channelName}
         socialLinks={modalData.socialLinks}
+        hasChannel={modalData.hasChannel}
         onViewChannel={async () => {
           setModalOpen(false);
           // Try to fetch channel by authorId

@@ -2,7 +2,7 @@ import React from 'react';
 import { FaYoutube, FaTwitter, FaInstagram, FaFacebook, FaTiktok, FaLinkedin, FaWhatsapp, FaGithub, FaEnvelope } from 'react-icons/fa';
 
 
-export default function ProfilePictureZoomModal({ open, onClose, profilePicture, channelName, socialLinks, onViewChannel }) {
+export default function ProfilePictureZoomModal({ open, onClose, profilePicture, channelName, socialLinks, hasChannel, onViewChannel }) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80" onClick={onClose}>
@@ -13,14 +13,16 @@ export default function ProfilePictureZoomModal({ open, onClose, profilePicture,
           className="object-cover w-80 h-80 shadow-2xl"
           style={{ aspectRatio: '1/1', background: '#222' }}
         />
-  <div className="absolute bottom-0 left-0 w-full flex flex-row justify-between items-end px-4 py-3" style={{background: 'rgba(0,0,0,0.95)'}}>
-          <div
-            className="text-white font-semibold text-base px-0 py-0 w-fit cursor-pointer hover:underline transition"
-            style={{ display: 'flex', alignItems: 'center' }}
-            onClick={onViewChannel}
-          >
-            View channel
-          </div>
+        <div className="absolute bottom-0 left-0 w-full flex flex-row justify-between items-end px-4 py-3" style={{background: 'rgba(0,0,0,0.95)'}}>
+          {hasChannel && (
+            <div
+              className="text-white font-semibold text-base px-0 py-0 w-fit cursor-pointer hover:underline transition"
+              style={{ display: 'flex', alignItems: 'center' }}
+              onClick={onViewChannel}
+            >
+              View channel
+            </div>
+          )}
           <div className="flex gap-3 items-center">
             {/* Always show these icons, use socialLinks if available, else '#' */}
             <a href={socialLinks?.linkedin || '#'} target="_blank" rel="noopener noreferrer" title="LinkedIn"><FaLinkedin className="text-blue-700 text-2xl" /></a>
