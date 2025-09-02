@@ -1,69 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { FaRegHeart, FaHeart, FaRegThumbsDown, FaRegCommentDots, FaShare } from 'react-icons/fa';
 
-// Sample dummy posts with images, links, and counts
-const posts = [
-  {
-    id: 1,
-    username: 'powerhub_admin',
-    profile: 'https://randomuser.me/api/portraits/men/32.jpg',
-    content: 'Check out our new features and updates.',
-    image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80',
-    link: 'https://powerhub.com/features',
-    likes: 1200,
-    dislikes: 45,
-    comments: 320,
-    shares: 80,
-  },
-  {
-    id: 2,
-    username: 'community_manager',
-    profile: 'https://randomuser.me/api/portraits/women/44.jpg',
-    content: 'Join our upcoming webinar for exclusive tips.',
-    image: 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=400&q=80',
-    link: 'https://powerhub.com/webinar',
-    likes: 5400,
-    dislikes: 12,
-    comments: 2100,
-    shares: 300,
-  },
-  {
-    id: 3,
-    username: 'jane_doe',
-    profile: 'https://randomuser.me/api/portraits/women/65.jpg',
-    content: 'Read how Jane improved her workflow with PowerHub.',
-    image: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80',
-    link: 'https://powerhub.com/stories/jane',
-    likes: 980,
-    dislikes: 5,
-    comments: 120,
-    shares: 40,
-  },
-  {
-    id: 4,
-    username: 'dev_team',
-    profile: 'https://randomuser.me/api/portraits/men/56.jpg',
-    content: 'Explore our documentation and start building today.',
-    image: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=400&q=80',
-    link: 'https://powerhub.com/docs',
-    likes: 22000,
-    dislikes: 100,
-    comments: 8000,
-    shares: 1200,
-  },
-  {
-    id: 5,
-    username: 'tips_bot',
-    profile: 'https://randomuser.me/api/portraits/men/76.jpg',
-    content: 'Discover quick tips to boost your productivity and get the most out of PowerHub. Stay tuned for weekly updates!',
-    image: 'https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?auto=format&fit=crop&w=400&q=80',
-    link: 'https://powerhub.com/tips',
-    likes: 350,
-    dislikes: 2,
-    comments: 60,
-    shares: 10,
-  },
-];
+// Fetch actual posts from backend
 
 // ExpandablePostCard component for truncation and expand on tap
 function formatCount(n) {
@@ -74,7 +12,11 @@ function formatCount(n) {
 
 const ExpandablePostCard = ({ post }) => {
   const [liked, setLiked] = React.useState(false);
-  const [likeCount, setLikeCount] = React.useState(post.likes);
+  const [likeCount, setLikeCount] = React.useState(Array.isArray(post.likes) ? post.likes.length : (typeof post.likes === 'number' ? post.likes : 0));
+  // Default counts to 0 if missing
+  const dislikesCount = typeof post.dislikes === 'number' ? post.dislikes : 0;
+  const commentsCount = typeof post.comments === 'number' ? post.comments : (Array.isArray(post.comments) ? post.comments.length : 0);
+  const sharesCount = typeof post.shares === 'number' ? post.shares : (typeof post.shareCount === 'number' ? post.shareCount : 0);
 
   const handleLike = () => {
     setLiked(l => !l);
@@ -89,8 +31,8 @@ const ExpandablePostCard = ({ post }) => {
       <div className="flex flex-row items-start px-4 pt-3 pb-2 gap-3 flex-1 relative">
         <div className="flex flex-col flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <img src={post.profile} alt={post.username} className="w-8 h-8 rounded-full object-cover border border-gray-300 dark:border-gray-700" />
-            <span className="text-[18px] font-semibold text-gray-900 dark:text-gray-100 leading-tight truncate">{post.username}</span>
+            <img src={post.author?.profilePicture || '/default-avatar.png'} alt={post.author?.username || 'User'} className="w-8 h-8 rounded-full object-cover border border-gray-300 dark:border-gray-700" />
+            <span className="text-[18px] font-semibold text-gray-900 dark:text-gray-100 leading-tight truncate">{post.author?.username || 'Unknown'}</span>
           </div>
           <span
             className="text-[16px] text-gray-800 dark:text-gray-200 mb-1 leading-snug line-clamp-5"
@@ -110,16 +52,16 @@ const ExpandablePostCard = ({ post }) => {
             </a>
           )}
         </div>
-        {post.image && (
+        {Array.isArray(post.images) && post.images.length > 0 ? (
           <div className="flex flex-col justify-center items-center h-full">
             <img
-              src={post.image}
-              alt={post.title}
+              src={post.images[0]}
+              alt={post.content?.slice(0, 20) || 'Post image'}
               className="w-32 h-32 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
               style={{ minWidth: '8rem', minHeight: '8rem' }}
             />
           </div>
-        )}
+        ) : null}
       </div>
       <div className="border-t border-gray-100 dark:border-gray-700 px-4 py-2 flex items-center justify-between">
         <div className="flex gap-2 items-center">
@@ -132,17 +74,17 @@ const ExpandablePostCard = ({ post }) => {
           </button>
           <button className="text-gray-600 dark:text-gray-400 hover:text-[#0bb6bc] flex items-center gap-1">
             <FaRegThumbsDown className="text-[20px]" />
-            <span className="text-xs font-medium">{formatCount(post.dislikes)}</span>
+            <span className="text-xs font-medium">{formatCount(dislikesCount)}</span>
           </button>
         </div>
         <div className="flex gap-2 items-center">
           <button className="text-gray-600 dark:text-gray-400 hover:text-[#0bb6bc] flex items-center gap-1">
             <FaRegCommentDots className="text-[20px]" />
-            <span className="text-xs font-medium">{formatCount(post.comments)}</span>
+            <span className="text-xs font-medium">{formatCount(commentsCount)}</span>
           </button>
           <button className="text-gray-600 dark:text-gray-400 hover:text-[#0bb6bc] flex items-center gap-1">
             <FaShare className="text-[20px]" />
-            <span className="text-xs font-medium">{formatCount(post.shares)}</span>
+            <span className="text-xs font-medium">{formatCount(sharesCount)}</span>
           </button>
         </div>
       </div>
@@ -151,14 +93,44 @@ const ExpandablePostCard = ({ post }) => {
 };
 
 const SwipeablePosts = () => {
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchPosts = async () => {
+      setLoading(true);
+      setError('');
+      try {
+  const res = await fetch(`${import.meta.env.VITE_API_URL}/posts`);
+  if (!res.ok) throw new Error('Failed to fetch posts');
+  const data = await res.json();
+  // If backend returns an array, use it directly; if object, use .posts
+  setPosts(Array.isArray(data) ? data : (data.posts || []));
+      } catch (err) {
+        setError(err.message);
+      }
+      setLoading(false);
+    };
+    fetchPosts();
+  }, []);
+
   return (
-  <section className="w-full mt-2 mb-8">
+    <section className="w-full mt-2 mb-8">
       <h2 className="text-[1.25rem] font-medium font-sans mb-4 text-[#0bb6bc] dark:text-[#0bb6bc]">PowerHub Community posts</h2>
-      <div className="flex overflow-x-auto gap-4 pb-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700">
-        {posts.map(post => (
-          <ExpandablePostCard key={post.id} post={post} />
-        ))}
-      </div>
+      {loading ? (
+        <div className="text-gray-500 dark:text-gray-400 px-4 py-6">Loading posts...</div>
+      ) : error ? (
+        <div className="text-red-500 px-4 py-6">{error}</div>
+      ) : posts.length === 0 ? (
+        <div className="text-gray-500 dark:text-gray-400 px-4 py-6">No posts found.</div>
+      ) : (
+        <div className="flex overflow-x-auto gap-4 pb-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700">
+          {posts.map(post => (
+            <ExpandablePostCard key={post._id || post.id} post={post} />
+          ))}
+        </div>
+      )}
     </section>
   );
 };
