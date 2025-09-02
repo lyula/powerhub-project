@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { FaRegHeart, FaHeart, FaRegThumbsDown, FaRegCommentDots, FaShare } from 'react-icons/fa';
 
 // Fetch actual posts from backend
@@ -11,7 +12,9 @@ function formatCount(n) {
 }
 
 const ExpandablePostCard = ({ post }) => {
-  const [liked, setLiked] = React.useState(false);
+  const { user, token } = useAuth();
+  const userId = user?._id;
+  const [liked, setLiked] = React.useState(Array.isArray(post.likes) && userId ? post.likes.includes(userId) : false);
   const [likeCount, setLikeCount] = React.useState(Array.isArray(post.likes) ? post.likes.length : (typeof post.likes === 'number' ? post.likes : 0));
   // Default counts to 0 if missing
   const dislikesCount = typeof post.dislikes === 'number' ? post.dislikes : 0;
@@ -19,8 +22,36 @@ const ExpandablePostCard = ({ post }) => {
   const sharesCount = typeof post.shares === 'number' ? post.shares : (typeof post.shareCount === 'number' ? post.shareCount : 0);
 
   const handleLike = () => {
-    setLiked(l => !l);
-    setLikeCount(count => liked ? count - 1 : count + 1);
+    if (!userId || !token) return;
+    if (!liked) {
+      // Like post
+      fetch(`${import.meta.env.VITE_API_URL}/posts/${post._id}/like`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+        .then(res => res.json())
+        .then(data => {
+          setLiked(true);
+          setLikeCount(data.likes || (likeCount + 1));
+        });
+    } else {
+      // Unlike post
+      fetch(`${import.meta.env.VITE_API_URL}/posts/${post._id}/unlike`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+        .then(res => res.json())
+        .then(data => {
+          setLiked(false);
+          setLikeCount(data.likes || (likeCount - 1));
+        });
+    }
   };
 
   return (
@@ -68,6 +99,8 @@ const ExpandablePostCard = ({ post }) => {
           <button
             className={`flex items-center gap-1 ${liked ? 'text-pink-500' : 'text-gray-600 dark:text-gray-400 hover:text-[#0bb6bc]'}`}
             onClick={handleLike}
+            disabled={!userId || !token}
+            title={!userId || !token ? 'Login to like posts' : liked ? 'Unlike' : 'Like'}
           >
             {liked ? <FaHeart className="text-[20px]" /> : <FaRegHeart className="text-[20px]" />}
             <span className="text-xs font-medium">{formatCount(likeCount)}</span>
