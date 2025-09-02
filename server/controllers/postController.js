@@ -58,11 +58,17 @@ exports.addComment = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ error: 'Post not found' });
-    const { content } = req.body;
-    const author = req.user._id;
-    post.comments.push({ author, content });
-    await post.save();
-    res.status(201).json(post.comments);
+  // Accept 'text' or 'content' from frontend
+  const content = req.body.text || req.body.content;
+  if (!content) return res.status(400).json({ error: 'Comment text is required' });
+  const author = req.user._id;
+  const newComment = { author, content };
+  post.comments.push(newComment);
+  await post.save();
+  // Populate author for the new comment
+  await post.populate('comments.author', 'username profilePicture');
+  const addedComment = post.comments[post.comments.length - 1];
+  res.status(201).json({ comment: addedComment });
   } catch (err) {
     res.status(500).json({ error: 'Failed to add comment', details: err.message });
   }

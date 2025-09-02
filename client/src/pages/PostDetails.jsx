@@ -5,8 +5,15 @@ import StudentUtility from '../components/StudentUtility';
 import BottomTabs from '../components/BottomTabs';
 import { useParams } from 'react-router-dom';
 import { timeAgo } from '../utils/timeAgo';
+import { useAuth } from '../context/AuthContext';
 
 const PostDetails = () => {
+  // Auth context for token
+  const { token } = useAuth();
+  // Comment input state
+  const [commentInput, setCommentInput] = useState('');
+  const [commentLoading, setCommentLoading] = useState(false);
+  const [commentError, setCommentError] = useState('');
   const { postId } = useParams();
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -124,22 +131,47 @@ const PostDetails = () => {
                     <div className="mb-4">
                       <form
                         className="flex items-center gap-2"
-                        onSubmit={e => {
+                        onSubmit={async e => {
                           e.preventDefault();
-                          // TODO: Implement comment submission logic here
+                          if (!commentInput.trim()) return;
+                          setCommentLoading(true);
+                          setCommentError('');
+                          try {
+                            const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}/comment`, {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                              },
+                              body: JSON.stringify({ text: commentInput })
+                            });
+                            if (!res.ok) throw new Error('Failed to post comment');
+                            const data = await res.json();
+                            // Update comments list
+                            setPost(prev => ({ ...prev, comments: [data.comment, ...(prev.comments || [])] }));
+                            setCommentInput('');
+                          } catch (err) {
+                            setCommentError(err.message || 'Failed to post comment');
+                          }
+                          setCommentLoading(false);
                         }}
                       >
                         <input
                           type="text"
+                          value={commentInput}
+                          onChange={e => setCommentInput(e.target.value)}
                           placeholder="Add a comment..."
                           className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#222] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#0bb6bc]"
+                          disabled={commentLoading}
                         />
                         <button
                           type="submit"
                           className="px-4 py-2 rounded-lg bg-[#0bb6bc] text-white font-semibold hover:bg-[#099ca1] transition"
+                          disabled={commentLoading}
                         >
-                          Post
+                          {commentLoading ? 'Posting...' : 'Post'}
                         </button>
+                    {commentError && <div className="text-red-500 text-sm mb-2">{commentError}</div>}
                       </form>
                     </div>
                     {Array.isArray(post.comments) && post.comments.length > 0 ? (
@@ -149,8 +181,11 @@ const PostDetails = () => {
                             <div className="flex items-center gap-2 mb-1">
                               <img src={comment.author?.profilePicture || comment.author?.avatar || '/default-avatar.png'} alt={comment.author?.username || 'User'} className="w-7 h-7 rounded-full object-cover border border-gray-300 dark:border-gray-700" />
                               <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{comment.author?.username || 'Unknown'}</span>
+                              {comment.createdAt && (
+                                <span className="text-xs text-gray-400 ml-2">{timeAgo(comment.createdAt)}</span>
+                              )}
                             </div>
-                            <span className="text-gray-800 dark:text-gray-200 text-sm">{comment.text}</span>
+                            <span className="text-gray-800 dark:text-gray-200 text-sm">{comment.content}</span>
                           </div>
                         ))}
                       </div>
