@@ -60,7 +60,6 @@ const PostDetails = () => {
                       {post.createdAt && (
                         <span className="text-xs text-gray-500 dark:text-gray-400 mb-1">{timeAgo(post.createdAt)}</span>
                       )}
-                      <span className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1"> • {post.posted}</span>
                       <span className="text-xs text-[#c42152] font-semibold">{post.specialization}</span>
                     </div>
                   </div>
