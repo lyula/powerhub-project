@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaRegHeart, FaRegThumbsDown, FaRegCommentDots, FaShare } from 'react-icons/fa';
+import { FaRegHeart, FaHeart, FaRegThumbsDown, FaRegCommentDots, FaShare } from 'react-icons/fa';
 
 // Sample dummy posts with images, links, and counts
 const posts = [
@@ -73,10 +73,18 @@ function formatCount(n) {
 }
 
 const ExpandablePostCard = ({ post }) => {
+  const [liked, setLiked] = React.useState(false);
+  const [likeCount, setLikeCount] = React.useState(post.likes);
+
+  const handleLike = () => {
+    setLiked(l => !l);
+    setLikeCount(count => liked ? count - 1 : count + 1);
+  };
+
   return (
     <div
       className="min-w-[370px] max-w-[400px] h-[260px] bg-white dark:bg-[#222] rounded-lg shadow-sm flex-shrink-0 border border-gray-200 dark:border-gray-700 flex flex-col justify-between font-sans"
-  style={{ fontFamily: 'Roboto, Arial, sans-serif' }}
+      style={{ fontFamily: 'Roboto, Arial, sans-serif' }}
     >
       <div className="flex flex-row items-start px-4 pt-3 pb-2 gap-3 flex-1 relative">
         <div className="flex flex-col flex-1 min-w-0">
@@ -115,9 +123,12 @@ const ExpandablePostCard = ({ post }) => {
       </div>
       <div className="border-t border-gray-100 dark:border-gray-700 px-4 py-2 flex items-center justify-between">
         <div className="flex gap-2 items-center">
-          <button className="text-gray-600 dark:text-gray-400 hover:text-[#0bb6bc] flex items-center gap-1">
-            <FaRegHeart className="text-[20px]" />
-            <span className="text-xs font-medium">{formatCount(post.likes)}</span>
+          <button
+            className={`flex items-center gap-1 ${liked ? 'text-pink-500' : 'text-gray-600 dark:text-gray-400 hover:text-[#0bb6bc]'}`}
+            onClick={handleLike}
+          >
+            {liked ? <FaHeart className="text-[20px]" /> : <FaRegHeart className="text-[20px]" />}
+            <span className="text-xs font-medium">{formatCount(likeCount)}</span>
           </button>
           <button className="text-gray-600 dark:text-gray-400 hover:text-[#0bb6bc] flex items-center gap-1">
             <FaRegThumbsDown className="text-[20px]" />
