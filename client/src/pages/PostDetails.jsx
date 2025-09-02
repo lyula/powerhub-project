@@ -1,3 +1,57 @@
+// Recursive comment/reply renderer
+function CommentThread({ comments, postId, token, userId, onReply, replyingTo, replyText, setReplyText, handleAddReply, handleLike, handleLikeReply }) {
+  return (
+    <div className="flex flex-col gap-2">
+      {comments.map((comment) => (
+        <div key={comment._id} className="py-2 px-0">
+          <div className="flex items-center gap-2 mb-1">
+            <img src={comment.author?.profilePicture || comment.author?.avatar || '/default-avatar.png'} alt={comment.author?.username || 'User'} className="w-7 h-7 rounded-full object-cover border border-gray-300 dark:border-gray-700" />
+            <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{comment.author?.username || 'Unknown'}</span>
+            {comment.createdAt && (
+              <span className="text-xs text-gray-400 ml-2">{timeAgo(comment.createdAt)}</span>
+            )}
+          </div>
+          <span className="text-gray-800 dark:text-gray-200 text-sm block mb-1 pl-9">{comment.content}</span>
+          <div className="flex gap-4 items-center mt-1 pl-9">
+            <button className={`text-xs flex items-center ${Array.isArray(comment.likes) && comment.likes.includes(userId) ? 'text-pink-500' : 'text-gray-500'} hover:text-pink-500 font-medium px-2 py-1 rounded transition`} onClick={() => handleLike(comment._id, Array.isArray(comment.likes) && comment.likes.includes(userId))}>
+              <svg xmlns="http://www.w3.org/2000/svg" fill={Array.isArray(comment.likes) && comment.likes.includes(userId) ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" className="w-4 h-4 mr-1">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 21.682l-7.682-7.682a4.5 4.5 0 010-6.364z" />
+              </svg>
+              <span className="ml-1">{Array.isArray(comment.likes) ? comment.likes.length : 0}</span>
+            </button>
+            <button className="text-xs text-gray-500 hover:text-[#0bb6bc] font-medium px-2 py-1 rounded transition" onClick={() => onReply(comment._id, null, comment.author?.username)}>
+              Reply
+            </button>
+          </div>
+          {replyingTo && replyingTo.commentId === comment._id && !replyingTo.replyId && (
+            <form onSubmit={e => handleAddReply(e, comment._id, null, comment.author?.username)} className="flex gap-2 mt-2 ml-9">
+              <input type="text" className="flex-1 border rounded px-2 py-1 text-black dark:text-white bg-gray-100 dark:bg-gray-800" placeholder={`Reply to @${replyingTo.taggedUser || comment.author?.username}...`} value={replyText} onChange={e => setReplyText(e.target.value)} />
+              <button type="submit" className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition">Reply</button>
+            </form>
+          )}
+          {/* Render replies recursively */}
+          {comment.replies && comment.replies.length > 0 && (
+            <div className="ml-8 mt-2 flex flex-col gap-2">
+              <CommentThread
+                comments={comment.replies}
+                postId={postId}
+                token={token}
+                userId={userId}
+                onReply={onReply}
+                replyingTo={replyingTo}
+                replyText={replyText}
+                setReplyText={setReplyText}
+                handleAddReply={handleAddReply}
+                handleLike={handleLikeReply}
+                handleLikeReply={handleLikeReply}
+              />
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
 import React, { useEffect, useState } from 'react';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
@@ -8,8 +62,62 @@ import { timeAgo } from '../utils/timeAgo';
 import { useAuth } from '../context/AuthContext';
 
 const PostDetails = () => {
+  // Like a comment
+  const handleLike = async (commentId, liked) => {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}/comment/like`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ commentId })
+      });
+      if (!res.ok) throw new Error('Failed to like/unlike comment');
+      const data = await res.json();
+      // Update comment likes in state
+      setPost(prev => ({
+        ...prev,
+        comments: prev.comments.map(c =>
+          c._id === commentId ? { ...c, likes: data.likes } : c
+        )
+      }));
+    } catch (err) {
+      // Optionally handle error
+    }
+  };
+
+  // Like a reply
+  const handleLikeReply = async (replyId, liked) => {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}/reply/${replyId}/like`, {
+        method: liked ? 'DELETE' : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      if (!res.ok) throw new Error('Failed to like/unlike reply');
+      const data = await res.json();
+      // Update reply likes in state (recursive update)
+      function updateReplies(replies) {
+        return replies.map(r =>
+          r._id === replyId ? { ...r, likes: data.likes } :
+          r.replies ? { ...r, replies: updateReplies(r.replies) } : r
+        );
+      }
+      setPost(prev => ({
+        ...prev,
+        comments: prev.comments.map(c =>
+          c.replies ? { ...c, replies: updateReplies(c.replies) } : c
+        )
+      }));
+    } catch (err) {
+      // Optionally handle error
+    }
+  };
   // Auth context for token
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   // Comment input state
   const [commentInput, setCommentInput] = useState('');
   const [commentLoading, setCommentLoading] = useState(false);
@@ -176,18 +284,15 @@ const PostDetails = () => {
                     </div>
                     {Array.isArray(post.comments) && post.comments.length > 0 ? (
                       <div className="flex flex-col gap-4">
-                        {post.comments.map((comment, idx) => (
-                          <div key={comment._id || idx} className="bg-gray-50 dark:bg-[#222] rounded-lg p-3 border border-gray-200 dark:border-gray-700">
-                            <div className="flex items-center gap-2 mb-1">
-                              <img src={comment.author?.profilePicture || comment.author?.avatar || '/default-avatar.png'} alt={comment.author?.username || 'User'} className="w-7 h-7 rounded-full object-cover border border-gray-300 dark:border-gray-700" />
-                              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{comment.author?.username || 'Unknown'}</span>
-                              {comment.createdAt && (
-                                <span className="text-xs text-gray-400 ml-2">{timeAgo(comment.createdAt)}</span>
-                              )}
-                            </div>
-                            <span className="text-gray-800 dark:text-gray-200 text-sm">{comment.content}</span>
-                          </div>
-                        ))}
+                        <CommentThread
+                          comments={post.comments}
+                          postId={postId}
+                          token={token}
+                          userId={user?._id}
+                          handleLike={handleLike}
+                          handleLikeReply={handleLikeReply}
+                          // ...pass other required props (onReply, replyingTo, etc.)
+                        />
                       </div>
                     ) : (
                       <div className="text-gray-500 dark:text-gray-400">No comments yet.</div>

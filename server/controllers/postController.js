@@ -104,7 +104,7 @@ exports.likeComment = async (req, res) => {
       comment.likes.push(userId);
       await post.save();
     }
-    res.json({ likes: comment.likes.length });
+    res.json({ likes: comment.likes });
   } catch (err) {
     res.status(500).json({ error: 'Failed to like comment', details: err.message });
   }
