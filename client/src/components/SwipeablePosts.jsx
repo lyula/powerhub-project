@@ -5,7 +5,8 @@ import { FaRegHeart, FaRegThumbsDown, FaRegCommentDots, FaShare } from 'react-ic
 const posts = [
   {
     id: 1,
-    title: 'Welcome to PowerHub!',
+    username: 'powerhub_admin',
+    profile: 'https://randomuser.me/api/portraits/men/32.jpg',
     content: 'Check out our new features and updates.',
     image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80',
     link: 'https://powerhub.com/features',
@@ -16,7 +17,8 @@ const posts = [
   },
   {
     id: 2,
-    title: 'Community Event',
+    username: 'community_manager',
+    profile: 'https://randomuser.me/api/portraits/women/44.jpg',
     content: 'Join our upcoming webinar for exclusive tips.',
     image: 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=400&q=80',
     link: 'https://powerhub.com/webinar',
@@ -27,7 +29,8 @@ const posts = [
   },
   {
     id: 3,
-    title: 'User Story',
+    username: 'jane_doe',
+    profile: 'https://randomuser.me/api/portraits/women/65.jpg',
     content: 'Read how Jane improved her workflow with PowerHub.',
     image: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80',
     link: 'https://powerhub.com/stories/jane',
@@ -38,7 +41,8 @@ const posts = [
   },
   {
     id: 4,
-    title: 'Get Started',
+    username: 'dev_team',
+    profile: 'https://randomuser.me/api/portraits/men/56.jpg',
     content: 'Explore our documentation and start building today.',
     image: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=400&q=80',
     link: 'https://powerhub.com/docs',
@@ -49,7 +53,8 @@ const posts = [
   },
   {
     id: 5,
-    title: 'PowerHub Tips',
+    username: 'tips_bot',
+    profile: 'https://randomuser.me/api/portraits/men/76.jpg',
     content: 'Discover quick tips to boost your productivity and get the most out of PowerHub. Stay tuned for weekly updates!',
     image: 'https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?auto=format&fit=crop&w=400&q=80',
     link: 'https://powerhub.com/tips',
@@ -75,7 +80,10 @@ const ExpandablePostCard = ({ post }) => {
     >
       <div className="flex flex-row items-start px-4 pt-3 pb-2 gap-3 flex-1 relative">
         <div className="flex flex-col flex-1 min-w-0">
-          <span className="text-[18px] font-semibold text-gray-900 dark:text-gray-100 leading-tight mb-1 truncate">{post.title}</span>
+          <div className="flex items-center gap-2 mb-1">
+            <img src={post.profile} alt={post.username} className="w-8 h-8 rounded-full object-cover border border-gray-300 dark:border-gray-700" />
+            <span className="text-[18px] font-semibold text-gray-900 dark:text-gray-100 leading-tight truncate">{post.username}</span>
+          </div>
           <span
             className="text-[16px] text-gray-800 dark:text-gray-200 mb-1 leading-snug line-clamp-2"
             style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'normal' }}
