@@ -79,40 +79,45 @@ exports.createChannel = async (req, res) => {
 
     const fs = require('fs');
     // Handle avatar upload
-    if (req.files && req.files.avatar) {
-      try {
-        const avatarPath = req.files.avatar[0].path;
-        console.log('Uploading avatar:', avatarPath);
-        const avatarUpload = await cloudinary.uploader.upload(avatarPath, {
-          folder: 'powerhub/channels/avatars',
-          resource_type: 'image',
-        });
-        avatarUrl = avatarUpload.secure_url;
-        console.log('Avatar uploaded:', avatarUrl);
-        // Delete temp file
-        fs.unlink(avatarPath, (err) => {
-          if (err) console.error('Failed to delete temp avatar:', err);
-        });
-      } catch (avatarErr) {
-        console.error('Avatar upload error:', avatarErr);
-        return res.status(500).json({ error: 'Avatar upload failed', details: avatarErr });
+      // If avatar URL is provided in body, use it directly
+      if (req.body.avatar) {
+        avatarUrl = req.body.avatar;
+      } else if (req.files && req.files.avatar) {
+        try {
+          const avatarPath = req.files.avatar[0].path;
+          console.log('Uploading avatar:', avatarPath);
+          const avatarUpload = await cloudinary.uploader.upload(avatarPath, {
+            folder: 'powerhub/channels/avatars',
+            resource_type: 'image',
+          });
+          avatarUrl = avatarUpload.secure_url;
+          console.log('Avatar uploaded:', avatarUrl);
+          // Delete temp file
+          fs.unlink(avatarPath, (err) => {
+            if (err) console.error('Failed to delete temp avatar:', err);
+          });
+        } catch (avatarErr) {
+          console.error('Avatar upload error:', avatarErr);
+          return res.status(500).json({ error: 'Avatar upload failed', details: avatarErr });
+        }
       }
-    }
 
     // Handle banner upload
-    if (req.files && req.files.banner) {
-      try {
-        const bannerPath = req.files.banner[0].path;
-        console.log('Uploading banner:', bannerPath);
-        const bannerUpload = await cloudinary.uploader.upload(bannerPath, {
-          folder: 'powerhub/channels/banners',
-          resource_type: 'image',
-        });
-        bannerUrl = bannerUpload.secure_url;
-        console.log('Banner uploaded:', bannerUrl);
-        // Delete temp file
-        fs.unlink(bannerPath, (err) => {
-          if (err) console.error('Failed to delete temp banner:', err);
+      if (req.body.banner) {
+        bannerUrl = req.body.banner;
+      } else if (req.files && req.files.banner) {
+        try {
+          const bannerPath = req.files.banner[0].path;
+          console.log('Uploading banner:', bannerPath);
+          const bannerUpload = await cloudinary.uploader.upload(bannerPath, {
+            folder: 'powerhub/channels/banners',
+            resource_type: 'image',
+          });
+          bannerUrl = bannerUpload.secure_url;
+          console.log('Banner uploaded:', bannerUrl);
+          // Delete temp file
+          fs.unlink(bannerPath, (err) => {
+            if (err) console.error('Failed to delete temp banner:', err);
         });
       } catch (bannerErr) {
         console.error('Banner upload error:', bannerErr);
