@@ -34,6 +34,28 @@ function renderComments(comments, handleReply, replyingTo, replyText, setReplyTe
   ));
 }
 
+// Helper to count all comments, replies to comments, and replies to replies
+function getTotalCommentCount(comments) {
+  let count = 0;
+  function countReplies(replies) {
+    let replyCount = 0;
+    for (const reply of replies || []) {
+      replyCount++;
+      if (reply.replies && reply.replies.length > 0) {
+        replyCount += countReplies(reply.replies);
+      }
+    }
+    return replyCount;
+  }
+  for (const comment of comments || []) {
+    count++;
+    if (comment.replies && comment.replies.length > 0) {
+      count += countReplies(comment.replies);
+    }
+  }
+  return count;
+}
+
 export default function VideoComments({ videoId, onCountChange }) {
   const { user, token } = useAuth();
   const [comments, setComments] = useState([]);
@@ -52,7 +74,7 @@ export default function VideoComments({ videoId, onCountChange }) {
         if (res.ok) {
           const data = await res.json();
           setComments(data.comments || []);
-          if (onCountChange) onCountChange((data.comments || []).length);
+          if (onCountChange) onCountChange(getTotalCommentCount(data.comments || []));
         }
       } catch (err) {}
     };
@@ -94,7 +116,7 @@ export default function VideoComments({ videoId, onCountChange }) {
         const data = await res.json();
         setComments(data.comments || []);
         setCommentText("");
-        if (onCountChange) onCountChange((data.comments || []).length);
+        if (onCountChange) onCountChange(getTotalCommentCount(data.comments || []));
       }
     } catch (err) {}
   };
@@ -141,7 +163,7 @@ export default function VideoComments({ videoId, onCountChange }) {
         setComments(data.comments || []);
         setReplyText("");
         setReplyingTo(null);
-        if (onCountChange) onCountChange((data.comments || []).length);
+        if (onCountChange) onCountChange(getTotalCommentCount(data.comments || []));
       }
     } catch (err) {
       console.error('Reply error:', err);
@@ -483,7 +505,7 @@ export default function VideoComments({ videoId, onCountChange }) {
     <div className="w-full max-w-3xl bg-white dark:bg-[#222] rounded-lg shadow p-4 mt-4">
       <h3 className="text-lg font-bold mb-3 text-black dark:text-white flex items-center gap-2">
         Comments
-        <span className="text-base font-normal text-gray-500 dark:text-gray-400">({comments.length})</span>
+        <span className="text-base font-normal text-gray-500 dark:text-gray-400">({getTotalCommentCount(comments)})</span>
       </h3>
       <form onSubmit={handleAddComment} className="flex gap-2 mb-4">
         <input type="text" className="flex-1 border rounded px-3 py-2 text-black dark:text-white bg-gray-100 dark:bg-gray-800" placeholder="Add a comment..." value={commentText} onChange={(e) => setCommentText(e.target.value)} />
