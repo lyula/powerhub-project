@@ -73,8 +73,9 @@ export default function Header({ onToggleSidebar }) {
         </div>
             <div className="relative" style={{ position: 'relative', zIndex: 100 }}>
               <button
-                className="hidden md:inline flex flex-row items-center gap-3 px-4 py-2 rounded-lg bg-[#c42152] text-white font-semibold hover:bg-[#0bb6bc] transition text-base"
-                style={{ height: '36px', paddingTop: 0, paddingBottom: 0, width: 'auto', minWidth: 0 }}
+                className="hidden md:inline-flex items-center gap-2 rounded-full bg-white dark:bg-[#222] shadow hover:bg-gray-100 dark:hover:bg-[#333] transition focus:outline-none px-4"
+                style={{ height: '40px', minWidth: '120px', boxShadow: '0 2px 8px rgba(0,0,0,0.10)' }}
+                aria-label="Create"
                 onClick={() => {
                   if (!channel) {
                     navigate('/channel-setup');
@@ -83,8 +84,10 @@ export default function Header({ onToggleSidebar }) {
                   }
                 }}
               >
-                <span className="text-lg font-bold">+</span>
-                <span className="">Create</span>
+                <span className="flex items-center gap-2 w-full justify-center">
+                  <FaVideo className="text-[#c42152] dark:text-[#c42152]" size={22} />
+                  <span className="text-base font-semibold text-[#c42152] dark:text-[#c42152]">Create</span>
+                </span>
               </button>
               {showCreateModal && modalRoot && createPortal(
                 <>
