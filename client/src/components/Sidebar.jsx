@@ -1,7 +1,7 @@
 
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { MdHome, MdWhatshot, MdVideoLibrary, MdSubscriptions, MdBookmark, MdFavoriteBorder, MdPlayCircleOutline, MdHistory, MdNotificationsNone, MdPersonOutline } from 'react-icons/md';
+import { MdHome, MdWhatshot, MdVideoLibrary, MdSubscriptions, MdBookmark, MdFavoriteBorder, MdPlayCircleOutline, MdHistory, MdNotificationsNone, MdPersonOutline, MdLogout } from 'react-icons/md';
 
 const items = [
   { label: 'Home', icon: <MdHome size={24} />, path: '/home' },
@@ -14,15 +14,31 @@ const items = [
   { label: 'Watch History', icon: <MdHistory size={24} />, path: '/watch-history' },
   { label: 'Notifications', icon: <MdNotificationsNone size={24} />, path: '/notifications' },
   { label: 'Profile', icon: <MdPersonOutline size={24} />, path: '/profile' },
+  { label: 'Logout', icon: <MdLogout size={24} color="#c42152" />, logout: true },
 ];
 
 export default function Sidebar({ collapsed }) {
   const navigate = useNavigate();
-  const { channel } = useAuth();
+  const { channel, logout } = useAuth();
   return (
     <aside className={`hidden md:flex flex-col min-h-screen bg-gray-100 dark:bg-[#111111] border-r border-gray-200 dark:border-gray-900 py-6 ${collapsed ? 'w-20 px-2' : 'w-64 px-4'}`}>
       <nav className="flex flex-col gap-2 overflow-y-auto max-h-[calc(100vh-48px)]">
         {items.map((item) => {
+          if (item.logout) {
+            return (
+              <button
+                key={item.label}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-red-100 dark:hover:bg-red-900 transition ${collapsed ? 'justify-center' : ''}`}
+                onClick={async () => {
+                  await logout();
+                  navigate('/login', { replace: true });
+                }}
+              >
+                <span className="w-6 h-6">{item.icon}</span>
+                {!collapsed && <span>{item.label}</span>}
+              </button>
+            );
+          }
           if (item.isChannel) {
             return (
               <button

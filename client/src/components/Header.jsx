@@ -137,14 +137,30 @@ export default function Header({ onToggleSidebar }) {
           </div>
         )}
         
-        <button 
-          className="hidden md:flex items-center justify-center px-2 py-2 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 shadow hover:shadow-lg transition hover:bg-red-500 dark:hover:bg-red-600 focus:outline-none" 
-          aria-label="Logout" 
-          style={{ minWidth: 40, height: 40 }}
-          onClick={handleLogout}
-        >
-          <MdLogout size={26} color="#c42152" />
-        </button>
+        {/* User Profile Picture or Avatar */}
+        {user && (
+          <button
+            className="hidden md:flex items-center justify-center"
+            style={{ width: 44, height: 44, minWidth: 44, minHeight: 44, maxWidth: 44, maxHeight: 44, borderRadius: '50%', background: 'white', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden', padding: 0, cursor: 'pointer', border: 'none' }}
+            onClick={() => navigate('/profile')}
+            aria-label="Go to profile"
+          >
+            {user.profilePicture ? (
+              <img
+                src={user.profilePicture}
+                alt="Profile"
+                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                draggable={false}
+              />
+            ) : (
+              <span
+                style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#e5e7eb', color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 700 }}
+              >
+                {user.username ? user.username[0].toUpperCase() : <MdPersonOutline size={28} />}
+              </span>
+            )}
+          </button>
+        )}
       </div>
     </header>
   );
