@@ -316,7 +316,39 @@ export const AuthProvider = ({ children }) => {
     channel,
     setChannel,
     serverConnected,
-    isAuthenticated: !!token
+    isAuthenticated: !!token,
+    uploadProfilePicture: async (file) => {
+      // Upload image directly to Cloudinary
+      const CLOUDINARY_NAME = import.meta.env.VITE_CLOUDINARY_NAME;
+      const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_PRESET;
+      const CLOUDINARY_IMAGE_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_NAME}/image/upload`;
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', UPLOAD_PRESET);
+      try {
+        const cloudRes = await fetch(CLOUDINARY_IMAGE_URL, {
+          method: 'POST',
+          body: formData
+        });
+        const cloudData = await cloudRes.json();
+        if (!cloudRes.ok || !cloudData.secure_url) throw new Error(cloudData.error?.message || 'Cloudinary upload failed');
+        // Send only the Cloudinary URL to backend
+        const response = await fetch(`${API_BASE_URL}/profile/upload-profile-picture`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ imageUrl: cloudData.secure_url })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Profile update failed');
+        setUser(data.user);
+        return { success: true, url: data.url, user: data.user };
+      } catch (error) {
+        return { success: false, error: error.message };
+      }
+    }
   };
 
   return (

@@ -419,7 +419,6 @@ export default function VideoComments({ videoId, onCountChange }) {
                           {/* Render replies to replies (second level only, same indentation) */}
                           {reply.replies && reply.replies.length > 0 && (
                             reply.replies.map((subReply, subIdx) => {
-                              console.log('Reply to reply author:', subReply?.author, 'Full subReply:', subReply);
                               return (
                                 <div key={subReply._id || subIdx} className="flex gap-2 items-start">
                                   <img src={getAvatar(subReply.author)} alt={getDisplayName(subReply.author)} className="w-7 h-7 rounded-full border" />

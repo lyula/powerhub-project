@@ -13,6 +13,7 @@ const userSchema = new mongoose.Schema({
   whatsapp: { type: String, default: '' },
   linkedin: { type: String, default: '' },
   instagram: { type: String, default: '' }
+  ,profilePicture: { type: String, default: '' } // Cloudinary URL
 }, { timestamps: true });
 
 userSchema.pre('save', async function(next) {

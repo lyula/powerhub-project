@@ -8,7 +8,29 @@ import StudentUtility from '../components/StudentUtility';
 import BottomTabs from '../components/BottomTabs';
 
 const Profile = () => {
-  const { user, updateProfile, changePassword } = useAuth();
+  const { user, updateProfile, changePassword, uploadProfilePicture } = useAuth();
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const [avatarMessage, setAvatarMessage] = useState('');
+  // Handle avatar click to upload profile picture
+  const handleAvatarClick = () => {
+    document.getElementById('profile-picture-input').click();
+  };
+
+  const handleProfilePictureChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    setUploadError('');
+    const result = await uploadProfilePicture(file);
+    if (result.success) {
+      setAvatarMessage('Profile picture updated successfully!');
+      setTimeout(() => setAvatarMessage(''), 3000);
+    } else {
+      setUploadError(result.error || 'Failed to upload profile picture');
+    }
+    setUploading(false);
+  };
   const [isEditing, setIsEditing] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -189,17 +211,64 @@ const Profile = () => {
             <div className="max-w-4xl mx-auto">
               <div className="bg-white dark:bg-[#1a1a1a] rounded-xl shadow-lg p-6 mb-8 border border-gray-200 dark:border-gray-700 pt-6 md:pt-6 mt-10 md:mt-0">
                 <div className="flex items-center space-x-6">
-                  <div className="w-24 h-24 bg-gradient-to-br from-[#0bb6bc] to-[#0a9ba0] rounded-full flex items-center justify-center shadow-lg">
-                    <span className="text-3xl font-bold text-white">
-                      {user.firstName?.charAt(0) || user.username?.charAt(0) || 'U'}
-                    </span>
+                  <div className="relative w-24 h-24 flex flex-col items-center">
+                    <input
+                      id="profile-picture-input"
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={handleProfilePictureChange}
+                      disabled={uploading}
+                    />
+                    <div
+                      className="w-24 h-24 bg-gradient-to-br from-[#0bb6bc] to-[#0a9ba0] rounded-full flex items-center justify-center shadow-lg cursor-pointer overflow-hidden border-4 border-white dark:border-gray-800"
+                      onClick={handleAvatarClick}
+                      title="Click to change profile picture"
+                      style={{ position: 'relative' }}
+                    >
+                      {user.profilePicture ? (
+                        <img
+                          src={user.profilePicture}
+                          alt="Profile"
+                          className="w-full h-full object-cover rounded-full"
+                        />
+                      ) : (
+                        <span className="text-3xl font-bold text-white">
+                          {user.firstName?.charAt(0) || user.username?.charAt(0) || 'U'}
+                        </span>
+                      )}
+                      {/* Edit icon overlay at bottom center */}
+                      <span
+                        className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center"
+                        style={{ zIndex: 3 }}
+                      >
+                        {/* Modern camera icon, strawberry red, centered in avatar */}
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#FC5A8D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8">
+                          <circle cx="12" cy="13" r="3" />
+                          <path d="M5 7h2l2-3h6l2 3h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z" />
+                        </svg>
+                      </span>
+                      {uploading && (
+                        <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center rounded-full">
+                          <span className="text-white text-lg">Uploading...</span>
+                        </div>
+                      )}
+                    </div>
+                    {/* Success message below avatar, outside avatar container */}
+                    {avatarMessage && (
+                      <div className="mt-3 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 px-3 py-1 rounded shadow text-sm whitespace-nowrap z-10">
+                        {avatarMessage}
+                      </div>
+                    )}
                   </div>
                   <div>
                     <h3 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">
                       {user.firstName} {user.lastName}
                     </h3>
                     <p className="text-gray-600 dark:text-gray-400 mb-2">{user.email}</p>
-                    {/* Removed role display */}
+                    {uploadError && (
+                      <div className="text-red-500 text-sm mt-2">{uploadError}</div>
+                    )}
                   </div>
                 </div>
               </div>
