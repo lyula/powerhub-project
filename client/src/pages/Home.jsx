@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { FaVolumeMute, FaVolumeUp } from 'react-icons/fa';
 import PostCard from '../components/PostCard';
 import postCardData from '../components/PostCardData';
+import SwipeablePosts from '../components/SwipeablePosts';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
@@ -189,7 +190,6 @@ export default function Home() {
                         <div
                           className="flex flex-row items-center gap-1 md:gap-3 pl-7 sm:pl-14 text-xs text-gray-600 dark:text-gray-400 truncate"
                           style={{ marginBottom: '0' }}
-
                         >
                           <div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-10" />
                           <span>•</span>
@@ -202,94 +202,179 @@ export default function Home() {
                     </div>
                   ))
                 ) : (
-                  displayVideos.map((video, i) => {
-                    const showDuration = videoDurations[i];
-                    // Add extra margin-bottom to last video on mobile
-                    const isLast = i === displayVideos.length - 1;
-                    return (
-                      <div
-                        key={video._id || i}
-                        className={`relative group cursor-pointer bg-gray-100 dark:bg-[#111111] flex flex-col min-w-0 w-full rounded-lg${isLast ? ' mb-16 sm:mb-0' : ''}`}
-                        style={{ minHeight: '180px', paddingBottom: '0.5rem' }}
-                        onClick={(e) => {
-                          // Prevent navigation to watch page if clicking channel name or profile pic
-                          if (e.target.closest('.channel-link')) return;
-                          navigate(`/watch/${video._id || i + 1}`);
-                        }}
-                      >
+                  <React.Fragment>
+                    {displayVideos.slice(0, 6).map((video, i) => {
+                      const showDuration = videoDurations[i];
+                      const isLast = i === displayVideos.length - 1;
+                      return (
                         <div
-                          className="relative"
-                          style={{ width: '100%', height: '180px' }}
+                          key={video._id || i}
+                          className={`relative group cursor-pointer bg-gray-100 dark:bg-[#111111] flex flex-col min-w-0 w-full rounded-lg${isLast ? ' mb-16 sm:mb-0' : ''}`}
+                          style={{ minHeight: '180px', paddingBottom: '0.5rem' }}
+                          onClick={(e) => {
+                            if (e.target.closest('.channel-link')) return;
+                            navigate(`/watch/${video._id || i + 1}`);
+                          }}
                         >
-                          <HomeThumbnail
-                            video={video}
-                            source="homepage"
-                            userId={video.userId}
-                            sessionId={window.sessionStorage.getItem('sessionId') || undefined}
-                            className="w-full h-[180px] object-cover rounded-lg hover:scale-105 transition-transform"
-                            style={{ borderRadius: '0.75rem' }}
-                            id={video._id || i}
-                          />
-                        </div>
-                        <div className="block sm:hidden" style={{ height: '12px' }} />
-                        <div className="p-0 sm:p-3 flex-1 flex flex-col justify-between pb-1">
-                          <div className="flex items-start gap-2 sm:gap-3 mb-0">
-                            <Link
-                              to={`/channel/${video.channelId}`}
-                              className="p-0 m-0 bg-transparent border-none channel-link"
-                              style={{ lineHeight: 0, display: 'inline-block' }}
-                              aria-label={`Go to ${video.author} channel`}
-                              onClick={e => e.stopPropagation()}
-                            >
-                              <img src={video.profile} alt={video.author} className="w-7 h-7 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 dark:border-gray-700 flex-shrink-0 cursor-pointer hover:scale-105 transition-transform" style={{ width: '40px', height: '40px', objectFit: 'cover', aspectRatio: '1/1', minWidth: '40px', minHeight: '40px', maxWidth: '40px', maxHeight: '40px', pointerEvents: 'auto' }} />
-                            </Link>
-                            <div className="flex flex-col min-w-0">
-                              <h3
-                                className="font-bold text-xs sm:text-base md:text-lg text-black dark:text-white line-clamp-2"
-                                title={video.title}
-                                style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'normal', minHeight: '2.4em', marginBottom: '2px' }}
+                          {/* ...existing code for video card... */}
+                          <div className="relative" style={{ width: '100%', height: '180px' }}>
+                            <HomeThumbnail
+                              video={video}
+                              source="homepage"
+                              userId={video.userId}
+                              sessionId={window.sessionStorage.getItem('sessionId') || undefined}
+                              className="w-full h-[180px] object-cover rounded-lg hover:scale-105 transition-transform"
+                              style={{ borderRadius: '0.75rem' }}
+                              id={video._id || i}
+                            />
+                          </div>
+                          <div className="block sm:hidden" style={{ height: '12px' }} />
+                          <div className="p-0 sm:p-3 flex-1 flex flex-col justify-between pb-1">
+                            <div className="flex items-start gap-2 sm:gap-3 mb-0">
+                              <Link
+                                to={`/channel/${video.channelId}`}
+                                className="p-0 m-0 bg-transparent border-none channel-link"
+                                style={{ lineHeight: 0, display: 'inline-block' }}
+                                aria-label={`Go to ${video.author} channel`}
+                                onClick={e => e.stopPropagation()}
                               >
-                                {video.title}
-                              </h3>
-                              <div className="flex flex-col gap-0">
-                                {/* On mobile, channel name and views are on the same line. On PC, channel name is above views. */}
-                                <div className="flex flex-row items-center gap-1 text-xs text-gray-600 dark:text-gray-400 truncate sm:hidden">
-                                  <button
-                                    type="button"
-                                    onClick={(e) => { e.stopPropagation(); navigate(`/channel/${video.channelId}`); }}
-                                    className="text-xs font-medium text-gray-600 dark:text-gray-400 truncate hover:underline bg-transparent border-none p-0 m-0 channel-link"
-                                    style={{ textAlign: 'left' }}
-                                    aria-label={`Go to ${video.author} channel`}
-                                  >
-                                    {video.author}
-                                  </button>
-                                  <span>•</span>
-                                  <span>{formatViews(video.views)} views</span>
-                                  <span>•</span>
-                                  <span>{video.posted}</span>
-                                </div>
-                                <div className="hidden sm:flex flex-col gap-0 text-xs text-gray-600 dark:text-gray-400 truncate">
-                                  <button
-                                    type="button"
-                                    onClick={() => navigate(`/channel/${video.channelId}`)}
-                                    className="text-xs font-medium text-gray-600 dark:text-gray-400 truncate hover:underline bg-transparent border-none p-0 m-0"
-                                    style={{ textAlign: 'left' }}
-                                  >
-                                    {video.author}
-                                  </button>
-                                  <div className="flex flex-row items-center gap-3">
+                                <img src={video.profile} alt={video.author} className="w-7 h-7 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 dark:border-gray-700 flex-shrink-0 cursor-pointer hover:scale-105 transition-transform" style={{ width: '40px', height: '40px', objectFit: 'cover', aspectRatio: '1/1', minWidth: '40px', minHeight: '40px', maxWidth: '40px', maxHeight: '40px', pointerEvents: 'auto' }} />
+                              </Link>
+                              <div className="flex flex-col min-w-0">
+                                <h3
+                                  className="font-bold text-xs sm:text-base md:text-lg text-black dark:text-white line-clamp-2"
+                                  title={video.title}
+                                  style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'normal', minHeight: '2.4em', marginBottom: '2px' }}
+                                >
+                                  {video.title}
+                                </h3>
+                                <div className="flex flex-col gap-0">
+                                  <div className="flex flex-row items-center gap-1 text-xs text-gray-600 dark:text-gray-400 truncate sm:hidden">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); navigate(`/channel/${video.channelId}`); }}
+                                      className="text-xs font-medium text-gray-600 dark:text-gray-400 truncate hover:underline bg-transparent border-none p-0 m-0 channel-link"
+                                      style={{ textAlign: 'left' }}
+                                      aria-label={`Go to ${video.author} channel`}
+                                    >
+                                      {video.author}
+                                    </button>
+                                    <span>•</span>
                                     <span>{formatViews(video.views)} views</span>
                                     <span>•</span>
                                     <span>{video.posted}</span>
+                                  </div>
+                                  <div className="hidden sm:flex flex-col gap-0 text-xs text-gray-600 dark:text-gray-400 truncate">
+                                    <button
+                                      type="button"
+                                      onClick={() => navigate(`/channel/${video.channelId}`)}
+                                      className="text-xs font-medium text-gray-600 dark:text-gray-400 truncate hover:underline bg-transparent border-none p-0 m-0"
+                                      style={{ textAlign: 'left' }}
+                                    >
+                                      {video.author}
+                                    </button>
+                                    <div className="flex flex-row items-center gap-3">
+                                      <span>{formatViews(video.views)} views</span>
+                                      <span>•</span>
+                                      <span>{video.posted}</span>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })
+                      );
+                    })}
+                    {/* Swipeable Posts Section after first two video rows */}
+                    <div style={{ gridColumn: '1/-1', width: '100%' }}>
+                      <SwipeablePosts />
+                    </div>
+                    {/* Render remaining videos after swipeable posts */}
+                    {displayVideos.slice(6).map((video, i) => {
+                      const showDuration = videoDurations[i + 6];
+                      const isLast = i + 6 === displayVideos.length - 1;
+                      return (
+                        <div
+                          key={video._id || i + 6}
+                          className={`relative group cursor-pointer bg-gray-100 dark:bg-[#111111] flex flex-col min-w-0 w-full rounded-lg${isLast ? ' mb-16 sm:mb-0' : ''}`}
+                          style={{ minHeight: '180px', paddingBottom: '0.5rem' }}
+                          onClick={(e) => {
+                            if (e.target.closest('.channel-link')) return;
+                            navigate(`/watch/${video._id || i + 7}`);
+                          }}
+                        >
+                          {/* ...existing code for video card... */}
+                          <div className="relative" style={{ width: '100%', height: '180px' }}>
+                            <HomeThumbnail
+                              video={video}
+                              source="homepage"
+                              userId={video.userId}
+                              sessionId={window.sessionStorage.getItem('sessionId') || undefined}
+                              className="w-full h-[180px] object-cover rounded-lg hover:scale-105 transition-transform"
+                              style={{ borderRadius: '0.75rem' }}
+                              id={video._id || i + 6}
+                            />
+                          </div>
+                          <div className="block sm:hidden" style={{ height: '12px' }} />
+                          <div className="p-0 sm:p-3 flex-1 flex flex-col justify-between pb-1">
+                            <div className="flex items-start gap-2 sm:gap-3 mb-0">
+                              <Link
+                                to={`/channel/${video.channelId}`}
+                                className="p-0 m-0 bg-transparent border-none channel-link"
+                                style={{ lineHeight: 0, display: 'inline-block' }}
+                                aria-label={`Go to ${video.author} channel`}
+                                onClick={e => e.stopPropagation()}
+                              >
+                                <img src={video.profile} alt={video.author} className="w-7 h-7 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 dark:border-gray-700 flex-shrink-0 cursor-pointer hover:scale-105 transition-transform" style={{ width: '40px', height: '40px', objectFit: 'cover', aspectRatio: '1/1', minWidth: '40px', minHeight: '40px', maxWidth: '40px', maxHeight: '40px', pointerEvents: 'auto' }} />
+                              </Link>
+                              <div className="flex flex-col min-w-0">
+                                <h3
+                                  className="font-bold text-xs sm:text-base md:text-lg text-black dark:text-white line-clamp-2"
+                                  title={video.title}
+                                  style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'normal', minHeight: '2.4em', marginBottom: '2px' }}
+                                >
+                                  {video.title}
+                                </h3>
+                                <div className="flex flex-col gap-0">
+                                  <div className="flex flex-row items-center gap-1 text-xs text-gray-600 dark:text-gray-400 truncate sm:hidden">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); navigate(`/channel/${video.channelId}`); }}
+                                      className="text-xs font-medium text-gray-600 dark:text-gray-400 truncate hover:underline bg-transparent border-none p-0 m-0 channel-link"
+                                      style={{ textAlign: 'left' }}
+                                      aria-label={`Go to ${video.author} channel`}
+                                    >
+                                      {video.author}
+                                    </button>
+                                    <span>•</span>
+                                    <span>{formatViews(video.views)} views</span>
+                                    <span>•</span>
+                                    <span>{video.posted}</span>
+                                  </div>
+                                  <div className="hidden sm:flex flex-col gap-0 text-xs text-gray-600 dark:text-gray-400 truncate">
+                                    <button
+                                      type="button"
+                                      onClick={() => navigate(`/channel/${video.channelId}`)}
+                                      className="text-xs font-medium text-gray-600 dark:text-gray-400 truncate hover:underline bg-transparent border-none p-0 m-0"
+                                      style={{ textAlign: 'left' }}
+                                    >
+                                      {video.author}
+                                    </button>
+                                    <div className="flex flex-row items-center gap-3">
+                                      <span>{formatViews(video.views)} views</span>
+                                      <span>•</span>
+                                      <span>{video.posted}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </React.Fragment>
                 )}
               </div>
             </main>
