@@ -19,8 +19,9 @@ const ExpandablePostCard = ({ post }) => {
   const [liked, setLiked] = React.useState(Array.isArray(post.likes) && userId ? post.likes.includes(userId) : false);
   const [likeCount, setLikeCount] = React.useState(Array.isArray(post.likes) ? post.likes.length : (typeof post.likes === 'number' ? post.likes : 0));
   const commentsCount = typeof post.comments === 'number' ? post.comments : (Array.isArray(post.comments) ? post.comments.length : 0);
-  const sharesCount = typeof post.shares === 'number' ? post.shares : (typeof post.shareCount === 'number' ? post.shareCount : 0);
+  const [sharesCount, setSharesCount] = useState(typeof post.shares === 'number' ? post.shares : (typeof post.shareCount === 'number' ? post.shareCount : 0));
   const postUrl = `${window.location.origin}/post/${post._id || post.id}`;
+
 
   const handleLike = () => {
     if (!userId || !token) return;
@@ -118,7 +119,7 @@ const ExpandablePostCard = ({ post }) => {
             <span className="text-xs font-medium">{formatCount(sharesCount)}</span>
           </button>
         </div>
-        <SharePostModal open={shareOpen} onClose={() => setShareOpen(false)} postUrl={postUrl} />
+  <SharePostModal open={shareOpen} onClose={() => setShareOpen(false)} postUrl={postUrl} onShare={(newCount) => { if (typeof newCount === 'number') setSharesCount(newCount); }} />
       </div>
     </div>
   );

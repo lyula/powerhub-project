@@ -57,32 +57,33 @@ export default function SharePostModal({ open, onClose, postUrl, onShare }) {
   const incrementShare = async () => {
     if (!postId) {
       console.error('No postId found for share increment');
-      return;
+      return null;
     }
     try {
       const apiUrl = import.meta.env.VITE_API_URL || '';
       const endpoint = apiUrl.endsWith('/') ? `${apiUrl}posts/${postId}/share` : `${apiUrl}/posts/${postId}/share`;
       const res = await fetch(endpoint, { method: 'POST' });
-      if (!res.ok) {
-        const errText = await res.text();
-        console.error('Share count API error:', errText);
+      if (res.ok) {
+        const data = await res.json();
+        return data.shareCount;
       }
     } catch (err) {
       console.error('Share count increment failed:', err);
     }
+    return null;
   };
 
   const handleCopy = async () => {
     navigator.clipboard.writeText(postUrl);
     setCopied(true);
-    await incrementShare();
-    if (onShare) onShare();
+    const newCount = await incrementShare();
+    if (onShare) onShare(newCount);
     setTimeout(() => setCopied(false), 1500);
   };
 
   const handleSocialShare = async (url) => {
-    await incrementShare();
-    if (onShare) onShare();
+    const newCount = await incrementShare();
+    if (onShare) onShare(newCount);
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
