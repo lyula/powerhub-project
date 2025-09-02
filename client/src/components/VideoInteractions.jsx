@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import VideoShareModal from './VideoShareModal';
 
 // Icons as SVGs
 const LikeIcon = ({ liked }) => (
@@ -30,9 +31,12 @@ const ShareIcon = () => (
 const VideoInteractions = ({
   liked, setLiked, likeCount,
   disliked, setDisliked, dislikeCount,
-  showComments, setShowComments, commentCount
-}) => (
-  <div className="flex flex-wrap gap-4 w-full justify-start items-center mt-2">
+  showComments, setShowComments, commentCount,
+  videoUrl // Add videoUrl prop for sharing
+}) => {
+  const [shareOpen, setShareOpen] = useState(false);
+  return (
+    <div className="flex flex-wrap gap-4 w-full justify-start items-center mt-2">
     <button
       className={`flex items-center gap-2 transition bg-transparent border-none p-0 ${liked ? 'text-pink-500' : 'text-gray-700 dark:text-gray-200 hover:text-pink-500'}`}
       style={{ minHeight: 40 }}
@@ -64,17 +68,14 @@ const VideoInteractions = ({
     <button
       className="flex items-center gap-2 text-gray-700 dark:text-gray-200 hover:text-green-600 transition bg-transparent border-none p-0"
       style={{ minHeight: 40 }}
-      onClick={() => {
-        if (navigator.clipboard) {
-          navigator.clipboard.writeText(window.location.href);
-          alert('Link copied to clipboard!');
-        }
-      }}
+      onClick={() => setShareOpen(true)}
     >
       <ShareIcon />
       <span className="text-sm">Share</span>
     </button>
+    <VideoShareModal open={shareOpen} onClose={() => setShareOpen(false)} videoUrl={videoUrl || window.location.href} />
   </div>
-);
+  );
+};
 
 export default VideoInteractions;
