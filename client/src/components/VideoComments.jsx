@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from '../context/AuthContext';
+import ProfilePictureZoomModal from './ProfilePictureZoomModal';
 
 // Helper to recursively render comments and replies
-function renderComments(comments, handleReply, replyingTo, replyText, setReplyText, handleAddReply, getDisplayName) {
+function renderComments(comments, handleReply, replyingTo, replyText, setReplyText, handleAddReply, getDisplayName, handleProfilePictureClick) {
   return comments.map((comment) => (
     <div key={comment.id} className="flex gap-3 items-start">
-      <img src={comment.authorProfile} alt={comment.author} className="w-8 h-8 rounded-full border" />
+      <img
+        src={comment.authorProfile}
+        alt={comment.author}
+        className="w-8 h-8 rounded-full border cursor-pointer"
+        onClick={() => handleProfilePictureClick(comment.author)}
+      />
       <div className="flex flex-col flex-1">
         <span className="font-semibold text-black dark:text-white">{getDisplayName(comment.author, comment.channel)}</span>
         <span className="text-xs text-gray-500 dark:text-gray-400 mb-1">{comment.posted}</span>
@@ -26,7 +32,7 @@ function renderComments(comments, handleReply, replyingTo, replyText, setReplyTe
         )}
         {comment.replies && comment.replies.length > 0 && (
           <div className="ml-8 mt-2 flex flex-col gap-2">
-            {renderComments(comment.replies, handleReply, replyingTo, replyText, setReplyText, handleAddReply, getDisplayName)}
+            {renderComments(comment.replies, handleReply, replyingTo, replyText, setReplyText, handleAddReply, getDisplayName, handleProfilePictureClick)}
           </div>
         )}
       </div>
@@ -56,7 +62,7 @@ function getTotalCommentCount(comments) {
   return count;
 }
 
-export default function VideoComments({ videoId, onCountChange }) {
+export default function VideoComments({ videoId, onCountChange, channel }) {
   const { user, token } = useAuth();
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState("");
@@ -64,6 +70,8 @@ export default function VideoComments({ videoId, onCountChange }) {
   // replyingTo: { commentId, replyId } or null
   const [replyingTo, setReplyingTo] = useState(null);
   const [likeLoading, setLikeLoading] = useState({}); // { [commentId]: boolean }
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalData, setModalData] = useState({ profilePicture: '', channelName: '', socialLinks: {} });
   const API_BASE_URL = import.meta.env.VITE_API_URL;
 
   // Fetch comments and update count immediately on mount and when videoId changes
@@ -365,7 +373,12 @@ export default function VideoComments({ videoId, onCountChange }) {
       const shownReplies = expandedReplies[comment._id] || 0;
       return (
         <div key={comment._id} className="flex gap-3 items-start">
-          <img src={getAvatar(comment.author)} alt={getDisplayName(comment.author)} className="w-8 h-8 rounded-full border" />
+          <img
+            src={getAvatar(comment.author)}
+            alt={getDisplayName(comment.author)}
+            className="w-8 h-8 rounded-full border cursor-pointer"
+            onClick={() => handleProfilePictureClick(comment.author)}
+          />
           <div className="flex flex-col flex-1">
             <span className="font-semibold text-black dark:text-white">
               {getDisplayName(comment.author)}
@@ -407,7 +420,12 @@ export default function VideoComments({ videoId, onCountChange }) {
                   <React.Fragment>
                     {comment.replies.slice(0, shownReplies).map((reply) => (
                       <div key={reply._id} className="flex gap-2 items-start">
-                        <img src={getAvatar(reply.author)} alt={getDisplayName(reply.author)} className="w-7 h-7 rounded-full border" />
+                        <img
+                          src={getAvatar(reply.author)}
+                          alt={getDisplayName(reply.author)}
+                          className="w-7 h-7 rounded-full border cursor-pointer"
+                          onClick={() => handleProfilePictureClick(reply.author)}
+                        />
                         <div className="flex flex-col flex-1">
                           <span className="font-semibold text-black dark:text-white">
                             {getDisplayName(reply.author)}
@@ -451,7 +469,12 @@ export default function VideoComments({ videoId, onCountChange }) {
                             reply.replies.map((subReply, subIdx) => {
                               return (
                                 <div key={subReply._id || subIdx} className="flex gap-2 items-start">
-                                  <img src={getAvatar(subReply.author)} alt={getDisplayName(subReply.author)} className="w-7 h-7 rounded-full border" />
+                                  <img
+                                    src={getAvatar(subReply.author)}
+                                    alt={getDisplayName(subReply.author)}
+                                    className="w-7 h-7 rounded-full border cursor-pointer"
+                                    onClick={() => handleProfilePictureClick(subReply.author)}
+                                  />
                                   <div className="flex flex-col flex-1">
                                     <span className="font-semibold text-black dark:text-white">
                                       {getDisplayName(subReply.author)}
@@ -501,23 +524,49 @@ export default function VideoComments({ videoId, onCountChange }) {
     });
   }
 
+  // Helper to open modal with profile picture and channel info
+  function handleProfilePictureClick(author) {
+    setModalData({
+      profilePicture: author.profilePicture || author.avatar || 'https://randomuser.me/api/portraits/lego/1.jpg',
+      channelName: author.username || author.firstName || 'Unknown',
+      socialLinks: author.socialLinks || channel?.socialLinks || {},
+    });
+    setModalOpen(true);
+  }
+
   return (
-    <div className="w-full max-w-3xl bg-white dark:bg-[#222] rounded-lg shadow p-4 mt-4">
-      <h3 className="text-lg font-bold mb-3 text-black dark:text-white flex items-center gap-2">
-        Comments
-        <span className="text-base font-normal text-gray-500 dark:text-gray-400">({getTotalCommentCount(comments)})</span>
-      </h3>
-      <form onSubmit={handleAddComment} className="flex gap-2 mb-4">
-        <input type="text" className="flex-1 border rounded px-3 py-2 text-black dark:text-white bg-gray-100 dark:bg-gray-800" placeholder="Add a comment..." value={commentText} onChange={(e) => setCommentText(e.target.value)} />
-        <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition">Post</button>
-      </form>
-      <div className="flex flex-col gap-4">
-        {comments.length === 0 ? (
-          <span className="text-gray-500">No comments yet.</span>
-        ) : (
-          renderComments(comments)
-        )}
+    <>
+      <ProfilePictureZoomModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        profilePicture={modalData.profilePicture}
+        channelName={modalData.channelName}
+        socialLinks={modalData.socialLinks}
+        onViewChannel={() => {
+          setModalOpen(false);
+          // Optionally navigate to channel page
+          if (channel && channel._id) {
+            window.location.href = `/channel/${channel._id}`;
+          }
+        }}
+      />
+      <div className="w-full max-w-3xl bg-white dark:bg-[#222] rounded-lg shadow p-4 mt-4">
+        <h3 className="text-lg font-bold mb-3 text-black dark:text-white flex items-center gap-2">
+          Comments
+          <span className="text-base font-normal text-gray-500 dark:text-gray-400">({getTotalCommentCount(comments)})</span>
+        </h3>
+        <form onSubmit={handleAddComment} className="flex gap-2 mb-4">
+          <input type="text" className="flex-1 border rounded px-3 py-2 text-black dark:text-white bg-gray-100 dark:bg-gray-800" placeholder="Add a comment..." value={commentText} onChange={(e) => setCommentText(e.target.value)} />
+          <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition">Post</button>
+        </form>
+        <div className="flex flex-col gap-4">
+          {comments.length === 0 ? (
+            <span className="text-gray-500">No comments yet.</span>
+          ) : (
+            renderComments(comments)
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
