@@ -11,7 +11,9 @@ export default function Filters() {
     const fetchFilters = async () => {
       try {
         const res = await axios.get(`${import.meta.env.VITE_API_URL}/filters`);
-        setCategories(res.data.map(f => f.name));
+        // Sort by createdAt descending (newest first)
+        const sorted = [...res.data].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setCategories(sorted.map(f => f.name));
       } catch (err) {
         setCategories([]);
       } finally {
