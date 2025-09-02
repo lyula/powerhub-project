@@ -65,7 +65,16 @@ export default function VideoComments({ videoId, onCountChange }) {
   };
 
   const getAvatar = (authorObj) => {
-    if (authorObj.avatar) return authorObj.avatar;
+    if (!authorObj) {
+      console.warn('getAvatar: authorObj is undefined or null', authorObj);
+      return "https://randomuser.me/api/portraits/lego/1.jpg";
+    }
+    if (authorObj.profilePicture) {
+      return authorObj.profilePicture;
+    }
+    if (authorObj.avatar) {
+      return authorObj.avatar;
+    }
     return "https://randomuser.me/api/portraits/lego/1.jpg";
   };
 
@@ -118,7 +127,6 @@ export default function VideoComments({ videoId, onCountChange }) {
       }
     }
     const payload = replyId ? { commentId, replyId, text: textToSend } : { commentId, text: textToSend };
-    console.log('Sending reply:', payload);
     try {
       const res = await fetch(`${API_BASE_URL}/videos/${videoId}/comment/reply`, {
         method: 'POST',

@@ -5,7 +5,6 @@ const upload = require('../middleware/upload');
 const cloudinary = require('../config/cloudinary');
 const User = require('../models/User');
 
-// Upload profile picture and update user
 // Accept only a Cloudinary URL from frontend
 router.post('/upload-profile-picture', auth, async (req, res) => {
   try {
