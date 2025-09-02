@@ -73,21 +73,21 @@ export default function Header({ onToggleSidebar }) {
         </div>
             <div className="relative" style={{ position: 'relative', zIndex: 100 }}>
               <button
-                className="hidden md:inline-flex items-center gap-2 rounded-full bg-white dark:bg-[#222] shadow hover:bg-gray-100 dark:hover:bg-[#333] transition focus:outline-none px-4"
-                style={{ height: '40px', minWidth: '120px', boxShadow: '0 2px 8px rgba(0,0,0,0.10)' }}
-                aria-label="Create"
+                className="relative hidden md:flex items-center justify-center px-2 py-2 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 shadow hover:shadow-lg transition hover:bg-gray-200 dark:hover:bg-[#222] focus:outline-none"
+                aria-label="Notifications"
+                style={{ minWidth: 40, height: 40, position: 'relative' }}
                 onClick={() => {
-                  if (!channel) {
-                    navigate('/channel-setup');
+                  if (window.location.pathname === '/notifications') {
+                    setShowNotifModal(false);
+                    navigate('/home');
                   } else {
-                    setShowCreateModal(true);
+                    setShowNotifModal((prev) => !prev);
                   }
                 }}
+                type="button"
               >
-                <span className="flex items-center gap-2 w-full justify-center">
-                  <FaVideo className="text-[#c42152] dark:text-[#c42152]" size={22} />
-                  <span className="text-base font-semibold text-[#c42152] dark:text-[#c42152]">Create</span>
-                </span>
+                <MdNotificationsNone size={26} color="#0bb6bc" />
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5" style={{ minWidth: 18, minHeight: 18, lineHeight: '18px' }}>3</span>
               </button>
               {showCreateModal && modalRoot && createPortal(
                 <>
@@ -120,23 +120,20 @@ export default function Header({ onToggleSidebar }) {
             </div>
 
           {/* Notification Bell with Modal */}
-          <div className="relative hidden md:flex items-center justify-center">
+          <div className="relative hidden md:inline-flex items-center gap-2 rounded-full bg-white dark:bg-[#222] shadow hover:bg-gray-100 dark:hover:bg-[#333] transition focus:outline-none px-4" style={{ height: '40px', minWidth: '120px', boxShadow: '0 2px 8px rgba(0,0,0,0.10)' }}>
             <button
-              className={`flex items-center justify-center px-2 py-2 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 shadow hover:shadow-lg transition hover:bg-gray-200 dark:hover:bg-[#222] focus:outline-none`}
-              aria-label="Notifications"
-              style={{ minWidth: 40, height: 40, position: 'relative' }}
+              aria-label="Create"
+              className="flex items-center gap-2 w-full justify-center"
               onClick={() => {
-                if (window.location.pathname === '/notifications') {
-                  setShowNotifModal(false);
-                  navigate('/home');
+                if (!channel) {
+                  navigate('/channel-setup');
                 } else {
-                  setShowNotifModal((prev) => !prev);
+                  setShowCreateModal(true);
                 }
               }}
-              type="button"
             >
-              <MdNotificationsNone size={26} color="#0bb6bc" />
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5" style={{ minWidth: 18, minHeight: 18, lineHeight: '18px' }}>3</span>
+              <FaVideo className="text-[#c42152] dark:text-[#c42152]" size={22} />
+              <span className="text-base font-semibold text-[#c42152] dark:text-[#c42152]">Create</span>
             </button>
             {showNotifModal && modalRoot && createPortal(
               <div style={{ position: 'absolute', top: '48px', right: 0, zIndex: 9999 }}>
