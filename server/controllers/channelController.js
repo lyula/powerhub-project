@@ -1,3 +1,19 @@
+// Get channel by owner user ID
+exports.getChannelByOwner = async (req, res) => {
+  try {
+    const ownerId = req.params.ownerId;
+    const channel = await Channel.findOne({ owner: ownerId });
+    if (!channel) {
+      return res.status(404).json({ error: 'Channel not found.' });
+    }
+    // Optionally fetch videos for this channel
+    const Video = require('../models/Video');
+    const videos = await Video.find({ channel: channel._id }).sort({ createdAt: -1 });
+    res.json({ ...channel.toObject(), videos });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 // Subscribe to a channel
 exports.subscribeChannel = async (req, res) => {
   try {

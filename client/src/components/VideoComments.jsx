@@ -530,6 +530,7 @@ export default function VideoComments({ videoId, onCountChange, channel }) {
       profilePicture: author.profilePicture || author.avatar || 'https://randomuser.me/api/portraits/lego/1.jpg',
       channelName: author.username || author.firstName || 'Unknown',
       socialLinks: author.socialLinks || channel?.socialLinks || {},
+      authorId: author._id || author.id // store author user id for modal
     });
     setModalOpen(true);
   }
@@ -542,9 +543,23 @@ export default function VideoComments({ videoId, onCountChange, channel }) {
         profilePicture={modalData.profilePicture}
         channelName={modalData.channelName}
         socialLinks={modalData.socialLinks}
-        onViewChannel={() => {
+        onViewChannel={async () => {
           setModalOpen(false);
-          // Optionally navigate to channel page
+          // Try to fetch channel by authorId
+          if (modalData.authorId) {
+            try {
+              const apiUrl = import.meta.env.VITE_API_URL;
+              const res = await fetch(`${apiUrl}/channel/by-owner/${modalData.authorId}`);
+              if (res.ok) {
+                const data = await res.json();
+                if (data && data._id) {
+                  window.location.href = `/channel/${data._id}`;
+                  return;
+                }
+              }
+            } catch (err) {}
+          }
+          // Fallback: if current video channel exists, go there
           if (channel && channel._id) {
             window.location.href = `/channel/${channel._id}`;
           }

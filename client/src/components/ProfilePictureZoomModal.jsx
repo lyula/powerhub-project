@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaYoutube, FaTwitter, FaInstagram, FaFacebook, FaTiktok, FaLinkedin, FaWhatsapp, FaGithub } from 'react-icons/fa';
+import { FaYoutube, FaTwitter, FaInstagram, FaFacebook, FaTiktok, FaLinkedin, FaWhatsapp, FaGithub, FaEnvelope } from 'react-icons/fa';
 
 
 export default function ProfilePictureZoomModal({ open, onClose, profilePicture, channelName, socialLinks, onViewChannel }) {
@@ -27,6 +27,7 @@ export default function ProfilePictureZoomModal({ open, onClose, profilePicture,
             <a href={socialLinks?.instagram || '#'} target="_blank" rel="noopener noreferrer" title="Instagram"><FaInstagram className="text-pink-500 text-2xl" /></a>
             <a href={socialLinks?.whatsapp || '#'} target="_blank" rel="noopener noreferrer" title="WhatsApp"><FaWhatsapp className="text-green-500 text-2xl" /></a>
             <a href={socialLinks?.github || '#'} target="_blank" rel="noopener noreferrer" title="GitHub"><FaGithub className="text-gray-200 text-2xl" /></a>
+            <a href={socialLinks?.email ? `mailto:${socialLinks.email}` : '#'} target="_blank" rel="noopener noreferrer" title="Email"><FaEnvelope className="text-yellow-400 text-2xl" /></a>
             {/* Optionally show other icons if present */}
             {socialLinks?.youtube && <a href={socialLinks.youtube} target="_blank" rel="noopener noreferrer" title="YouTube"><FaYoutube className="text-red-600 text-2xl" /></a>}
             {socialLinks?.twitter && <a href={socialLinks.twitter} target="_blank" rel="noopener noreferrer" title="Twitter"><FaTwitter className="text-blue-400 text-2xl" /></a>}
