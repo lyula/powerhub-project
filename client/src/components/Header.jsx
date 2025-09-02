@@ -77,12 +77,7 @@ export default function Header({ onToggleSidebar }) {
                 aria-label="Notifications"
                 style={{ minWidth: 40, height: 40, position: 'relative' }}
                 onClick={() => {
-                  if (window.location.pathname === '/notifications') {
-                    setShowNotifModal(false);
-                    navigate('/home');
-                  } else {
-                    setShowNotifModal((prev) => !prev);
-                  }
+                  setShowNotifModal((prev) => !prev);
                 }}
                 type="button"
               >
