@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FaVideo, FaRegEdit } from 'react-icons/fa';
+import { MdMenu, MdNotificationsNone, MdLogout } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ThemeToggle from './ThemeToggle';
-import { LogoutIcon, NotificationBellIcon } from './icons';
 
 export default function Header({ onToggleSidebar }) {
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -43,11 +43,7 @@ export default function Header({ onToggleSidebar }) {
           aria-label="Toggle sidebar"
           onClick={onToggleSidebar}
         >
-          <svg width="24" height="24" fill="none" stroke="#0bb6bc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="18" x2="21" y2="18" />
-          </svg>
+          <MdMenu size={28} color="#0bb6bc" />
         </button>
             <span className="hidden md:inline text-lg font-bold">
               <span style={{ color: '#c42152' }}>PLP</span>
@@ -115,7 +111,7 @@ export default function Header({ onToggleSidebar }) {
                 }
               }}
             >
-              <NotificationBellIcon />
+              <MdNotificationsNone size={26} color="#0bb6bc" />
               <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5" style={{ minWidth: 18, minHeight: 18, lineHeight: '18px' }}>3</span>
               {window.location.pathname === '/notifications' && (
                 <span className="absolute inset-0 rounded-full bg-[#0bb6bc] opacity-10 pointer-events-none"></span>
@@ -147,7 +143,7 @@ export default function Header({ onToggleSidebar }) {
           style={{ minWidth: 40, height: 40 }}
           onClick={handleLogout}
         >
-          <LogoutIcon />
+          <MdLogout size={26} color="#c42152" />
         </button>
       </div>
     </header>

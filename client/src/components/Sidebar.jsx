@@ -1,19 +1,19 @@
 
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { HomeIcon, FireIcon, AcademicCapIcon, VideoCameraIcon, UserIcon, BookmarkIcon, HeartIcon, PlayCircleIcon, ClockIcon, SubscriptionsIcon, NotificationBellIcon } from './icons';
+import { MdHome, MdWhatshot, MdVideoLibrary, MdSubscriptions, MdBookmark, MdFavoriteBorder, MdPlayCircleOutline, MdHistory, MdNotificationsNone, MdPersonOutline } from 'react-icons/md';
 
 const items = [
-  { label: 'Home', icon: <HomeIcon />, path: '/home' },
-  { label: 'Trending', icon: <FireIcon />, path: '/home' },
-  { label: 'My Channel', icon: <VideoCameraIcon />, isChannel: true },
-  { label: 'Subscriptions', icon: <SubscriptionsIcon />, path: '/subscriptions' },
-  { label: 'Saved Videos', icon: <BookmarkIcon />, path: '/saved-videos' },
-  { label: 'Liked Videos', icon: <HeartIcon />, path: '/liked-videos' },
-  { label: 'Course Videos', icon: <PlayCircleIcon />, path: '/course-videos' },
-  { label: 'Watch History', icon: <ClockIcon />, path: '/watch-history' },
-  { label: 'Notifications', icon: <NotificationBellIcon />, path: '/notifications' },
-  { label: 'Profile', icon: <UserIcon />, path: '/profile' },
+  { label: 'Home', icon: <MdHome size={24} />, path: '/home' },
+  { label: 'Trending', icon: <MdWhatshot size={24} />, path: '/home' },
+  { label: 'My Channel', icon: <MdVideoLibrary size={24} />, isChannel: true },
+  { label: 'Subscriptions', icon: <MdSubscriptions size={24} />, path: '/subscriptions' },
+  { label: 'Saved Videos', icon: <MdBookmark size={24} />, path: '/saved-videos' },
+  { label: 'Liked Videos', icon: <MdFavoriteBorder size={24} />, path: '/liked-videos' },
+  { label: 'Course Videos', icon: <MdPlayCircleOutline size={24} />, path: '/course-videos' },
+  { label: 'Watch History', icon: <MdHistory size={24} />, path: '/watch-history' },
+  { label: 'Notifications', icon: <MdNotificationsNone size={24} />, path: '/notifications' },
+  { label: 'Profile', icon: <MdPersonOutline size={24} />, path: '/profile' },
 ];
 
 export default function Sidebar({ collapsed }) {
