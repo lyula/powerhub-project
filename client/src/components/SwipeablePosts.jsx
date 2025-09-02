@@ -99,8 +99,8 @@ const ExpandablePostCard = ({ post }) => {
             <img
               src={post.image}
               alt={post.title}
-              className="w-16 h-16 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
-              style={{ minWidth: '4rem', minHeight: '4rem' }}
+              className="w-24 h-24 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
+              style={{ minWidth: '6rem', minHeight: '6rem' }}
             />
           </div>
         )}
