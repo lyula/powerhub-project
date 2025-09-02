@@ -20,6 +20,7 @@ import LikedVideos from './pages/LikedVideos';
 import CourseVideos from './pages/CourseVideos';
 import WatchHistory from './pages/WatchHistory';
 import Notifications from './pages/Notifications';
+import LandingPage from './pages/LandingPage';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -63,8 +64,8 @@ const PublicRoute = ({ children }) => {
       </div>
     );
   }
-  // Only redirect if not on /login or /register
-  if (isAuthenticated && location !== '/login' && location !== '/register') {
+  // Only redirect if authenticated and on /login or /register
+  if (isAuthenticated && (location === '/login' || location === '/register')) {
     return <Navigate to="/home" replace />;
   }
   return children;
@@ -77,7 +78,7 @@ function AppRoutes() {
   const { channel } = useAuth();
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/login" replace />} />
+  <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
       <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />

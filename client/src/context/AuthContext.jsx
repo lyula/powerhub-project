@@ -20,13 +20,13 @@ export const AuthProvider = ({ children }) => {
   const [serverConnected, setServerConnected] = useState(true);
   useEffect(() => {
     if (!loading && !user) {
-      // Only redirect if not already on /login or /register
+      // Only redirect if not already on /login, /register, or landing page
       const currentPath = location?.pathname || '';
-      if (currentPath !== '/login' && currentPath !== '/register') {
+      if (currentPath !== '/login' && currentPath !== '/register' && currentPath !== '/') {
         navigate('/login', { replace: true });
       }
     }
-  // Do not restrict access to login or register pages for authenticated users
+    // Do not restrict access to login, register, or landing page for unauthenticated users
   }, [loading, user, location, navigate]);
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
