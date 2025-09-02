@@ -182,14 +182,19 @@ export default function VideoComments({ videoId, onCountChange, channel }) {
   const handleLikeComment = async (commentId, liked) => {
     if (likeLoading[commentId]) return; // Prevent double click
     setLikeLoading((prev) => ({ ...prev, [commentId]: true }));
-    // Optimistic UI update
+    // Optimistic UI update: always fill when liked, persist until toggled
     const prevComments = comments;
     setComments((prevComments) => prevComments.map(comment => {
       if (comment._id === commentId) {
         let likesArr = Array.isArray(comment.likes) ? comment.likes : [];
-        let newLikes = liked
-          ? likesArr.filter(id => id !== user._id)
-          : [...new Set([...likesArr, user._id])];
+        let newLikes;
+        if (liked) {
+          // Unlike: remove user._id
+          newLikes = likesArr.filter(id => id !== user._id);
+        } else {
+          // Like: add user._id if not present
+          newLikes = likesArr.includes(user._id) ? likesArr : [...likesArr, user._id];
+        }
         return { ...comment, likes: newLikes };
       }
       return comment;
@@ -206,11 +211,20 @@ export default function VideoComments({ videoId, onCountChange, channel }) {
       });
       if (res.ok) {
         const data = await res.json();
-        // Always sync likes with backend response
+        // Always sync likes with backend response, but enforce current user's like state
         if (Array.isArray(data.likes)) {
           setComments((prevComments) => prevComments.map(comment => {
             if (comment._id === commentId) {
-              return { ...comment, likes: data.likes };
+              let likesArr = data.likes;
+              // If just liked, ensure user._id is present
+              if (!liked && !likesArr.includes(user._id)) {
+                likesArr = [...likesArr, user._id];
+              }
+              // If just unliked, ensure user._id is absent
+              if (liked && likesArr.includes(user._id)) {
+                likesArr = likesArr.filter(id => id !== user._id);
+              }
+              return { ...comment, likes: likesArr };
             }
             return comment;
           }));
