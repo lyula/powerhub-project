@@ -76,7 +76,7 @@ const ExpandablePostCard = ({ post }) => {
   return (
     <div
       className="min-w-[370px] max-w-[400px] h-[260px] bg-white dark:bg-[#222] rounded-lg shadow-sm flex-shrink-0 border border-gray-200 dark:border-gray-700 flex flex-col justify-between font-sans"
-      style={{ fontFamily: 'Roboto, Arial, sans-serif' }}
+  style={{ fontFamily: 'Roboto, Arial, sans-serif' }}
     >
       <div className="flex flex-row items-start px-4 pt-3 pb-2 gap-3 flex-1 relative">
         <div className="flex flex-col flex-1 min-w-0">
