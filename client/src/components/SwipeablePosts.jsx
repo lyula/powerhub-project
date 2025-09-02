@@ -110,7 +110,15 @@ const ExpandablePostCard = ({ post }) => {
 
   // Navigation to post details
   const navigateToPostDetails = () => {
-    window.location.href = `/post/${post._id || post.id}`;
+    // Save scroll position before navigating
+    sessionStorage.setItem('homeFeedScroll', window.scrollY);
+    // Use React Router navigation with state
+    if (window && window.history && window.history.pushState) {
+      window.history.pushState({}, '', `/post/${post._id || post.id}`);
+      window.location.assign(`/post/${post._id || post.id}`);
+    } else {
+      window.location.href = `/post/${post._id || post.id}`;
+    }
   };
 
   return (
