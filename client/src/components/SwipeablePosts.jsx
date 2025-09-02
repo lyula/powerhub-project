@@ -75,7 +75,7 @@ function formatCount(n) {
 const ExpandablePostCard = ({ post }) => {
   return (
     <div
-      className="min-w-[320px] max-w-[340px] h-[180px] bg-white dark:bg-[#222] rounded-lg shadow-sm flex-shrink-0 border border-gray-200 dark:border-gray-700 flex flex-col justify-between font-sans"
+      className="min-w-[370px] max-w-[400px] h-[260px] bg-white dark:bg-[#222] rounded-lg shadow-sm flex-shrink-0 border border-gray-200 dark:border-gray-700 flex flex-col justify-between font-sans"
       style={{ fontFamily: 'Roboto, Arial, sans-serif' }}
     >
       <div className="flex flex-row items-start px-4 pt-3 pb-2 gap-3 flex-1 relative">
@@ -85,8 +85,8 @@ const ExpandablePostCard = ({ post }) => {
             <span className="text-[18px] font-semibold text-gray-900 dark:text-gray-100 leading-tight truncate">{post.username}</span>
           </div>
           <span
-            className="text-[16px] text-gray-800 dark:text-gray-200 mb-1 leading-snug line-clamp-2"
-            style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'normal' }}
+            className="text-[16px] text-gray-800 dark:text-gray-200 mb-1 leading-snug line-clamp-5"
+            style={{ display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'normal' }}
             title={post.content}
           >
             {post.content}
@@ -107,8 +107,8 @@ const ExpandablePostCard = ({ post }) => {
             <img
               src={post.image}
               alt={post.title}
-              className="w-24 h-24 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
-              style={{ minWidth: '6rem', minHeight: '6rem' }}
+              className="w-32 h-32 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
+              style={{ minWidth: '8rem', minHeight: '8rem' }}
             />
           </div>
         )}
