@@ -30,6 +30,7 @@ export default function LikedVideos() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedIdx, setSelectedIdx] = useState(0);
+  const [hoveredIdx, setHoveredIdx] = useState(null);
   const [page, setPage] = useState(1);
   const pageSize = 30;
 
@@ -96,6 +97,7 @@ export default function LikedVideos() {
                   <div className="flex flex-col gap-2">
                     {paginatedVideos.map((video, idx) => {
                       const likedByCurrentUser = Array.isArray(video.likes) && video.likes.some(like => like.user?.toString() === (video.userLike?.user?.toString() || ''));
+                      const isHovered = hoveredIdx === idx;
                       return (
                         <div
                           key={video._id}
@@ -107,13 +109,27 @@ export default function LikedVideos() {
                               navigate(`/watch/${video._id}`);
                             }
                           }}
+                          onMouseEnter={() => setHoveredIdx(idx)}
+                          onMouseLeave={() => setHoveredIdx(null)}
                         >
                           <div className="relative w-32 h-20">
-                            <img
-                              src={video.thumbnailUrl || 'https://via.placeholder.com/400x225?text=Video+Thumbnail'}
-                              alt={video.title || 'Video Thumbnail'}
-                              className="w-32 h-20 object-cover rounded-l-lg"
-                            />
+                            {isHovered && video.videoUrl ? (
+                              <video
+                                src={video.videoUrl}
+                                autoPlay
+                                muted
+                                loop
+                                poster={video.thumbnailUrl}
+                                className="w-32 h-20 object-cover rounded-l-lg transition-transform duration-700 scale-110 z-10"
+                                style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}
+                              />
+                            ) : (
+                              <img
+                                src={video.thumbnailUrl || 'https://via.placeholder.com/400x225?text=Video+Thumbnail'}
+                                alt={video.title || 'Video Thumbnail'}
+                                className="w-32 h-20 object-cover rounded-l-lg transition-transform duration-700 group-hover:scale-110"
+                              />
+                            )}
                             {video.duration !== undefined && (
                               <span className="absolute bottom-1 right-1 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
                                 {formatDuration(video.duration)}
@@ -146,10 +162,11 @@ export default function LikedVideos() {
               {/* Highlighted video player (large screens only) */}
               {isLargeScreen && paginatedVideos[selectedIdx] && (
                 <div className="w-full lg:w-[600px] xl:w-[700px] flex flex-col items-start justify-start text-left">
-                  <div className="w-full aspect-video bg-black rounded-lg shadow-lg overflow-hidden mb-4">
+                  <div className="w-full aspect-video bg-black rounded-lg shadow-lg overflow-hidden mb-4 relative">
                     <video
                       src={paginatedVideos[selectedIdx].videoUrl}
                       controls
+                      controlsList="nodownload"
                       poster={paginatedVideos[selectedIdx].thumbnailUrl}
                       className="w-full h-full object-contain"
                     />
