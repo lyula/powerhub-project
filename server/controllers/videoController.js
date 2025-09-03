@@ -320,6 +320,20 @@ exports.dislikeVideo = async (req, res) => {
   }
 };
 
+// Undislike a video
+exports.undislikeVideo = async (req, res) => {
+  try {
+    const video = await Video.findById(req.params.id);
+    if (!video) return res.status(404).json({ error: 'Video not found' });
+    const userId = req.user._id;
+    // Remove from dislikes if present
+    video.dislikes = video.dislikes.filter(id => id.toString() !== userId.toString());
+    await video.save();
+    res.json(video);
+  } catch (err) {
+    res.status(500).json({ error: 'Undislike failed', details: err });
+  }
+};
 // Add a comment
 exports.addComment = async (req, res) => {
   try {
