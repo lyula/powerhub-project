@@ -131,6 +131,16 @@ const ExpandablePostCard = ({ post }) => {
     sessionStorage.setItem('homeFeedScroll', window.scrollY);
     try {
       const apiUrl = import.meta.env.VITE_API_URL;
+      // Increment view count before navigation
+      if (user && token && user._id) {
+        await fetch(`${apiUrl}/posts/${post._id || post.id}/view`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+      }
       const res = await fetch(`${apiUrl}/posts/${post._id || post.id}`);
       if (!res.ok) throw new Error('Failed to fetch post');
       const data = await res.json();

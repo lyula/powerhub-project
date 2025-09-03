@@ -176,6 +176,7 @@ function CommentThread({ comments, postId, token, userId, onReply, replyingTo, r
 
 const PostDetails = () => {
   // Profile modal state
+  const hasIncrementedView = React.useRef(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalData, setModalData] = useState({ profilePicture: '', channelName: '', socialLinks: {}, hasChannel: false, authorId: '' });
 
@@ -344,38 +345,29 @@ const PostDetails = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const fetchPostAndIncrementView = async () => {
+    // Only run on mount or postId change
+    const fetchPost = async () => {
       setLoading(true);
       setError('');
       try {
-        // Fetch post details
+        // If post is not present, fetch only
         const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}`);
         if (!res.ok) throw new Error('Failed to fetch post');
         const data = await res.json();
         setPost(data.post || data);
-        // Increment view count if user is authenticated
-        if (token && user && user._id) {
-          await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}/view`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            }
-          });
-        }
       } catch (err) {
         setError(err.message);
       }
       setLoading(false);
     };
     if (!post) {
-      fetchPostAndIncrementView();
+      fetchPost();
     } else {
       setLoading(false);
     }
-    // Clean up localStorage after using
     localStorage.removeItem('postDetailsData');
-  }, [postId, token, user]);
+    // eslint-disable-next-line
+  }, [postId]);
 
   // Sidebar expand/collapse logic
   const [sidebarOpen, setSidebarOpen] = useState(false);
