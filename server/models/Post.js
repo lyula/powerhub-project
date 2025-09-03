@@ -7,8 +7,16 @@ const CommentSchema = new mongoose.Schema({
   replies: [{
     author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     content: { type: String, required: true },
+    taggedUser: { type: String },
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     createdAt: { type: Date, default: Date.now },
+    replies: [{
+      author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+      content: { type: String, required: true },
+      taggedUser: { type: String },
+      likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+      createdAt: { type: Date, default: Date.now },
+    }]
   }],
   createdAt: { type: Date, default: Date.now },
 });

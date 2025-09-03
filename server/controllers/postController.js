@@ -79,16 +79,27 @@ exports.addComment = async (req, res) => {
 exports.addReply = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
-  if (!post) return res.status(404).json({ error: 'Post not found' });
-  const { commentId, content } = req.body;
-  const author = req.user._id;
-  const comment = post.comments.id(commentId);
-  if (!comment) return res.status(404).json({ error: 'Comment not found' });
-  comment.replies.push({ author, content });
-  await post.save();
-  // Populate author for replies
-  await post.populate('comments.replies.author', 'username profilePicture');
-  res.status(201).json(comment.replies);
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+    const { commentId, replyId, content, taggedUser } = req.body;
+    const author = req.user._id;
+    const comment = post.comments.id(commentId);
+    if (!comment) return res.status(404).json({ error: 'Comment not found' });
+
+    // If replyId is provided, reply to a reply (nested)
+    if (replyId) {
+      const parentReply = comment.replies.id(replyId);
+      if (!parentReply) return res.status(404).json({ error: 'Parent reply not found' });
+      parentReply.replies = parentReply.replies || [];
+      parentReply.replies.push({ author, content, taggedUser });
+    } else {
+      // Reply to comment
+      comment.replies.push({ author, content, taggedUser });
+    }
+    await post.save();
+    // Populate author for replies and nested replies
+    await post.populate('comments.replies.author', 'username profilePicture');
+    await post.populate('comments.replies.replies.author', 'username profilePicture');
+    res.status(201).json(comment.replies);
   } catch (err) {
     res.status(500).json({ error: 'Failed to add reply', details: err.message });
   }

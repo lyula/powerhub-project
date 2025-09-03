@@ -11,7 +11,10 @@ function CommentThread({ comments, postId, token, userId, onReply, replyingTo, r
               <span className="text-xs text-gray-400 ml-2">{timeAgo(comment.createdAt)}</span>
             )}
           </div>
-          <span className="text-gray-800 dark:text-gray-200 text-sm block mb-1 pl-9">{comment.content}</span>
+          <span className="text-gray-800 dark:text-gray-200 text-sm block mb-1 pl-9">
+            {comment.taggedUser ? <span className="text-[#0bb6bc] font-semibold mr-1">@{comment.taggedUser}</span> : null}
+            {comment.content}
+          </span>
           <div className="flex gap-4 items-center mt-1 pl-9">
             <button className={`text-xs flex items-center ${Array.isArray(comment.likes) && comment.likes.includes(userId) ? 'text-pink-500' : 'text-gray-500'} hover:text-pink-500 font-medium px-2 py-1 rounded transition`} onClick={() => handleLike(comment._id, Array.isArray(comment.likes) && comment.likes.includes(userId))}>
               <svg xmlns="http://www.w3.org/2000/svg" fill={Array.isArray(comment.likes) && comment.likes.includes(userId) ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" className="w-4 h-4 mr-1">
@@ -31,7 +34,7 @@ function CommentThread({ comments, postId, token, userId, onReply, replyingTo, r
               )}
             </form>
           )}
-          {/* Render replies flat, passing commentId to like handler */}
+          {/* Render replies recursively, allow replying to replies */}
           {comment.replies && comment.replies.length > 0 && (
             <div className="ml-8 mt-2 flex flex-col gap-2">
               {comment.replies.map(reply => (
@@ -43,7 +46,10 @@ function CommentThread({ comments, postId, token, userId, onReply, replyingTo, r
                       <span className="text-xs text-gray-400 ml-2">{timeAgo(reply.createdAt)}</span>
                     )}
                   </div>
-                  <span className="text-gray-800 dark:text-gray-200 text-sm block mb-1 pl-9">{reply.content}</span>
+                  <span className="text-gray-800 dark:text-gray-200 text-sm block mb-1 pl-9">
+                    {reply.taggedUser ? <span className="text-[#0bb6bc] font-semibold mr-1">@{reply.taggedUser}</span> : null}
+                    {reply.content}
+                  </span>
                   <div className="flex gap-4 items-center mt-1 pl-9">
                     <button className={`text-xs flex items-center ${Array.isArray(reply.likes) && reply.likes.includes(userId) ? 'text-pink-500' : 'text-gray-500'} hover:text-pink-500 font-medium px-2 py-1 rounded transition`} onClick={() => handleLikeReply(reply._id, comment._id, Array.isArray(reply.likes) && reply.likes.includes(userId))}>
                       <svg xmlns="http://www.w3.org/2000/svg" fill={Array.isArray(reply.likes) && reply.likes.includes(userId) ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" className="w-4 h-4 mr-1">
@@ -51,7 +57,36 @@ function CommentThread({ comments, postId, token, userId, onReply, replyingTo, r
                       </svg>
                       <span className="ml-1">{Array.isArray(reply.likes) ? reply.likes.length : 0}</span>
                     </button>
+                    <button className="text-xs text-gray-500 hover:text-[#0bb6bc] font-medium px-2 py-1 rounded transition" onClick={() => onReply(comment._id, reply._id, reply.author?.username)}>
+                      Reply
+                    </button>
                   </div>
+                  {replyingTo && replyingTo.commentId === comment._id && replyingTo.replyId === reply._id && (
+                    <form onSubmit={e => handleAddReply(e, comment._id, reply._id, reply.author?.username)} className="flex gap-2 mt-2 ml-9">
+                      <input type="text" className="flex-1 rounded px-2 py-1 text-black dark:text-white bg-gray-100 dark:bg-gray-800 border-0 focus:ring-2 focus:ring-[#0bb6bc]" placeholder={`Reply to @${replyingTo.taggedUser || reply.author?.username}...`} value={replyText} onChange={e => setReplyText(e.target.value)} />
+                      {replyText.trim() && (
+                        <button type="submit" className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition">Reply</button>
+                      )}
+                    </form>
+                  )}
+                  {/* Recursively render deeper replies if present */}
+                  {reply.replies && reply.replies.length > 0 && (
+                    <div className="ml-8 mt-2 flex flex-col gap-2">
+                      <CommentThread
+                        comments={reply.replies}
+                        postId={postId}
+                        token={token}
+                        userId={userId}
+                        handleLike={handleLike}
+                        handleLikeReply={handleLikeReply}
+                        onReply={onReply}
+                        replyingTo={replyingTo}
+                        replyText={replyText}
+                        setReplyText={setReplyText}
+                        handleAddReply={handleAddReply}
+                      />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
