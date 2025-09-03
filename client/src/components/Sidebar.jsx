@@ -1,5 +1,5 @@
 
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { MdHome, MdWhatshot, MdVideoLibrary, MdSubscriptions, MdBookmark, MdFavoriteBorder, MdPlayCircleOutline, MdHistory, MdNotificationsNone, MdPersonOutline, MdLogout } from 'react-icons/md';
 import React, { useRef, useState, useEffect } from 'react';
@@ -21,12 +21,20 @@ const items = [
 
 export default function Sidebar({ collapsed }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { channel, logout } = useAuth();
 
   return (
     <aside className={`hidden md:flex flex-col min-h-screen bg-gray-100 dark:bg-[#111111] border-r border-gray-200 dark:border-gray-900 py-6 ${collapsed ? 'w-20 px-2' : 'w-64 px-4'}`}>
-      <nav className="flex flex-col gap-2 overflow-y-auto max-h-[calc(100vh-48px)]">
+  <nav className={`flex flex-col gap-2 ${collapsed ? 'overflow-visible' : 'overflow-y-auto'} max-h-[calc(100vh-48px)]`}>
         {items.map((item) => {
+          // Determine if the tab is active
+          let isActive = false;
+          if (item.path) {
+            isActive = location.pathname === item.path;
+          } else if (item.isChannel && channel && channel._id) {
+            isActive = location.pathname === `/channel/${channel._id}`;
+          }
           if (item.logout) {
             return (
               <button
@@ -37,8 +45,15 @@ export default function Sidebar({ collapsed }) {
                   navigate('/login', { replace: true });
                 }}
               >
-                <span className="w-6 h-6">{item.icon}</span>
-                {!collapsed && <span>{item.label}</span>}
+                  <span className="w-6 h-6 relative group flex items-center justify-center">
+                    {item.icon}
+                    {collapsed && (
+                      <span className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 rounded bg-gray-800 text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
+                        {item.label}
+                      </span>
+                    )}
+                  </span>
+                  {!collapsed && <span>{item.label}</span>}
               </button>
             );
           }
@@ -55,8 +70,15 @@ export default function Sidebar({ collapsed }) {
                   }
                 }}
               >
-                <span className="w-6 h-6">{item.icon}</span>
-                {!collapsed && <span>{item.label}</span>}
+                  <span className="w-6 h-6 relative group flex items-center justify-center">
+                    {item.icon}
+                    {collapsed && (
+                      <span className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 rounded bg-gray-800 text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
+                        {item.label}
+                      </span>
+                    )}
+                  </span>
+                  {!collapsed && <span>{item.label}</span>}
               </button>
             );
           }
@@ -67,8 +89,15 @@ export default function Sidebar({ collapsed }) {
                 to={item.path}
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-900 transition ${collapsed ? 'justify-center' : ''}`}
               >
-                <span className="w-6 h-6">{item.icon}</span>
-                {!collapsed && <span>{item.label}</span>}
+                  <span className="w-6 h-6 relative group flex items-center justify-center">
+                    {item.icon}
+                    {collapsed && (
+                      <span className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 rounded bg-gray-800 text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
+                        {item.label}
+                      </span>
+                    )}
+                  </span>
+                  {!collapsed && <span>{item.label}</span>}
               </Link>
             );
           }
@@ -77,8 +106,15 @@ export default function Sidebar({ collapsed }) {
               key={item.label}
               className={`flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-900 transition ${collapsed ? 'justify-center' : ''}`}
             >
-              <span className="w-6 h-6">{item.icon}</span>
-              {!collapsed && <span>{item.label}</span>}
+                <span className={`w-6 h-6 relative group flex items-center justify-center ${isActive ? 'text-[#0bb6bc]' : ''}`}>
+                  {item.icon}
+                  {collapsed && (
+                    <span className="absolute left-1/2 top-full -translate-x-1/2 mt-2 px-2 py-1 rounded bg-gray-800 text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[9999] shadow-lg">
+                      {item.label}
+                    </span>
+                  )}
+                </span>
+                {!collapsed && <span>{item.label}</span>}
             </button>
           );
         })}
