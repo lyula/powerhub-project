@@ -30,6 +30,8 @@ const PostSchema = new mongoose.Schema({
   author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   comments: [CommentSchema],
   likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  views: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Array of user IDs who viewed
+  viewCount: { type: Number, default: 0 }, // Total unique views
   shareCount: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
 });

@@ -1,4 +1,22 @@
 // Get a post by ID
+// Increment post view count and record viewer
+exports.incrementViewCount = async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+    const userId = req.user._id;
+    // Only add user if not already present
+    if (!post.views.some(id => id.toString() === userId.toString())) {
+      post.views.push(userId);
+    }
+    // Always increment viewCount on every visit
+    post.viewCount = (typeof post.viewCount === 'number' ? post.viewCount : 0) + 1;
+    await post.save();
+    res.json({ viewCount: post.viewCount });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to increment view count', details: err.message });
+  }
+};
 exports.getPostById = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id)

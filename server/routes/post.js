@@ -40,3 +40,6 @@ router.get('/user/:userId', postController.getPostsByUser);
 router.get('/specialization/:specialization', postController.getPostsBySpecialization);
 
 module.exports = router;
+
+// Increment view count
+router.post('/:id/view', auth, postController.incrementViewCount);

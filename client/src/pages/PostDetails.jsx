@@ -13,6 +13,7 @@ function countAllComments(comments) {
   return count;
 }
 import React, { useEffect, useState } from 'react';
+import { FaChartBar } from 'react-icons/fa';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import StudentUtility from '../components/StudentUtility';
@@ -343,27 +344,38 @@ const PostDetails = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!post) {
-      const fetchPost = async () => {
-        setLoading(true);
-        setError('');
-        try {
-          const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}`);
-          if (!res.ok) throw new Error('Failed to fetch post');
-          const data = await res.json();
-          setPost(data.post || data);
-        } catch (err) {
-          setError(err.message);
+    const fetchPostAndIncrementView = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        // Fetch post details
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}`);
+        if (!res.ok) throw new Error('Failed to fetch post');
+        const data = await res.json();
+        setPost(data.post || data);
+        // Increment view count if user is authenticated
+        if (token && user && user._id) {
+          await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}/view`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            }
+          });
         }
-        setLoading(false);
-      };
-      fetchPost();
+      } catch (err) {
+        setError(err.message);
+      }
+      setLoading(false);
+    };
+    if (!post) {
+      fetchPostAndIncrementView();
     } else {
       setLoading(false);
     }
     // Clean up localStorage after using
     localStorage.removeItem('postDetailsData');
-  }, [postId]);
+  }, [postId, token, user]);
 
   // Sidebar expand/collapse logic
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -416,6 +428,7 @@ const PostDetails = () => {
                       )}
                       <span className="text-xs text-[#c42152] font-semibold">{post.specialization}</span>
                     </div>
+                    {/* Views icon and count */}
                   </div>
                   {post.images && post.images.length > 0 && (
                     <>
@@ -455,9 +468,15 @@ const PostDetails = () => {
                   </div>
                   {/* Comments section */}
                   <div className="p-4 pt-0 border-t border-gray-200 dark:border-gray-700">
-                    <h3 className="text-lg font-bold mb-3 text-black dark:text-white">
-                      Comments ({countAllComments(post.comments)})
-                    </h3>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-lg font-bold text-black dark:text-white">
+                        Comments ({countAllComments(post.comments)})
+                      </h3>
+                      <div className="flex items-center gap-1">
+                        <FaChartBar className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                        <span className="text-xs text-gray-600 dark:text-gray-400 font-semibold">{post.viewCount ?? (Array.isArray(post.views) ? post.views.length : 0)}</span>
+                      </div>
+                    </div>
                     {/* Comments input for engagement */}
                     <div className="mb-4">
                       <form
