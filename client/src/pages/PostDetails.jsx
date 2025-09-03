@@ -24,99 +24,151 @@ import ProfilePictureZoomModal from '../components/ProfilePictureZoomModal';
 
 // Recursive comment/reply renderer
 function CommentThread({ comments, postId, token, userId, onReply, replyingTo, replyText, setReplyText, handleAddReply, handleLike, handleLikeReply, onProfileClick }) {
+  // Helper to count all replies and subreplies recursively
+  function countReplies(replies) {
+    let count = 0;
+    function recurse(arr) {
+      for (const r of arr) {
+        count++;
+        if (r.replies && r.replies.length > 0) recurse(r.replies);
+      }
+    }
+    if (Array.isArray(replies)) recurse(replies);
+    return count;
+  }
+
+  // State to track expanded replies per comment
+  const [expandedReplies, setExpandedReplies] = useState({});
+  const [shownReplies, setShownReplies] = useState({}); // how many replies to show per comment
+  const REPLIES_BATCH = 3;
+
+  const handleViewReplies = (commentId, total) => {
+    setExpandedReplies(prev => ({ ...prev, [commentId]: true }));
+    setShownReplies(prev => ({ ...prev, [commentId]: Math.min(REPLIES_BATCH, total) }));
+  };
+  const handleShowMoreReplies = (commentId, total) => {
+    setShownReplies(prev => ({ ...prev, [commentId]: Math.min((prev[commentId] || REPLIES_BATCH) + REPLIES_BATCH, total) }));
+  };
+  const handleHideReplies = (commentId) => {
+    setExpandedReplies(prev => ({ ...prev, [commentId]: false }));
+    setShownReplies(prev => ({ ...prev, [commentId]: 0 }));
+  };
+
   return (
     <div className="flex flex-col gap-2">
-      {comments.map((comment) => (
-        <div key={comment._id} className="py-2 px-0">
-          <div className="flex items-center gap-2 mb-1">
-            <img src={comment.author?.profilePicture || comment.author?.avatar || '/default-avatar.png'} alt={comment.author?.username || 'User'} className="w-7 h-7 rounded-full object-cover border border-gray-300 dark:border-gray-700 cursor-pointer" onClick={() => onProfileClick(comment.author)} />
-            <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{comment.author?.username || 'Unknown'}</span>
-            {comment.createdAt && (
-              <span className="text-xs text-gray-400 ml-2">{timeAgo(comment.createdAt)}</span>
+      {comments.map((comment) => {
+        const totalReplies = countReplies(comment.replies || []);
+        const isExpanded = expandedReplies[comment._id];
+        const numToShow = shownReplies[comment._id] || 0;
+        return (
+          <div key={comment._id} className="py-2 px-0">
+            <div className="flex items-center gap-2 mb-1">
+              <img src={comment.author?.profilePicture || comment.author?.avatar || '/default-avatar.png'} alt={comment.author?.username || 'User'} className="w-7 h-7 rounded-full object-cover border border-gray-300 dark:border-gray-700 cursor-pointer" onClick={() => onProfileClick(comment.author)} />
+              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{comment.author?.username || 'Unknown'}</span>
+              {comment.createdAt && (
+                <span className="text-xs text-gray-400 ml-2">{timeAgo(comment.createdAt)}</span>
+              )}
+            </div>
+            <span className="text-gray-800 dark:text-gray-200 text-sm block mb-1 pl-9">
+              {comment.taggedUser ? <span className="text-[#0bb6bc] font-semibold mr-1">@{comment.taggedUser}</span> : null}
+              {comment.content}
+            </span>
+            <div className="flex gap-4 items-center mt-1 pl-9">
+              <button className={`text-xs flex items-center ${Array.isArray(comment.likes) && comment.likes.includes(userId) ? 'text-pink-500' : 'text-gray-500'} hover:text-pink-500 font-medium px-2 py-1 rounded transition`} onClick={() => handleLike(comment._id, Array.isArray(comment.likes) && comment.likes.includes(userId))}>
+                <svg xmlns="http://www.w3.org/2000/svg" fill={Array.isArray(comment.likes) && comment.likes.includes(userId) ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" className="w-4 h-4 mr-1">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 21.682l-7.682-7.682a4.5 4.5 0 010-6.364z" />
+                </svg>
+                <span className="ml-1">{Array.isArray(comment.likes) ? comment.likes.length : 0}</span>
+              </button>
+              <button className="text-xs text-gray-500 hover:text-[#0bb6bc] font-medium px-2 py-1 rounded transition" onClick={() => onReply(comment._id, null, comment.author?.username)}>
+                Reply
+              </button>
+            </div>
+            {replyingTo && replyingTo.commentId === comment._id && !replyingTo.replyId && (
+              <form onSubmit={e => handleAddReply(e, comment._id, null, comment.author?.username)} className="flex gap-2 mt-2 ml-9">
+                <input type="text" className="flex-1 rounded px-2 py-1 text-black dark:text-white bg-gray-100 dark:bg-gray-800 border-0 focus:ring-2 focus:ring-[#0bb6bc]" placeholder={`Reply to @${replyingTo.taggedUser || comment.author?.username}...`} value={replyText} onChange={e => setReplyText(e.target.value)} />
+                {replyText.trim() && (
+                  <button type="submit" className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition">Reply</button>
+                )}
+              </form>
+            )}
+            {/* Replies section: show view/hide link and replies batch */}
+            {comment.replies && comment.replies.length > 0 && (
+              <div className="ml-8 mt-2 flex flex-col gap-2">
+                {!isExpanded ? (
+                  <button className="text-xs text-blue-500 hover:underline w-fit" onClick={() => handleViewReplies(comment._id, totalReplies)}>
+                    View replies ({totalReplies})
+                  </button>
+                ) : (
+                  <>
+                    {comment.replies.slice(0, numToShow).map(reply => (
+                      <div key={reply._id} className="py-2 px-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <img src={reply.author?.profilePicture || reply.author?.avatar || '/default-avatar.png'} alt={reply.author?.username || 'User'} className="w-7 h-7 rounded-full object-cover border border-gray-300 dark:border-gray-700 cursor-pointer" onClick={() => onProfileClick(reply.author)} />
+                          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{reply.author?.username || 'Unknown'}</span>
+                          {reply.createdAt && (
+                            <span className="text-xs text-gray-400 ml-2">{timeAgo(reply.createdAt)}</span>
+                          )}
+                        </div>
+                        <span className="text-gray-800 dark:text-gray-200 text-sm block mb-1 pl-9">
+                          {reply.taggedUser ? <span className="text-[#0bb6bc] font-semibold mr-1">@{reply.taggedUser}</span> : null}
+                          {reply.content}
+                        </span>
+                        <div className="flex gap-4 items-center mt-1 pl-9">
+                          <button className={`text-xs flex items-center ${Array.isArray(reply.likes) && reply.likes.includes(userId) ? 'text-pink-500' : 'text-gray-500'} hover:text-pink-500 font-medium px-2 py-1 rounded transition`} onClick={() => handleLikeReply(reply._id, comment._id, Array.isArray(reply.likes) && reply.likes.includes(userId))}>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill={Array.isArray(reply.likes) && reply.likes.includes(userId) ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" className="w-4 h-4 mr-1">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 21.682l-7.682-7.682a4.5 4.5 0 010-6.364z" />
+                            </svg>
+                            <span className="ml-1">{Array.isArray(reply.likes) ? reply.likes.length : 0}</span>
+                          </button>
+                          <button className="text-xs text-gray-500 hover:text-[#0bb6bc] font-medium px-2 py-1 rounded transition" onClick={() => onReply(comment._id, reply._id, reply.author?.username)}>
+                            Reply
+                          </button>
+                        </div>
+                        {replyingTo && replyingTo.commentId === comment._id && replyingTo.replyId === reply._id && (
+                          <form onSubmit={e => handleAddReply(e, comment._id, reply._id, reply.author?.username)} className="flex gap-2 mt-2 ml-9">
+                            <input type="text" className="flex-1 rounded px-2 py-1 text-black dark:text-white bg-gray-100 dark:bg-gray-800 border-0 focus:ring-2 focus:ring-[#0bb6bc]" placeholder={`Reply to @${replyingTo.taggedUser || reply.author?.username}...`} value={replyText} onChange={e => setReplyText(e.target.value)} />
+                            {replyText.trim() && (
+                              <button type="submit" className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition">Reply</button>
+                            )}
+                          </form>
+                        )}
+                        {/* Recursively render deeper replies if present */}
+                        {reply.replies && reply.replies.length > 0 && (
+                          <div className="ml-8 mt-2 flex flex-col gap-2">
+                            <CommentThread
+                              comments={reply.replies}
+                              postId={postId}
+                              token={token}
+                              userId={userId}
+                              handleLike={handleLike}
+                              handleLikeReply={handleLikeReply}
+                              onReply={onReply}
+                              replyingTo={replyingTo}
+                              replyText={replyText}
+                              setReplyText={setReplyText}
+                              handleAddReply={handleAddReply}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {/* Show more/hide buttons */}
+                    {numToShow < totalReplies && (
+                      <button className="text-xs text-blue-500 hover:underline w-fit" onClick={() => handleShowMoreReplies(comment._id, totalReplies)}>
+                        Show more replies
+                      </button>
+                    )}
+                    <button className="text-xs text-gray-500 hover:underline w-fit" onClick={() => handleHideReplies(comment._id)}>
+                      Hide replies
+                    </button>
+                  </>
+                )}
+              </div>
             )}
           </div>
-          <span className="text-gray-800 dark:text-gray-200 text-sm block mb-1 pl-9">
-            {comment.taggedUser ? <span className="text-[#0bb6bc] font-semibold mr-1">@{comment.taggedUser}</span> : null}
-            {comment.content}
-          </span>
-          <div className="flex gap-4 items-center mt-1 pl-9">
-            <button className={`text-xs flex items-center ${Array.isArray(comment.likes) && comment.likes.includes(userId) ? 'text-pink-500' : 'text-gray-500'} hover:text-pink-500 font-medium px-2 py-1 rounded transition`} onClick={() => handleLike(comment._id, Array.isArray(comment.likes) && comment.likes.includes(userId))}>
-              <svg xmlns="http://www.w3.org/2000/svg" fill={Array.isArray(comment.likes) && comment.likes.includes(userId) ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" className="w-4 h-4 mr-1">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 21.682l-7.682-7.682a4.5 4.5 0 010-6.364z" />
-              </svg>
-              <span className="ml-1">{Array.isArray(comment.likes) ? comment.likes.length : 0}</span>
-            </button>
-            <button className="text-xs text-gray-500 hover:text-[#0bb6bc] font-medium px-2 py-1 rounded transition" onClick={() => onReply(comment._id, null, comment.author?.username)}>
-              Reply
-            </button>
-          </div>
-          {replyingTo && replyingTo.commentId === comment._id && !replyingTo.replyId && (
-            <form onSubmit={e => handleAddReply(e, comment._id, null, comment.author?.username)} className="flex gap-2 mt-2 ml-9">
-              <input type="text" className="flex-1 rounded px-2 py-1 text-black dark:text-white bg-gray-100 dark:bg-gray-800 border-0 focus:ring-2 focus:ring-[#0bb6bc]" placeholder={`Reply to @${replyingTo.taggedUser || comment.author?.username}...`} value={replyText} onChange={e => setReplyText(e.target.value)} />
-              {replyText.trim() && (
-                <button type="submit" className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition">Reply</button>
-              )}
-            </form>
-          )}
-          {/* Render replies recursively, allow replying to replies */}
-          {comment.replies && comment.replies.length > 0 && (
-            <div className="ml-8 mt-2 flex flex-col gap-2">
-              {comment.replies.map(reply => (
-                <div key={reply._id} className="py-2 px-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <img src={reply.author?.profilePicture || reply.author?.avatar || '/default-avatar.png'} alt={reply.author?.username || 'User'} className="w-7 h-7 rounded-full object-cover border border-gray-300 dark:border-gray-700 cursor-pointer" onClick={() => onProfileClick(reply.author)} />
-                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{reply.author?.username || 'Unknown'}</span>
-                    {reply.createdAt && (
-                      <span className="text-xs text-gray-400 ml-2">{timeAgo(reply.createdAt)}</span>
-                    )}
-                  </div>
-                  <span className="text-gray-800 dark:text-gray-200 text-sm block mb-1 pl-9">
-                    {reply.taggedUser ? <span className="text-[#0bb6bc] font-semibold mr-1">@{reply.taggedUser}</span> : null}
-                    {reply.content}
-                  </span>
-                  <div className="flex gap-4 items-center mt-1 pl-9">
-                    <button className={`text-xs flex items-center ${Array.isArray(reply.likes) && reply.likes.includes(userId) ? 'text-pink-500' : 'text-gray-500'} hover:text-pink-500 font-medium px-2 py-1 rounded transition`} onClick={() => handleLikeReply(reply._id, comment._id, Array.isArray(reply.likes) && reply.likes.includes(userId))}>
-                      <svg xmlns="http://www.w3.org/2000/svg" fill={Array.isArray(reply.likes) && reply.likes.includes(userId) ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" className="w-4 h-4 mr-1">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 21.682l-7.682-7.682a4.5 4.5 0 010-6.364z" />
-                      </svg>
-                      <span className="ml-1">{Array.isArray(reply.likes) ? reply.likes.length : 0}</span>
-                    </button>
-                    <button className="text-xs text-gray-500 hover:text-[#0bb6bc] font-medium px-2 py-1 rounded transition" onClick={() => onReply(comment._id, reply._id, reply.author?.username)}>
-                      Reply
-                    </button>
-                  </div>
-                  {replyingTo && replyingTo.commentId === comment._id && replyingTo.replyId === reply._id && (
-                    <form onSubmit={e => handleAddReply(e, comment._id, reply._id, reply.author?.username)} className="flex gap-2 mt-2 ml-9">
-                      <input type="text" className="flex-1 rounded px-2 py-1 text-black dark:text-white bg-gray-100 dark:bg-gray-800 border-0 focus:ring-2 focus:ring-[#0bb6bc]" placeholder={`Reply to @${replyingTo.taggedUser || reply.author?.username}...`} value={replyText} onChange={e => setReplyText(e.target.value)} />
-                      {replyText.trim() && (
-                        <button type="submit" className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition">Reply</button>
-                      )}
-                    </form>
-                  )}
-                  {/* Recursively render deeper replies if present */}
-                  {reply.replies && reply.replies.length > 0 && (
-                    <div className="ml-8 mt-2 flex flex-col gap-2">
-                      <CommentThread
-                        comments={reply.replies}
-                        postId={postId}
-                        token={token}
-                        userId={userId}
-                        handleLike={handleLike}
-                        handleLikeReply={handleLikeReply}
-                        onReply={onReply}
-                        replyingTo={replyingTo}
-                        replyText={replyText}
-                        setReplyText={setReplyText}
-                        handleAddReply={handleAddReply}
-                      />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
