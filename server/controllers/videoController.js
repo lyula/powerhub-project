@@ -1,3 +1,41 @@
+// Unlike a video
+exports.unlikeVideo = async (req, res) => {
+  try {
+    const video = await Video.findById(req.params.id);
+    if (!video) return res.status(404).json({ error: 'Video not found' });
+    const userId = req.user._id;
+    // Remove user from likes array
+    video.likes = video.likes.filter(id => id.toString() !== userId.toString());
+    await video.save();
+    res.json(video);
+  } catch (err) {
+    res.status(500).json({ error: 'Unlike failed', details: err });
+  }
+};
+// Get all videos liked by the current user
+exports.getLikedVideos = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const videos = await require('../models/Video').find({ likes: userId }).populate('channel', 'name avatar');
+    res.json(videos);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch liked videos', details: err });
+  }
+};
+
+// Get like/dislike status for a specific video for the current user
+exports.getVideoLikeStatus = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const video = await require('../models/Video').findById(req.params.id);
+    if (!video) return res.status(404).json({ error: 'Video not found' });
+    const liked = video.likes.some(id => id.toString() === userId.toString());
+    const disliked = video.dislikes.some(id => id.toString() === userId.toString());
+    res.json({ liked, disliked });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch like status', details: err });
+  }
+};
 // Increment share count for a video
 exports.incrementShareCount = async (req, res) => {
   try {
