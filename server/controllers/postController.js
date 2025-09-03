@@ -3,7 +3,8 @@ exports.getPostById = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id)
       .populate('author', 'username profilePicture')
-      .populate('comments.author', 'username profilePicture');
+      .populate('comments.author', 'username profilePicture')
+      .populate('comments.replies.author', 'username profilePicture');
     if (!post) return res.status(404).json({ error: 'Post not found' });
     res.json(post);
   } catch (err) {
@@ -78,14 +79,16 @@ exports.addComment = async (req, res) => {
 exports.addReply = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
-    if (!post) return res.status(404).json({ error: 'Post not found' });
-    const { commentId, content } = req.body;
-    const author = req.user._id;
-    const comment = post.comments.id(commentId);
-    if (!comment) return res.status(404).json({ error: 'Comment not found' });
-    comment.replies.push({ author, content });
-    await post.save();
-    res.status(201).json(comment.replies);
+  if (!post) return res.status(404).json({ error: 'Post not found' });
+  const { commentId, content } = req.body;
+  const author = req.user._id;
+  const comment = post.comments.id(commentId);
+  if (!comment) return res.status(404).json({ error: 'Comment not found' });
+  comment.replies.push({ author, content });
+  await post.save();
+  // Populate author for replies
+  await post.populate('comments.replies.author', 'username profilePicture');
+  res.status(201).json(comment.replies);
   } catch (err) {
     res.status(500).json({ error: 'Failed to add reply', details: err.message });
   }
@@ -142,7 +145,7 @@ exports.likeReply = async (req, res) => {
       reply.likes.push(userId);
       await post.save();
     }
-    res.json({ likes: reply.likes.length });
+    res.json({ likes: reply.likes });
   } catch (err) {
     res.status(500).json({ error: 'Failed to like reply', details: err.message });
   }
