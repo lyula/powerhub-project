@@ -149,7 +149,7 @@ export default function Home() {
       )}
       <div className="min-h-screen bg-gray-100 dark:bg-[#111111] w-full" style={{ overflowX: 'hidden', scrollbarWidth: 'none', maxWidth: '100vw' }}>
         <HeaderFixed onToggleSidebar={handleToggleSidebar} showCreateModal={showCreateModal} setShowCreateModal={setShowCreateModal} />
-        <div className="flex flex-row w-full" style={{ height: 'calc(100vh - 44px)', maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
+  <div className="flex flex-row w-full" style={{ height: '100vh', maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
           <SidebarFixed sidebarOpen={sidebarOpen} />
           {!sidebarOpen && (
             <div className="md:ml-20">
@@ -378,7 +378,7 @@ export default function Home() {
             </main>
           </div>
         </div>
-        <BottomTabs />
+  <BottomTabs />
       </div>
     </React.Fragment>
   );
