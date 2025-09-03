@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FaVolumeMute, FaVolumeUp } from 'react-icons/fa';
-import PostCard from '../components/PostCard';
-import postCardData from '../components/PostCardData';
 import SwipeablePosts from '../components/SwipeablePosts';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Header from '../components/Header';
@@ -110,7 +108,6 @@ export default function Home() {
   // Use API duration directly for display
   useEffect(() => {
     if (!videos || videos.length === 0) return;
-    console.log('Fetched videos:', videos);
   setVideoDurations(videos.map(v => formatDuration(Number(v.duration))));
   }, [videos]);
 
@@ -151,7 +148,7 @@ export default function Home() {
       )}
       <div className="min-h-screen bg-gray-100 dark:bg-[#111111] w-full" style={{ overflowX: 'hidden', scrollbarWidth: 'none', maxWidth: '100vw' }}>
         <HeaderFixed onToggleSidebar={handleToggleSidebar} showCreateModal={showCreateModal} setShowCreateModal={setShowCreateModal} />
-        <div className="flex flex-row w-full" style={{ height: 'calc(100vh - 44px)', maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
+  <div className="flex flex-row w-full" style={{ height: '100vh', maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
           <SidebarFixed sidebarOpen={sidebarOpen} />
           {!sidebarOpen && (
             <div className="md:ml-20">
@@ -380,7 +377,7 @@ export default function Home() {
             </main>
           </div>
         </div>
-        <BottomTabs />
+  <BottomTabs />
       </div>
     </React.Fragment>
   );

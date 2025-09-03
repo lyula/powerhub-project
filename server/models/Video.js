@@ -43,7 +43,10 @@ const videoSchema = new Schema({
   channel: { type: Schema.Types.ObjectId, ref: 'Channel', required: true },
   channelName: { type: String, required: true },
   uploader: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  likes: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+  likes: [{
+    user: { type: Schema.Types.ObjectId, ref: 'User' },
+    likedAt: { type: Date, default: Date.now }
+  }],
   dislikes: [{ type: Schema.Types.ObjectId, ref: 'User' }],
   views: [{ type: Schema.Types.ObjectId, ref: 'User' }], // users who viewed
   viewCount: { type: Number, default: 0 }, // total view count

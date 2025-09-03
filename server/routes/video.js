@@ -14,9 +14,11 @@ router.post('/upload', auth, multer.fields([
   { name: 'thumbnail', maxCount: 1 }
 ]), videoController.uploadVideo);
 
-// Like/dislike video
+// Like/dislike/unlike video
 router.post('/:id/like', auth, videoController.likeVideo);
 router.post('/:id/dislike', auth, videoController.dislikeVideo);
+router.post('/:id/undislike', auth, videoController.undislikeVideo);
+router.post('/:id/unlike', auth, videoController.unlikeVideo);
 
 // Add comment
 router.post('/:id/comment', auth, videoController.addComment);
@@ -29,6 +31,10 @@ router.post('/:id/comment/reply', auth, videoController.replyComment);
 router.post('/:id/comment/reply/like', auth, videoController.likeReply);
 router.post('/:id/comment/reply/unlike', auth, videoController.unlikeReply);
 
+
+// Get all videos liked by the current user
+router.get('/liked', auth, videoController.getLikedVideos);
+
 // Get all videos
 router.get('/', videoController.getAllVideos);
 
@@ -40,4 +46,8 @@ router.get('/:id', videoController.getVideo);
 
 // Increment share count
 router.post('/:id/share', videoController.incrementShareCount);
+
+// Get like/dislike status for a specific video for the current user
+router.get('/:id/like-status', auth, videoController.getVideoLikeStatus);
+
 module.exports = router;

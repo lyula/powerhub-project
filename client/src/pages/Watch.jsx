@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { Link, useParams } from 'react-router-dom';
 import VideoComments from '../components/VideoComments';
 import VideoInteractions from '../components/VideoInteractions';
@@ -35,6 +36,7 @@ function getTotalCommentCount(comments) {
 
 export default function Watch() {
   const { id } = useParams();
+  const { user } = useAuth();
   const [video, setVideo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [recommendations, setRecommendations] = useState([]);
@@ -62,9 +64,20 @@ export default function Watch() {
       let data = null;
       if (res.ok) {
         data = await res.json();
-        setVideo(data);
-        setLikeCount(data.likes?.length || 0);
-        setDislikeCount(data.dislikes?.length || 0);
+  setVideo(data);
+  setLikeCount(data.likes?.length || 0);
+  setDislikeCount(data.dislikes?.length || 0);
+        // Set liked/disliked state based on user._id in likes/dislikes arrays (new format)
+        if (user && data.likes) {
+          setLiked(data.likes.some(like => like.user?.toString() === user._id));
+        } else {
+          setLiked(false);
+        }
+        if (user && data.dislikes) {
+          setDisliked(data.dislikes.some(id => id.toString() === user._id));
+        } else {
+          setDisliked(false);
+        }
         // Fetch channel details for subscribe button
         if (data.channel?._id) {
           const channelRes = await fetch(`${apiUrl}/channel/${data.channel._id}`);
@@ -208,6 +221,85 @@ export default function Watch() {
     return <div className="w-full min-h-screen flex items-center justify-center bg-gray-100 dark:bg-[#181818]">Video not found.</div>;
   }
 
+  // Like/dislike handlers
+  const apiUrl = import.meta.env.VITE_API_URL;
+  const handleLike = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!liked) {
+        // Like the video
+        const res = await fetch(`${apiUrl}/videos/${id}/like`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          }
+        });
+        if (res.ok) {
+          const updatedVideo = await res.json();
+          setLiked(true);
+          setDisliked(false);
+          setLikeCount(updatedVideo.likes?.length || 0);
+          if (disliked) {
+            setDislikeCount(updatedVideo.dislikes?.length || 0);
+          }
+        }
+      } else {
+        // Unlike the video
+        const res = await fetch(`${apiUrl}/videos/${id}/unlike`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          }
+        });
+        if (res.ok) {
+          const updatedVideo = await res.json();
+          setLiked(false);
+          setLikeCount(updatedVideo.likes?.length || 0);
+        }
+      }
+    } catch (err) {}
+  };
+  const handleDislike = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!disliked) {
+        // Dislike the video
+        const res = await fetch(`${apiUrl}/videos/${id}/dislike`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          }
+        });
+        if (res.ok) {
+          setDisliked(true);
+          setLiked(false); // Ensure user cannot be in both arrays
+          setDislikeCount(count => count + 1);
+          if (liked) setLikeCount(count => Math.max(0, count - 1));
+        }
+      } else {
+        // Undislike the video
+        const res = await fetch(`${apiUrl}/videos/${id}/undislike`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          }
+        });
+        if (res.ok) {
+          setDisliked(false);
+          setDislikeCount(count => Math.max(0, count - 1));
+        }
+      }
+    } catch (err) {}
+  };
+
   return (
     <>
       <div className="w-full min-h-screen bg-gray-100 dark:bg-[#181818]">
@@ -247,10 +339,10 @@ export default function Watch() {
               </div>
               <VideoInteractions
                 liked={liked}
-                setLiked={l => { setLiked(l); setLikeCount(count => l ? count + 1 : count - 1); }}
+                setLiked={setLiked}
                 likeCount={likeCount}
                 disliked={disliked}
-                setDisliked={d => { setDisliked(d); setDislikeCount(count => d ? count + 1 : count - 1); }}
+                setDisliked={setDisliked}
                 dislikeCount={dislikeCount}
                 showComments={showComments}
                 setShowComments={(val) => {
@@ -264,6 +356,8 @@ export default function Watch() {
                 commentCount={commentCount}
                 videoUrl={`${window.location.origin}/watch/${video._id}`}
                 shareCount={video.shareCount || 0}
+                handleLike={handleLike}
+                handleDislike={handleDislike}
               />
               {/* Video Description with Read More/Read Less */}
               {video.description && !showComments && (

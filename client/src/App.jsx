@@ -21,6 +21,7 @@ import CourseVideos from './pages/CourseVideos';
 import WatchHistory from './pages/WatchHistory';
 import Notifications from './pages/Notifications';
 import LandingPage from './pages/LandingPage';
+import PostDetails from './pages/PostDetails';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -78,7 +79,7 @@ function AppRoutes() {
   const { channel } = useAuth();
   return (
     <Routes>
-  <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
+      <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
       <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
@@ -89,7 +90,7 @@ function AppRoutes() {
       <Route path="/channel/:author" element={<ProtectedRoute><ChannelProfile /></ProtectedRoute>} />
       <Route path="/watch/:id" element={<ProtectedRoute><Watch /></ProtectedRoute>} />
       {/* Sidebar Placeholder Pages */}
-    {/* <Route path="/trending" element={<ProtectedRoute><Trending /></ProtectedRoute>} /> */}
+      {/* <Route path="/trending" element={<ProtectedRoute><Trending /></ProtectedRoute>} /> */}
       <Route path="/specializations" element={<ProtectedRoute><Specializations /></ProtectedRoute>} />
       <Route path="/subscriptions" element={<ProtectedRoute><Subscriptions /></ProtectedRoute>} />
       <Route path="/saved-videos" element={<ProtectedRoute><SavedVideos /></ProtectedRoute>} />
@@ -97,6 +98,7 @@ function AppRoutes() {
       <Route path="/course-videos" element={<ProtectedRoute><CourseVideos /></ProtectedRoute>} />
       <Route path="/watch-history" element={<ProtectedRoute><WatchHistory /></ProtectedRoute>} />
       <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+  <Route path="/post/:postId" element={<ProtectedRoute><PostDetails /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
