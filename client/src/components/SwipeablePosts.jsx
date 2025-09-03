@@ -122,17 +122,29 @@ const ExpandablePostCard = ({ post }) => {
     }
   };
 
-  // Navigation to post details
-  const navigateToPostDetails = () => {
-    // Save scroll position before navigating
+  // Navigation to post details (fetch post data first)
+  const navigate = window.reactRouterNavigate || null; // fallback if not using useNavigate
+  const [loadingPost, setLoadingPost] = useState(false);
+  const navigateToPostDetails = async () => {
+    setLoadingPost(true);
     sessionStorage.setItem('homeFeedScroll', window.scrollY);
-    // Use React Router navigation with state
-    if (window && window.history && window.history.pushState) {
-      window.history.pushState({}, '', `/post/${post._id || post.id}`);
-      window.location.assign(`/post/${post._id || post.id}`);
-    } else {
-      window.location.href = `/post/${post._id || post.id}`;
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL;
+      const res = await fetch(`${apiUrl}/posts/${post._id || post.id}`);
+      if (!res.ok) throw new Error('Failed to fetch post');
+      const data = await res.json();
+      // Use React Router's navigate with state if available
+      if (navigate) {
+        navigate(`/post/${post._id || post.id}`, { state: { post: data.post || data } });
+      } else {
+        // fallback: window.location with localStorage
+        localStorage.setItem('postDetailsData', JSON.stringify(data.post || data));
+        window.location.assign(`/post/${post._id || post.id}`);
+      }
+    } catch (err) {
+      // Optionally show error
     }
+    setLoadingPost(false);
   };
 
   return (

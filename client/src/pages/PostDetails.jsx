@@ -272,25 +272,45 @@ const PostDetails = () => {
   const [commentLoading, setCommentLoading] = useState(false);
   const [commentError, setCommentError] = useState('');
   const { postId } = useParams();
-  const [post, setPost] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const location = typeof window !== 'undefined' && window.location && window.location.state ? window.location : null;
+  const [post, setPost] = useState(() => {
+    // Try to get post from route state
+    if (location && location.state && location.state.post) {
+      return location.state.post;
+    }
+    // Fallback: try localStorage
+    const localPost = localStorage.getItem('postDetailsData');
+    if (localPost) {
+      try {
+        return JSON.parse(localPost);
+      } catch {}
+    }
+    return null;
+  });
+  const [loading, setLoading] = useState(!post);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const fetchPost = async () => {
-      setLoading(true);
-      setError('');
-      try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}`);
-        if (!res.ok) throw new Error('Failed to fetch post');
-        const data = await res.json();
-        setPost(data.post || data);
-      } catch (err) {
-        setError(err.message);
-      }
+    if (!post) {
+      const fetchPost = async () => {
+        setLoading(true);
+        setError('');
+        try {
+          const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}`);
+          if (!res.ok) throw new Error('Failed to fetch post');
+          const data = await res.json();
+          setPost(data.post || data);
+        } catch (err) {
+          setError(err.message);
+        }
+        setLoading(false);
+      };
+      fetchPost();
+    } else {
       setLoading(false);
-    };
-    fetchPost();
+    }
+    // Clean up localStorage after using
+    localStorage.removeItem('postDetailsData');
   }, [postId]);
 
   // Sidebar expand/collapse logic
