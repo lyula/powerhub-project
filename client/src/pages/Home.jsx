@@ -108,7 +108,6 @@ export default function Home() {
   // Use API duration directly for display
   useEffect(() => {
     if (!videos || videos.length === 0) return;
-    console.log('Fetched videos:', videos);
   setVideoDurations(videos.map(v => formatDuration(Number(v.duration))));
   }, [videos]);
 

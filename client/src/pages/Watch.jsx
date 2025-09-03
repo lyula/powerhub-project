@@ -64,12 +64,12 @@ export default function Watch() {
       let data = null;
       if (res.ok) {
         data = await res.json();
-        setVideo(data);
-        setLikeCount(data.likes?.length || 0);
-        setDislikeCount(data.dislikes?.length || 0);
-        // Set liked/disliked state based on user._id in likes/dislikes arrays
+  setVideo(data);
+  setLikeCount(data.likes?.length || 0);
+  setDislikeCount(data.dislikes?.length || 0);
+        // Set liked/disliked state based on user._id in likes/dislikes arrays (new format)
         if (user && data.likes) {
-          setLiked(data.likes.some(id => id.toString() === user._id));
+          setLiked(data.likes.some(like => like.user?.toString() === user._id));
         } else {
           setLiked(false);
         }
@@ -237,10 +237,13 @@ export default function Watch() {
           }
         });
         if (res.ok) {
+          const updatedVideo = await res.json();
           setLiked(true);
           setDisliked(false);
-          setLikeCount(count => count + 1);
-          if (disliked) setDislikeCount(count => Math.max(0, count - 1));
+          setLikeCount(updatedVideo.likes?.length || 0);
+          if (disliked) {
+            setDislikeCount(updatedVideo.dislikes?.length || 0);
+          }
         }
       } else {
         // Unlike the video
@@ -253,8 +256,9 @@ export default function Watch() {
           }
         });
         if (res.ok) {
+          const updatedVideo = await res.json();
           setLiked(false);
-          setLikeCount(count => Math.max(0, count - 1));
+          setLikeCount(updatedVideo.likes?.length || 0);
         }
       }
     } catch (err) {}

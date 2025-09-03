@@ -3,21 +3,74 @@ exports.unlikeVideo = async (req, res) => {
   try {
     const video = await Video.findById(req.params.id);
     if (!video) return res.status(404).json({ error: 'Video not found' });
-    const userId = req.user._id;
-    // Remove user from likes array
-    video.likes = video.likes.filter(id => id.toString() !== userId.toString());
+  const userId = req.user._id;
+  // Remove user from likes array (handle both new and old formats)
+  video.likes = video.likes.filter(like => {
+    if (typeof like === 'object' && like.user) {
+      return like.user.toString() !== userId.toString();
+    }
+    // Old format: ObjectId
+    return like.toString() !== userId.toString();
+  });
     await video.save();
     res.json(video);
   } catch (err) {
     res.status(500).json({ error: 'Unlike failed', details: err });
   }
 };
-// Get all videos liked by the current user
+// Like a video
+exports.likeVideo = async (req, res) => {
+  try {
+    const video = await require('../models/Video').findById(req.params.id);
+    if (!video) return res.status(404).json({ error: 'Video not found' });
+    const userId = req.user._id;
+    // Check if already liked
+    const alreadyLiked = video.likes.some(like => like.user.toString() === userId.toString());
+    if (!alreadyLiked) {
+      video.likes.push({ user: userId, likedAt: new Date() });
+      await video.save();
+    }
+    res.json(video);
+  } catch (err) {
+    res.status(500).json({ error: 'Like failed', details: err });
+  }
+};
+
+// Get all videos liked by the current user, sorted by latest like
 exports.getLikedVideos = async (req, res) => {
   try {
-    const userId = req.user._id;
-    const videos = await require('../models/Video').find({ likes: userId }).populate('channel', 'name avatar');
-    res.json(videos);
+    const mongoose = require('mongoose');
+    let userId = req.user._id;
+    if (typeof userId === 'string' && mongoose.isValidObjectId(userId)) {
+      userId = mongoose.Types.ObjectId(userId);
+    }
+    if (!mongoose.isValidObjectId(userId)) {
+      return res.status(400).json({ error: 'Invalid user id' });
+    }
+    // Find videos where likes.user matches userId
+    const videos = await require('../models/Video').aggregate([
+      { $match: { 'likes.user': userId } },
+      { $addFields: {
+          userLike: {
+            $arrayElemAt: [
+              {
+                $filter: {
+                  input: '$likes',
+                  as: 'like',
+                  cond: { $eq: ['$$like.user', userId] }
+                }
+              },
+              0
+            ]
+          }
+        }
+      },
+      { $sort: { 'userLike.likedAt': -1 } }
+    ]);
+    // Populate channel info manually
+    const Video = require('../models/Video');
+    const populatedVideos = await Video.populate(videos, { path: 'channel', select: 'name avatar' });
+    res.json(populatedVideos);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch liked videos', details: err });
   }
@@ -293,9 +346,16 @@ exports.likeVideo = async (req, res) => {
     if (!video) return res.status(404).json({ error: 'Video not found' });
     const userId = req.user._id;
     // Remove from dislikes if present
-    video.dislikes = video.dislikes.filter(id => id.toString() !== userId.toString());
-    // Add to likes if not present
-    if (!video.likes.includes(userId)) video.likes.push(userId);
+    video.dislikes = video.dislikes.filter(id => {
+      if (typeof id === 'object' && id.user) {
+        return id.user.toString() !== userId.toString();
+      }
+      return id.toString() !== userId.toString();
+    });
+    // Add to likes if not present (new format)
+    if (!video.likes.some(like => like.user?.toString() === userId.toString())) {
+      video.likes.push({ user: userId, likedAt: new Date() });
+    }
     await video.save();
     res.json(video);
   } catch (err) {
@@ -309,10 +369,17 @@ exports.dislikeVideo = async (req, res) => {
     const video = await Video.findById(req.params.id);
     if (!video) return res.status(404).json({ error: 'Video not found' });
     const userId = req.user._id;
-    // Remove from likes if present
-    video.likes = video.likes.filter(id => id.toString() !== userId.toString());
+    // Remove from likes if present (new format)
+    video.likes = video.likes.filter(like => {
+      if (typeof like === 'object' && like.user) {
+        return like.user.toString() !== userId.toString();
+      }
+      return like.toString() !== userId.toString();
+    });
     // Add to dislikes if not present
-    if (!video.dislikes.includes(userId)) video.dislikes.push(userId);
+    if (!video.dislikes.some(id => id.toString() === userId.toString())) {
+      video.dislikes.push(userId);
+    }
     await video.save();
     res.json(video);
   } catch (err) {
