@@ -22,6 +22,10 @@ import { useAuth } from '../context/AuthContext';
 import { timeAgo } from '../utils/timeAgo';
 
 export default function LikedVideos() {
+  const [previewPaused, setPreviewPaused] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
+  const previewTimeoutRef = React.useRef();
+  const videoRef = React.useRef();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const handleToggleSidebar = () => setSidebarOpen((open) => !open);
@@ -105,6 +109,8 @@ export default function LikedVideos() {
                           onClick={() => {
                             if (isLargeScreen) {
                               setSelectedIdx(idx);
+                              setPreviewPaused(false);
+                              setIsMuted(true);
                             } else {
                               navigate(`/watch/${video._id}`);
                             }
@@ -163,13 +169,75 @@ export default function LikedVideos() {
               {isLargeScreen && paginatedVideos[selectedIdx] && (
                 <div className="w-full lg:w-[600px] xl:w-[700px] flex flex-col items-start justify-start text-left">
                   <div className="w-full aspect-video bg-black rounded-lg shadow-lg overflow-hidden mb-4 relative">
-                    <video
-                      src={paginatedVideos[selectedIdx].videoUrl}
-                      controls
-                      controlsList="nodownload"
-                      poster={paginatedVideos[selectedIdx].thumbnailUrl}
-                      className="w-full h-full object-contain"
-                    />
+                    {previewPaused ? (
+                      <div className="w-full h-full relative">
+                        <img
+                          src={paginatedVideos[selectedIdx].thumbnailUrl || 'https://via.placeholder.com/400x225?text=Video+Thumbnail'}
+                          alt={paginatedVideos[selectedIdx].title || 'Video Thumbnail'}
+                          className="w-full h-full object-contain"
+                        />
+                        <button
+                          className="absolute bottom-4 left-4 bg-[#0bb6bc] text-white rounded-full p-3 shadow-lg hover:bg-[#099ca3] focus:outline-none z-10 flex items-center justify-center"
+                          style={{ fontSize: '2rem', width: '48px', height: '48px' }}
+                          onClick={() => {
+                            setPreviewPaused(false);
+                            setIsMuted(false);
+                            setTimeout(() => {
+                              if (videoRef.current) {
+                                videoRef.current.play();
+                              }
+                            }, 0);
+                          }}
+                          aria-label="Play video"
+                        >
+                          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="14" cy="14" r="14" fill="none" />
+                            <polygon points="10,8 22,14 10,20" fill="white" />
+                          </svg>
+                        </button>
+                      </div>
+                    ) : (
+                      <video
+                        ref={videoRef}
+                        src={paginatedVideos[selectedIdx].videoUrl}
+                        controls
+                        controlsList="nodownload"
+                        poster={paginatedVideos[selectedIdx].thumbnailUrl}
+                        className="w-full h-full object-contain"
+                        autoPlay
+                        muted={isMuted}
+                        onPlay={() => {
+                          setPreviewPaused(false);
+                          if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
+                          if (videoRef.current && isMuted) {
+                            previewTimeoutRef.current = setTimeout(() => {
+                              if (videoRef.current && isMuted) {
+                                videoRef.current.pause();
+                                setPreviewPaused(true);
+                              }
+                            }, 5000);
+                          }
+                        }}
+                        onVolumeChange={() => {
+                          if (videoRef.current && !videoRef.current.muted) {
+                            setIsMuted(false);
+                            if (previewTimeoutRef.current) {
+                              clearTimeout(previewTimeoutRef.current);
+                              previewTimeoutRef.current = null;
+                            }
+                          } else {
+                            setIsMuted(true);
+                          }
+                        }}
+                        onPause={() => {
+                          if (previewTimeoutRef.current) {
+                            clearTimeout(previewTimeoutRef.current);
+                            previewTimeoutRef.current = null;
+                          }
+                          setPreviewPaused(true);
+                        }}
+                      />
+                    )}
                   </div>
                   <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1 truncate text-left" title={paginatedVideos[selectedIdx].title}>{paginatedVideos[selectedIdx].title}</h3>
                   <div className="flex items-center gap-3 mb-2 justify-start text-left">
