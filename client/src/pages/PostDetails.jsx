@@ -1,11 +1,21 @@
+import React, { useEffect, useState } from 'react';
+import Header from '../components/Header';
+import Sidebar from '../components/Sidebar';
+import StudentUtility from '../components/StudentUtility';
+import BottomTabs from '../components/BottomTabs';
+import { useParams } from 'react-router-dom';
+import { timeAgo } from '../utils/timeAgo';
+import { useAuth } from '../context/AuthContext';
+import ProfilePictureZoomModal from '../components/ProfilePictureZoomModal';
+
 // Recursive comment/reply renderer
-function CommentThread({ comments, postId, token, userId, onReply, replyingTo, replyText, setReplyText, handleAddReply, handleLike, handleLikeReply }) {
+function CommentThread({ comments, postId, token, userId, onReply, replyingTo, replyText, setReplyText, handleAddReply, handleLike, handleLikeReply, onProfileClick }) {
   return (
     <div className="flex flex-col gap-2">
       {comments.map((comment) => (
         <div key={comment._id} className="py-2 px-0">
           <div className="flex items-center gap-2 mb-1">
-            <img src={comment.author?.profilePicture || comment.author?.avatar || '/default-avatar.png'} alt={comment.author?.username || 'User'} className="w-7 h-7 rounded-full object-cover border border-gray-300 dark:border-gray-700" />
+            <img src={comment.author?.profilePicture || comment.author?.avatar || '/default-avatar.png'} alt={comment.author?.username || 'User'} className="w-7 h-7 rounded-full object-cover border border-gray-300 dark:border-gray-700 cursor-pointer" onClick={() => onProfileClick(comment.author)} />
             <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{comment.author?.username || 'Unknown'}</span>
             {comment.createdAt && (
               <span className="text-xs text-gray-400 ml-2">{timeAgo(comment.createdAt)}</span>
@@ -40,7 +50,7 @@ function CommentThread({ comments, postId, token, userId, onReply, replyingTo, r
               {comment.replies.map(reply => (
                 <div key={reply._id} className="py-2 px-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <img src={reply.author?.profilePicture || reply.author?.avatar || '/default-avatar.png'} alt={reply.author?.username || 'User'} className="w-7 h-7 rounded-full object-cover border border-gray-300 dark:border-gray-700" />
+                    <img src={reply.author?.profilePicture || reply.author?.avatar || '/default-avatar.png'} alt={reply.author?.username || 'User'} className="w-7 h-7 rounded-full object-cover border border-gray-300 dark:border-gray-700 cursor-pointer" onClick={() => onProfileClick(reply.author)} />
                     <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{reply.author?.username || 'Unknown'}</span>
                     {reply.createdAt && (
                       <span className="text-xs text-gray-400 ml-2">{timeAgo(reply.createdAt)}</span>
@@ -96,16 +106,52 @@ function CommentThread({ comments, postId, token, userId, onReply, replyingTo, r
     </div>
   );
 }
-import React, { useEffect, useState } from 'react';
-import Header from '../components/Header';
-import Sidebar from '../components/Sidebar';
-import StudentUtility from '../components/StudentUtility';
-import BottomTabs from '../components/BottomTabs';
-import { useParams } from 'react-router-dom';
-import { timeAgo } from '../utils/timeAgo';
-import { useAuth } from '../context/AuthContext';
 
 const PostDetails = () => {
+  // Profile modal state
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalData, setModalData] = useState({ profilePicture: '', channelName: '', socialLinks: {}, hasChannel: false, authorId: '' });
+
+  // Helper to open modal with profile picture and channel info
+  const handleProfileClick = async (author) => {
+    if (!author) return;
+    setModalData({
+      profilePicture: author.profilePicture || author.avatar || '/default-avatar.png',
+      channelName: author.username || '',
+      socialLinks: {},
+      hasChannel: false,
+      authorId: author._id || author.id || ''
+    });
+    // Fetch channel info if author has a channel
+    if (author._id || author.id) {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL;
+        const res = await fetch(`${apiUrl}/channel/by-owner/${author._id || author.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          let hasChannel = false;
+          let channelName = author.username || '';
+          let socialLinks = {};
+          if (data && data._id) {
+            hasChannel = true;
+            channelName = data.name || channelName;
+            socialLinks = data.socialLinks || {};
+          } else if (data.channel && data.channel._id) {
+            hasChannel = true;
+            channelName = data.channel.name || channelName;
+            socialLinks = data.channel.socialLinks || {};
+          }
+          setModalData(prev => ({
+            ...prev,
+            hasChannel,
+            channelName,
+            socialLinks
+          }));
+        }
+      } catch {}
+    }
+    setModalOpen(true);
+  };
   // Reply state for comments
   const [replyingTo, setReplyingTo] = useState(null);
   const [replyText, setReplyText] = useState('');
@@ -387,6 +433,7 @@ const PostDetails = () => {
                           replyText={replyText}
                           setReplyText={setReplyText}
                           handleAddReply={handleAddReply}
+                          onProfileClick={handleProfileClick}
                         />
                       </div>
                     ) : (
@@ -400,6 +447,22 @@ const PostDetails = () => {
         </div>
         <BottomTabs />
       </div>
+    {modalOpen && (
+      <ProfilePictureZoomModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        profilePicture={modalData.profilePicture}
+        channelName={modalData.channelName}
+        socialLinks={modalData.socialLinks}
+        hasChannel={modalData.hasChannel}
+        onViewChannel={() => {
+          if (modalData.authorId && modalData.hasChannel) {
+            window.open(`/channel/${modalData.authorId}`, '_blank');
+            setModalOpen(false);
+          }
+        }}
+      />
+    )}
     </React.Fragment>
   );
 }
