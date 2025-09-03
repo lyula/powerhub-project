@@ -1,7 +1,6 @@
 const express = require('express');
-const mongoose = require('mongoose');
+// const mongoose = require('mongoose');
 const cors = require('cors');
-const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
@@ -15,19 +14,11 @@ app.use(cors({
   credentials: true
 }));
 
-// DB Connection
-const dbUri = process.env.MONGO_URI || 'mongodb://localhost:27017/powerhub';
-if (process.env.MONGO_URI) {
-  console.log('[DB] Using MONGO_URI from .env:', process.env.MONGO_URI);
-} else {
-  console.log('[DB] Using fallback URI:', dbUri);
-}
-mongoose.connect(dbUri, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-}).then(() => console.log('MongoDB connected')).catch(err => console.error('MongoDB connection error:', err));
 
-// Removed logic that creates uploads directory
+// DB Connection (moved to config/db.js)
+const connectDB = require('./config/db');
+connectDB();
+
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
