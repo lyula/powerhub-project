@@ -7,7 +7,13 @@ require('dotenv').config();
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'https://plppowerhub.vercel.app'
+  ],
+  credentials: true
+}));
 
 // DB Connection
 const dbUri = process.env.MONGO_URI || 'mongodb://localhost:27017/powerhub';
