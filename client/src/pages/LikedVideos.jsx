@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 // Format duration as h:mm:ss or m:ss
 function formatDuration(seconds) {
   if (!seconds || isNaN(seconds)) return '';
@@ -21,12 +22,16 @@ import { useAuth } from '../context/AuthContext';
 import { timeAgo } from '../utils/timeAgo';
 
 export default function LikedVideos() {
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const handleToggleSidebar = () => setSidebarOpen((open) => !open);
   const { token } = useAuth();
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedIdx, setSelectedIdx] = useState(0);
+  const [page, setPage] = useState(1);
+  const pageSize = 30;
 
   useEffect(() => {
     const fetchLikedVideos = async () => {
@@ -59,54 +64,113 @@ export default function LikedVideos() {
     if (token) fetchLikedVideos();
   }, [token]);
 
+  // Responsive logic
+  const isLargeScreen = typeof window !== 'undefined' ? window.innerWidth >= 1024 : false;
+  const paginatedVideos = videos.slice(0, page * pageSize);
+  const showMore = videos.length > paginatedVideos.length;
+
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-[#111111] w-full" style={{ overflowX: 'hidden', scrollbarWidth: 'none', maxWidth: '100vw' }}>
       <div className="fixed top-0 left-0 w-full z-40" style={{ height: '56px' }}>
         <Header onToggleSidebar={handleToggleSidebar} />
       </div>
-      <div className="flex flex-row w-full pt-14" style={{ height: 'calc(100vh - 56px)', maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
+  <div className="flex flex-row w-full pt-14" style={{ maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
         <div className={`fixed top-14 left-0 h-[calc(100vh-56px)] ${sidebarOpen ? 'w-64' : 'w-20'} z-30 bg-transparent md:block`}>
           <Sidebar collapsed={!sidebarOpen} />
         </div>
         <div className={`flex-1 flex flex-col ${sidebarOpen ? 'ml-64' : 'ml-20'} w-full`} style={{ maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
           <div className="p-2 md:p-4">
-            <h2 className="text-lg md:text-xl font-bold mb-2 text-[#0bb6bc] dark:text-[#0bb6bc]">Liked Videos</h2>
-            <div className="mt-4 md:mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {loading ? (
-                <div className="text-center col-span-3 text-gray-500 dark:text-gray-400">Loading liked videos...</div>
-              ) : error ? (
-                <div className="text-center col-span-3 text-red-500">{error}</div>
-              ) : videos.length === 0 ? (
-                <div className="text-center col-span-3 text-gray-500 dark:text-gray-400">No liked videos found.</div>
-              ) : (
-                videos.map((video) => {
-                  // Debug log for each video object
-                  // Check if current user liked this video (new format)
-                  const likedByCurrentUser = Array.isArray(video.likes) && video.likes.some(like => like.user?.toString() === (video.userLike?.user?.toString() || ''));
-                  return (
-                    <div key={video._id} className="bg-white dark:bg-[#222] rounded-lg shadow-md overflow-hidden flex flex-col">
-                      <div className="relative">
-                        <img
-                          src={video.thumbnailUrl || 'https://via.placeholder.com/400x225?text=Video+Thumbnail'}
-                          alt={video.title || 'Video Thumbnail'}
-                          className="w-full h-48 object-cover"
-                        />
-                        {video.duration !== undefined && (
-                          <span className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
-                            {formatDuration(video.duration)}
-                          </span>
-                        )}
-                      </div>
-                      <div className="p-4 flex-1 flex flex-col justify-between">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{video.title || 'Untitled Video'}</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{video.channel?.name || 'Unknown Channel'}</p>
-                        <span className="text-xs text-gray-400">{formatViews(video.viewCount || 0)} views • {video.createdAt ? timeAgo(video.createdAt) : ''}</span>
-                        {/* Optionally show liked status for current user */}
-                        {/* {likedByCurrentUser && <span className="text-xs text-pink-500">Liked</span>} */}
-                      </div>
-                    </div>
-                  );
-                })
+            <h2 className="text-lg md:text-xl font-bold mb-2 text-[#0bb6bc] dark:text-[#0bb6bc]">
+              Liked Videos{videos.length > 0 ? ` (${videos.length})` : ''}
+            </h2>
+            <div className="flex flex-col lg:flex-row gap-6">
+              {/* Video list (vertical) */}
+              <div className="flex-1">
+                {loading ? (
+                  <div className="text-center text-gray-500 dark:text-gray-400">Loading liked videos...</div>
+                ) : error ? (
+                  <div className="text-center text-red-500">{error}</div>
+                ) : paginatedVideos.length === 0 ? (
+                  <div className="text-center text-gray-500 dark:text-gray-400">No liked videos found.</div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {paginatedVideos.map((video, idx) => {
+                      const likedByCurrentUser = Array.isArray(video.likes) && video.likes.some(like => like.user?.toString() === (video.userLike?.user?.toString() || ''));
+                      return (
+                        <div
+                          key={video._id}
+                          className={`group flex items-center gap-4 bg-white dark:bg-[#222] rounded-lg shadow-md overflow-hidden transition hover:bg-gray-100 dark:hover:bg-[#333] cursor-pointer ${isLargeScreen && selectedIdx === idx ? 'ring-2 ring-[#0bb6bc]' : ''}`}
+                          onClick={() => {
+                            if (isLargeScreen) {
+                              setSelectedIdx(idx);
+                            } else {
+                              navigate(`/watch/${video._id}`);
+                            }
+                          }}
+                        >
+                          <div className="relative w-32 h-20">
+                            <img
+                              src={video.thumbnailUrl || 'https://via.placeholder.com/400x225?text=Video+Thumbnail'}
+                              alt={video.title || 'Video Thumbnail'}
+                              className="w-32 h-20 object-cover rounded-l-lg"
+                            />
+                            {video.duration !== undefined && (
+                              <span className="absolute bottom-1 right-1 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
+                                {formatDuration(video.duration)}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0 py-2">
+                            <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1 truncate" title={video.title}>{video.title || 'Untitled Video'}</h3>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1 truncate" title={video.channel?.name}>{video.channel?.name || 'Unknown Channel'}</p>
+                            <div className="flex items-center gap-2 text-xs text-gray-400">
+                              <span>{formatViews(video.viewCount || 0)} views</span>
+                              <span>•</span>
+                              <span>{video.createdAt ? timeAgo(video.createdAt) : ''}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {showMore && (
+                      <button
+                        className="mt-2 px-4 py-2 bg-[#0bb6bc] text-white rounded hover:bg-[#099ca3] transition"
+                        onClick={() => setPage(page + 1)}
+                      >
+                        Show More
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+              {/* Highlighted video player (large screens only) */}
+              {isLargeScreen && paginatedVideos[selectedIdx] && (
+                <div className="w-full lg:w-[600px] xl:w-[700px] flex flex-col items-start justify-start text-left">
+                  <div className="w-full aspect-video bg-black rounded-lg shadow-lg overflow-hidden mb-4">
+                    <video
+                      src={paginatedVideos[selectedIdx].videoUrl}
+                      controls
+                      poster={paginatedVideos[selectedIdx].thumbnailUrl}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1 truncate text-left" title={paginatedVideos[selectedIdx].title}>{paginatedVideos[selectedIdx].title}</h3>
+                  <div className="flex items-center gap-3 mb-2 justify-start text-left">
+                    {paginatedVideos[selectedIdx].channel?.avatar && (
+                      <img
+                        src={paginatedVideos[selectedIdx].channel.avatar}
+                        alt={paginatedVideos[selectedIdx].channel.name || 'Channel Avatar'}
+                        className="w-8 h-8 rounded-full border border-gray-300 dark:border-gray-700"
+                      />
+                    )}
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate" title={paginatedVideos[selectedIdx].channel?.name}>{paginatedVideos[selectedIdx].channel?.name || 'Unknown Channel'}</span>
+                    <span className="text-xs text-gray-400">{formatViews(paginatedVideos[selectedIdx].viewCount || 0)} views</span>
+                    <span className="text-xs text-gray-400">• {paginatedVideos[selectedIdx].createdAt ? timeAgo(paginatedVideos[selectedIdx].createdAt) : ''}</span>
+                  </div>
+                  {paginatedVideos[selectedIdx].description && (
+                    <p className="text-xs text-gray-700 dark:text-gray-300 mt-2 max-h-32 overflow-y-auto">{paginatedVideos[selectedIdx].description}</p>
+                  )}
+                </div>
               )}
             </div>
           </div>
