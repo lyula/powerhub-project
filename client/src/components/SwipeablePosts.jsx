@@ -13,6 +13,7 @@ function countAllComments(comments) {
   return count;
 }
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import SharePostModal from './SharePostModal';
 import { useAuth } from '../context/AuthContext';
 import { FaRegHeart, FaHeart, FaRegThumbsDown, FaThumbsDown, FaRegCommentDots, FaShare } from 'react-icons/fa';
@@ -27,6 +28,7 @@ function formatCount(n) {
 }
 
 const ExpandablePostCard = ({ post }) => {
+  const navigate = useNavigate();
   const [shareOpen, setShareOpen] = useState(false);
   const { user, token } = useAuth();
   const userId = user?._id;
@@ -123,7 +125,6 @@ const ExpandablePostCard = ({ post }) => {
   };
 
   // Navigation to post details (fetch post data first)
-  const navigate = window.reactRouterNavigate || null; // fallback if not using useNavigate
   const [loadingPost, setLoadingPost] = useState(false);
   const navigateToPostDetails = async () => {
     setLoadingPost(true);
@@ -133,14 +134,7 @@ const ExpandablePostCard = ({ post }) => {
       const res = await fetch(`${apiUrl}/posts/${post._id || post.id}`);
       if (!res.ok) throw new Error('Failed to fetch post');
       const data = await res.json();
-      // Use React Router's navigate with state if available
-      if (navigate) {
-        navigate(`/post/${post._id || post.id}`, { state: { post: data.post || data } });
-      } else {
-        // fallback: window.location with localStorage
-        localStorage.setItem('postDetailsData', JSON.stringify(data.post || data));
-        window.location.assign(`/post/${post._id || post.id}`);
-      }
+      navigate(`/post/${post._id || post.id}`, { state: { post: data.post || data } });
     } catch (err) {
       // Optionally show error
     }

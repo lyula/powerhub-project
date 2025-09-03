@@ -18,7 +18,7 @@ import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import StudentUtility from '../components/StudentUtility';
 import BottomTabs from '../components/BottomTabs';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { timeAgo } from '../utils/timeAgo';
 import { useAuth } from '../context/AuthContext';
 import ProfilePictureZoomModal from '../components/ProfilePictureZoomModal';
@@ -381,6 +381,8 @@ const PostDetails = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const handleToggleSidebar = () => setSidebarOpen((open) => !open);
 
+  const navigate = useNavigate();
+
   return (
     <React.Fragment>
       <div className="min-h-screen bg-gray-100 dark:bg-[#111111] w-full" style={{ overflowX: 'hidden', scrollbarWidth: 'none', maxWidth: '100vw' }}>
@@ -404,13 +406,8 @@ const PostDetails = () => {
                   <div className="p-3 flex items-start gap-3">
                     <button
                       onClick={() => {
-                        // Save scroll position before navigating back
                         sessionStorage.setItem('homeFeedScroll', window.scrollY);
-                        if (window.history.length > 1) {
-                          window.history.back();
-                        } else {
-                          window.location.replace('/');
-                        }
+                        navigate(-1);
                       }}
                       className="mr-2 flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-700"
                       aria-label="Go back"
