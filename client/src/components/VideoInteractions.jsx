@@ -12,14 +12,35 @@ const VideoInteractions = ({
   const [shareOpen, setShareOpen] = useState(false);
   const [shareCount, setShareCount] = useState(initialShareCount);
   const handleShare = () => setShareCount(count => count + 1);
+
+  const handleLike = () => {
+    if(liked){
+      setLiked(false);
+    }else{
+      setLiked(true);
+    }
+    if(disliked){
+      setDisliked(false);
+    }
+  };
+
+  const handleDislike = () => {
+    if(disliked){
+      setDisliked(false);
+    }else{
+      setDisliked(true);
+    }
+    if(liked){
+      setLiked(false);
+    }
+  };
+
   return (
     <div className="flex flex-wrap gap-4 w-full justify-start items-center mt-2">
     <button
       className={`flex items-center gap-2 transition bg-transparent border-none p-0 ${liked ? 'text-pink-500' : 'text-gray-700 dark:text-gray-200 hover:text-pink-500'}`}
       style={{ minHeight: 40 }}
-      onClick={() => {
-        setLiked(l => !l);
-      }}
+      onClick={handleLike}
     >
       {liked
         ? <MdFavorite size={28} color="#c42152" />
@@ -29,9 +50,7 @@ const VideoInteractions = ({
     <button
       className={`flex items-center gap-2 text-gray-700 dark:text-gray-200 transition bg-transparent border-none p-0 ${disliked ? 'text-gray-400' : 'hover:text-gray-400'}`}
       style={{ minHeight: 40 }}
-      onClick={() => {
-        setDisliked(d => !d);
-      }}
+      onClick={handleDislike}
     >
       {disliked
         ? <MdThumbDown size={28} color="#888" />
