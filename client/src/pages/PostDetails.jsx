@@ -1,3 +1,17 @@
+// Recursively count all comments, replies, and replies to replies
+function countAllComments(comments) {
+  let count = 0;
+  function countRecursive(arr) {
+    for (const item of arr) {
+      count++;
+      if (item.replies && item.replies.length > 0) {
+        countRecursive(item.replies);
+      }
+    }
+  }
+  if (Array.isArray(comments)) countRecursive(comments);
+  return count;
+}
 import React, { useEffect, useState } from 'react';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
@@ -369,7 +383,9 @@ const PostDetails = () => {
                   </div>
                   {/* Comments section */}
                   <div className="p-4 pt-0 border-t border-gray-200 dark:border-gray-700">
-                    <h3 className="text-lg font-bold mb-3 text-black dark:text-white">Comments</h3>
+                    <h3 className="text-lg font-bold mb-3 text-black dark:text-white">
+                      Comments ({countAllComments(post.comments)})
+                    </h3>
                     {/* Comments input for engagement */}
                     <div className="mb-4">
                       <form

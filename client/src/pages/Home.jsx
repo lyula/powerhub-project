@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FaVolumeMute, FaVolumeUp } from 'react-icons/fa';
-import PostCard from '../components/PostCard';
-import postCardData from '../components/PostCardData';
 import SwipeablePosts from '../components/SwipeablePosts';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Header from '../components/Header';

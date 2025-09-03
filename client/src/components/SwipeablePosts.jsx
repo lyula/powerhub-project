@@ -1,3 +1,17 @@
+// Recursively count all comments, replies, and replies to replies
+function countAllComments(comments) {
+  let count = 0;
+  function countRecursive(arr) {
+    for (const item of arr) {
+      count++;
+      if (item.replies && item.replies.length > 0) {
+        countRecursive(item.replies);
+      }
+    }
+  }
+  if (Array.isArray(comments)) countRecursive(comments);
+  return count;
+}
 import React, { useEffect, useState } from 'react';
 import SharePostModal from './SharePostModal';
 import { useAuth } from '../context/AuthContext';
@@ -18,7 +32,7 @@ const ExpandablePostCard = ({ post }) => {
   const userId = user?._id;
   const [liked, setLiked] = React.useState(Array.isArray(post.likes) && userId ? post.likes.includes(userId) : false);
   const [likeCount, setLikeCount] = React.useState(Array.isArray(post.likes) ? post.likes.length : (typeof post.likes === 'number' ? post.likes : 0));
-  const commentsCount = typeof post.comments === 'number' ? post.comments : (Array.isArray(post.comments) ? post.comments.length : 0);
+  const commentsCount = countAllComments(post.comments);
   const [sharesCount, setSharesCount] = useState(typeof post.shares === 'number' ? post.shares : (typeof post.shareCount === 'number' ? post.shareCount : 0));
   const postUrl = `${window.location.origin}/post/${post._id || post.id}`;
 
