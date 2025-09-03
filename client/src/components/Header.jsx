@@ -47,10 +47,10 @@ export default function Header({ onToggleSidebar }) {
         >
           <MdMenu size={28} color="#0bb6bc" />
         </button>
-            <span className="hidden md:inline text-lg font-bold">
+            <a href="/" className="hidden md:inline text-lg font-bold" style={{ textDecoration: 'none' }}>
               <span style={{ color: '#c42152' }}>PLP</span>
               <span className="text-[#0bb6bc] dark:text-[#0bb6bc]"> PowerHub</span>
-            </span>
+            </a>
       </div>
   <div className="flex items-center gap-4 w-full justify-center min-w-0">
   <div className="relative w-full max-w-2xl">
