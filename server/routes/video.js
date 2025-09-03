@@ -17,6 +17,7 @@ router.post('/upload', auth, multer.fields([
 // Like/dislike/unlike video
 router.post('/:id/like', auth, videoController.likeVideo);
 router.post('/:id/dislike', auth, videoController.dislikeVideo);
+router.post('/:id/undislike', auth, videoController.undislikeVideo);
 router.post('/:id/unlike', auth, videoController.unlikeVideo);
 
 // Add comment

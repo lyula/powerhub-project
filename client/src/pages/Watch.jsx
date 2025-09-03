@@ -262,19 +262,36 @@ export default function Watch() {
   const handleDislike = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${apiUrl}/videos/${id}/dislike`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
+      if (!disliked) {
+        // Dislike the video
+        const res = await fetch(`${apiUrl}/videos/${id}/dislike`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          }
+        });
+        if (res.ok) {
+          setDisliked(true);
+          setLiked(false); // Ensure user cannot be in both arrays
+          setDislikeCount(count => count + 1);
+          if (liked) setLikeCount(count => Math.max(0, count - 1));
         }
-      });
-      if (res.ok) {
-        setDisliked(true);
-        setLiked(false);
-        setDislikeCount(count => count + 1);
-        if (liked) setLikeCount(count => Math.max(0, count - 1));
+      } else {
+        // Undislike the video
+        const res = await fetch(`${apiUrl}/videos/${id}/undislike`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          }
+        });
+        if (res.ok) {
+          setDisliked(false);
+          setDislikeCount(count => Math.max(0, count - 1));
+        }
       }
     } catch (err) {}
   };
