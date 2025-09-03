@@ -114,7 +114,10 @@ const PostDetails = () => {
   // Like a comment
   const handleLike = async (commentId, liked) => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}/comment/like`, {
+      const endpoint = liked
+        ? `${import.meta.env.VITE_API_URL}/posts/${postId}/comment/unlike`
+        : `${import.meta.env.VITE_API_URL}/posts/${postId}/comment/like`;
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -124,7 +127,6 @@ const PostDetails = () => {
       });
       if (!res.ok) throw new Error('Failed to like/unlike comment');
       const data = await res.json();
-      // Update comment likes in state
       setPost(prev => ({
         ...prev,
         comments: prev.comments.map(c =>
@@ -139,7 +141,10 @@ const PostDetails = () => {
   // Like a reply
   const handleLikeReply = async (replyId, commentId, liked) => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}/comment/reply/like`, {
+      const endpoint = liked
+        ? `${import.meta.env.VITE_API_URL}/posts/${postId}/comment/reply/unlike`
+        : `${import.meta.env.VITE_API_URL}/posts/${postId}/comment/reply/like`;
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -149,7 +154,6 @@ const PostDetails = () => {
       });
       if (!res.ok) throw new Error('Failed to like/unlike reply');
       const data = await res.json();
-      // Update reply likes in state (recursive update)
       function updateReplies(replies) {
         return replies.map(r =>
           r._id === replyId ? { ...r, likes: data.likes } :
