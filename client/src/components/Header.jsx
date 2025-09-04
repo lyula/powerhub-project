@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { FaVideo, FaRegEdit } from 'react-icons/fa';
 import { MdMenu, MdNotificationsNone, MdLogout } from 'react-icons/md';
@@ -14,6 +14,8 @@ export default function Header({ onToggleSidebar }) {
   const navigate = useNavigate();
   const { user, logout, channel } = useAuth();
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
+  const [showAccountMenu, setShowAccountMenu] = useState(false);
+  const accountRef = useRef(null);
   
   const handleThemeToggle = () => {
     if (document.documentElement.classList.contains('dark')) {
@@ -29,12 +31,30 @@ export default function Header({ onToggleSidebar }) {
   };
 
   const handleLogout = async () => {
-    await logout();
-    navigate('/login');
+    try {
+      console.log('Starting logout process...');
+      await logout();
+      console.log('Logout successful, navigating to login');
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Still navigate to login even if logout fails
+      navigate('/login');
+    }
   };
 
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (accountRef.current && !accountRef.current.contains(e.target)) {
+        setShowAccountMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
-    <header className="w-full bg-gray-100 dark:bg-[#111111] border-b border-gray-200 dark:border-gray-900 px-4 py-3 flex items-center justify-between" style={{ minHeight: '56px', height: '56px', overflow: 'hidden', scrollbarWidth: 'none' }}>
+    <header className="w-full bg-gray-100 dark:bg-[#111111] border-b border-gray-200 dark:border-gray-900 px-4 py-3 flex items-center justify-between" style={{ minHeight: '56px', height: '56px', scrollbarWidth: 'none' }}>
       <style>{`
         header::-webkit-scrollbar { display: none !important; }
         header { scrollbar-width: none !important; }
@@ -159,36 +179,80 @@ export default function Header({ onToggleSidebar }) {
         
         {/* User Info */}
         {user && (
-          <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-lg bg-gray-200 dark:bg-gray-800">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          <div ref={accountRef} className="hidden md:flex items-center gap-3 relative" style={{ zIndex: 1000 }}>
+            {/* User Initial Circle */}
+            <div className="flex items-center justify-center w-8 h-8 bg-white rounded-full shadow-sm">
+              <span className="text-blue-600 font-bold text-sm">
+                {user.username ? user.username[0].toUpperCase() : '?'}
+              </span>
+            </div>
+            
+            {/* User Name */}
+            <span className="text-gray-800 dark:text-gray-200 font-semibold text-base">
               {user.username}
             </span>
-          </div>
-        )}
-        
-        {/* User Profile Picture or Avatar */}
-        {user && (
-          <button
-            className="hidden md:flex items-center justify-center"
-            style={{ width: 44, height: 44, minWidth: 44, minHeight: 44, maxWidth: 44, maxHeight: 44, borderRadius: '50%', background: 'white', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden', padding: 0, cursor: 'pointer', border: 'none' }}
-            onClick={() => navigate('/profile')}
-            aria-label="Go to profile"
-          >
-            {user.profilePicture ? (
-              <img
-                src={user.profilePicture}
-                alt="Profile"
-                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
-                draggable={false}
-              />
-            ) : (
-              <span
-                style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#e5e7eb', color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 700 }}
+            
+            {/* Dropdown Arrow */}
+            <button
+              className="flex items-center justify-center text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+              onClick={() => setShowAccountMenu((s) => !s)}
+              aria-haspopup="true"
+              aria-expanded={showAccountMenu}
+            >
+              <svg 
+                width="16" 
+                height="16" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                xmlns="http://www.w3.org/2000/svg"
               >
-                {user.username ? user.username[0].toUpperCase() : <MdPersonOutline size={28} />}
-              </span>
+                <path 
+                  d="M6 9L12 15L18 9" 
+                  stroke="currentColor" 
+                  strokeWidth="2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+            
+            {/* Dropdown Menu */}
+            {showAccountMenu && (
+              <div 
+                className="absolute right-0 w-36 bg-white dark:bg-[#222] rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
+                style={{ 
+                  top: '100%', 
+                  marginTop: '8px', 
+                  zIndex: 9999,
+                  position: 'absolute'
+                }}
+              >
+                <div className="px-3 py-2 font-bold text-gray-800 dark:text-gray-200 text-sm border-b border-gray-100 dark:border-gray-700">
+                  My Account
+                </div>
+                <button
+                  className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-[#333] text-gray-800 dark:text-gray-200 text-sm transition-colors"
+                  onClick={() => { 
+                    console.log('Profile button clicked');
+                    setShowAccountMenu(false); 
+                    navigate('/profile'); 
+                  }}
+                >
+                  Profile
+                </button>
+                <button
+                  className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-[#333] text-gray-800 dark:text-gray-200 text-sm transition-colors"
+                  onClick={async () => { 
+                    console.log('Logout button clicked');
+                    setShowAccountMenu(false); 
+                    await handleLogout(); 
+                  }}
+                >
+                  Logout
+                </button>
+              </div>
             )}
-          </button>
+          </div>
         )}
       </div>
     </header>

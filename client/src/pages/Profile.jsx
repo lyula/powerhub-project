@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Header from '../components/Header';
 import MobileHeader from '../components/MobileHeader';
@@ -8,7 +9,8 @@ import StudentUtility from '../components/StudentUtility';
 import BottomTabs from '../components/BottomTabs';
 
 const Profile = () => {
-  const { user, updateProfile, changePassword, uploadProfilePicture } = useAuth();
+  const { user, updateProfile, changePassword, uploadProfilePicture, channel } = useAuth();
+  const navigate = useNavigate();
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [avatarMessage, setAvatarMessage] = useState('');
@@ -36,6 +38,7 @@ const Profile = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const securityRef = useRef(null);
 
   const [profileForm, setProfileForm] = useState({
     firstName: '',
@@ -168,6 +171,16 @@ const Profile = () => {
     setMessage({ type: '', text: '' });
   };
 
+  const openSecuritySection = () => {
+    setIsChangingPassword(true);
+    // Scroll to the security section smoothly
+    setTimeout(() => {
+      if (securityRef.current) {
+        securityRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 0);
+  };
+
   if (!user) {
     return (
       <div className="min-h-screen bg-gray-100 dark:bg-[#111111] flex items-center justify-center">
@@ -265,7 +278,24 @@ const Profile = () => {
                     <h3 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">
                       {user.firstName} {user.lastName}
                     </h3>
-                    <p className="text-gray-600 dark:text-gray-400 mb-2">{user.email}</p>
+                    <div className="text-gray-600 dark:text-gray-400 text-sm mb-2">
+                      @{user.username}
+                      <span className="mx-1">·</span>
+                      <button
+                        type="button"
+                        className="text-[#0bb6bc] hover:underline"
+                        onClick={() => {
+                          if (channel && channel._id) {
+                            navigate(`/channel/${channel._id}`);
+                          } else {
+                            navigate('/channel-setup');
+                          }
+                        }}
+                      >
+                        View channel
+                      </button>
+                    </div>
+                    <p className="text-gray-600 dark:text-gray-400 mb-1">{user.email}</p>
                     {uploadError && (
                       <div className="text-red-500 text-sm mt-2">{uploadError}</div>
                     )}
@@ -276,14 +306,6 @@ const Profile = () => {
               <div className="bg-white dark:bg-[#1a1a1a] rounded-xl shadow-lg p-6 mb-8 border border-gray-200 dark:border-gray-700">
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Profile Details</h3>
-                  {!isEditing && (
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      className="px-6 py-2 bg-[#0bb6bc] text-white rounded-lg hover:bg-[#0a9ba0] transition-colors shadow-md font-medium"
-                    >
-                      Edit Profile
-                    </button>
-                  )}
                 </div>
 
                 {isEditing ? (
@@ -515,19 +537,37 @@ const Profile = () => {
                     </div>
                   </form>
                 )}
-              </div>
 
-              <div className="bg-white dark:bg-[#1a1a1a] rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Security</h3>
-                  {!isChangingPassword && (
+                {!isEditing && (
+                  <div className="flex items-center justify-between mt-8">
                     <button
-                      onClick={() => setIsChangingPassword(true)}
-                      className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors shadow-md font-medium"
+                      type="button"
+                      onClick={openSecuritySection}
+                      className="px-5 py-2 rounded-full border border-rose-500 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors flex items-center gap-2"
                     >
+                      <span className="inline-block w-4 h-4">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                      </span>
                       Change Password
                     </button>
-                  )}
+                    <button
+                      type="button"
+                      onClick={() => setIsEditing(true)}
+                      className="px-6 py-2 rounded-full bg-rose-600 text-white hover:bg-rose-700 transition-colors flex items-center gap-2"
+                    >
+                      <span className="inline-block w-4 h-4">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+                      </span>
+                      Edit
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {isChangingPassword && (
+              <div ref={securityRef} className="bg-white dark:bg-[#1a1a1a] rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Security</h3>
                 </div>
 
                 {isChangingPassword && (
@@ -592,6 +632,7 @@ const Profile = () => {
                   </form>
                 )}
               </div>
+              )}
             </div>
           </div>
         </div>
