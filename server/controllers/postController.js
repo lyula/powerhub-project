@@ -322,38 +322,22 @@ exports.deleteReply = async (req, res) => {
     const comment = post.comments.id(req.params.commentId);
     if (!comment) return res.status(404).json({ error: 'Comment not found' });
     
-    // Function to recursively find and remove reply
-    const findAndRemoveReply = (replies, replyId, userId) => {
-      for (let i = 0; i < replies.length; i++) {
-        if (replies[i]._id.toString() === replyId) {
-          // Check if user is authorized to delete this reply
-          if (replies[i].author.toString() !== userId.toString()) {
-            throw new Error('Unauthorized');
-          }
-          replies.splice(i, 1);
-          return true;
-        }
-        // Check nested replies
-        if (replies[i].replies && replies[i].replies.length > 0) {
-          if (findAndRemoveReply(replies[i].replies, replyId, userId)) {
-            return true;
-          }
-        }
-      }
-      return false;
-    };
-
-    const removed = findAndRemoveReply(comment.replies, req.params.replyId, req.user._id);
-    if (!removed) {
+    // With flattened structure, all replies are direct replies to the main comment
+    const replyIndex = comment.replies.findIndex(reply => reply._id.toString() === req.params.replyId);
+    if (replyIndex === -1) {
       return res.status(404).json({ error: 'Reply not found' });
     }
-
+    
+    const reply = comment.replies[replyIndex];
+    // Check if user is authorized to delete this reply
+    if (reply.author.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    
+    comment.replies.splice(replyIndex, 1);
     await post.save();
     res.json({ success: true });
   } catch (err) {
-    if (err.message === 'Unauthorized') {
-      return res.status(403).json({ error: 'Unauthorized' });
-    }
     res.status(500).json({ error: 'Failed to delete reply', details: err.message });
   }
 };

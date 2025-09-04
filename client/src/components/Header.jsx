@@ -91,6 +91,8 @@ export default function Header({ onToggleSidebar }) {
             </svg>
           </button>
         </div>
+      </div>
+  <div className="flex items-center gap-6 ml-4">
             <div className="relative" style={{ position: 'relative', zIndex: 100 }}>
               <button
                 className="relative hidden md:flex items-center justify-center px-2 py-2 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 shadow hover:shadow-lg transition hover:bg-gray-200 dark:hover:bg-[#222] focus:outline-none"
@@ -177,12 +179,27 @@ export default function Header({ onToggleSidebar }) {
           <ThemeToggle isDark={isDark} />
         </button>
         
-        {/* User Info */}
+        {/* User Info - Moved to be the last element */}
         {user && (
           <div ref={accountRef} className="hidden md:flex items-center gap-3 relative" style={{ zIndex: 1000 }}>
-            {/* User Initial Circle */}
-            <div className="flex items-center justify-center w-8 h-8 bg-white rounded-full shadow-sm">
-              <span className="text-blue-600 font-bold text-sm">
+            {/* User Profile Picture or Initial Circle */}
+            <div className="flex items-center justify-center w-8 h-8 bg-white rounded-full shadow-sm overflow-hidden">
+              {user.profilePicture ? (
+                <img 
+                  src={user.profilePicture} 
+                  alt={`${user.username}'s profile`}
+                  className="w-full h-full object-cover rounded-full"
+                  onError={(e) => {
+                    // Fallback to initial if image fails to load
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              <span 
+                className="text-blue-600 font-bold text-sm flex items-center justify-center w-full h-full"
+                style={{ display: user.profilePicture ? 'none' : 'flex' }}
+              >
                 {user.username ? user.username[0].toUpperCase() : '?'}
               </span>
             </div>

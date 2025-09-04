@@ -24,25 +24,20 @@ const formatRelativeTime = (dateString) => {
   return `${diffInDays} day${diffInDays === 1 ? '' : 's'} ago`;
 };
 
-// Helper to count all comments and replies recursively
+// Helper to count all comments and replies (flattened structure)
 const countAllComments = (comments) => {
   if (!comments || !Array.isArray(comments)) return 0;
   
-  let count = 0;
-  const countRecursive = (arr) => {
-    if (!arr || !Array.isArray(arr)) return;
-    
-    for (const item of arr) {
-      if (!item) continue;
-      count++;
-      if (item.replies && Array.isArray(item.replies) && item.replies.length > 0) {
-        countRecursive(item.replies);
-      }
-    }
-  };
+  let total = comments.length; // Count the main comments
   
-  countRecursive(comments);
-  return count;
+  // Add count of all replies
+  comments.forEach(comment => {
+    if (comment.replies && Array.isArray(comment.replies)) {
+      total += comment.replies.length;
+    }
+  });
+  
+  return total;
 };
 
 // CommentThread component for rendering comments and replies
@@ -334,28 +329,6 @@ const CommentThread = ({ comments, postId, token, userId, onReply, replyingTo, r
                             )}
                           </form>
                         )}
-                        {reply.replies && reply.replies.length > 0 && (
-                          <div className="ml-8 mt-2 flex flex-col gap-2">
-                            <CommentThread
-                              comments={reply.replies}
-                              postId={postId}
-                              token={token}
-                              userId={userId}
-                              handleLike={handleLike}
-                              handleLikeReply={handleLikeReply}
-                              onReply={onReply}
-                              replyingTo={replyingTo}
-                              replyText={replyText}
-                              setReplyText={setReplyText}
-                              handleAddReply={handleAddReply}
-                              onProfileClick={onProfileClick}
-                              handleDeleteComment={handleDeleteComment}
-                              handleDeleteReply={handleDeleteReply}
-                              autoExpandReplies={autoExpandReplies}
-                              onRemoveAutoExpand={onRemoveAutoExpand}
-                            />
-                          </div>
-                        )}
                       </div>
                     ))}
                     {numToShow < totalReplies && (
@@ -567,7 +540,12 @@ const PostDetails = () => {
     e.preventDefault();
     if (!replyText.trim() || !user || !token) return;
     
-    const replyContent = replyText;
+    // For replies to replies, add @tag but store as regular reply to the main comment
+    let replyContent = replyText;
+    if (replyId && taggedUser) {
+      replyContent = `@${taggedUser} ${replyText}`;
+    }
+    
     setReplyText('');
     setReplyingTo(null);
     
@@ -583,35 +561,22 @@ const PostDetails = () => {
         },
         body: JSON.stringify({ 
           commentId, 
-          content: replyContent, 
-          replyId: replyId || undefined,
-          taggedUser: taggedUser || undefined 
+          content: replyContent,
+          // Don't send replyId to flatten the structure on server side
+          taggedUser: replyId ? taggedUser : undefined 
         })
       });
       if (!res.ok) throw new Error('Failed to add reply');
       const data = await res.json();
       
-      // Simply add the server reply at the top
+      // Always add as direct reply to the main comment (flattened structure)
       setPost((prev) => {
         const newPost = {
           ...prev,
           comments: prev.comments.map((c) => {
             if (c._id === commentId) {
-              if (replyId) {
-                // For nested replies
-                const updateReplies = (replies) =>
-                  replies.map((r) =>
-                    r && r._id === replyId
-                      ? { ...r, replies: [data.reply, ...(r.replies || [])] }
-                      : r && r.replies
-                      ? { ...r, replies: updateReplies(r.replies) }
-                      : r
-                  );
-                return { ...c, replies: updateReplies(c.replies || []) };
-              } else {
-                // For direct replies to comment - add at the top
-                return { ...c, replies: [data.reply, ...(c.replies || [])] };
-              }
+              // Always add at the top as direct reply
+              return { ...c, replies: [data.reply, ...(c.replies || [])] };
             }
             return c;
           })
@@ -665,18 +630,17 @@ const PostDetails = () => {
     let prevComments;
     setPost((prev) => {
       prevComments = prev.comments;
-      const updateReplies = (replies) =>
-        replies.map((r) =>
-          r._id === replyId
-            ? { ...r, content: editContent, _editing: true }
-            : r.replies
-            ? { ...r, replies: updateReplies(r.replies) }
-            : r
-        );
       return {
         ...prev,
         comments: prev.comments.map((c) =>
-          c._id === commentId ? { ...c, replies: updateReplies(c.replies || []) } : c
+          c._id === commentId ? { 
+            ...c, 
+            replies: c.replies.map((r) =>
+              r._id === replyId
+                ? { ...r, content: editContent, _editing: true }
+                : r
+            )
+          } : c
         )
       };
     });
@@ -694,18 +658,17 @@ const PostDetails = () => {
       if (!res.ok) throw new Error('Failed to edit reply');
       const data = await res.json();
       setPost((prev) => {
-        const updateReplies = (replies) =>
-          replies.map((r) =>
-            r._id === replyId
-              ? { ...r, content: data.reply?.content || editContent, _editing: undefined }
-              : r.replies
-              ? { ...r, replies: updateReplies(r.replies) }
-              : r
-          );
         return {
           ...prev,
           comments: prev.comments.map((c) =>
-            c._id === commentId ? { ...c, replies: updateReplies(c.replies || []) } : c
+            c._id === commentId ? { 
+              ...c, 
+              replies: c.replies.map((r) =>
+                r._id === replyId
+                  ? { ...r, content: data.reply?.content || editContent, _editing: undefined }
+                  : r
+              )
+            } : c
           )
         };
       });
@@ -766,14 +729,13 @@ const PostDetails = () => {
     let prevComments;
     setPost((prev) => {
       prevComments = prev.comments;
-      const updateReplies = (replies) =>
-        replies
-          .filter((r) => r._id !== replyId)
-          .map((r) => (r.replies ? { ...r, replies: updateReplies(r.replies) } : r));
       return {
         ...prev,
         comments: prev.comments.map((c) =>
-          c._id === commentId ? { ...c, replies: updateReplies(c.replies || []) } : c
+          c._id === commentId ? { 
+            ...c, 
+            replies: c.replies.filter((r) => r._id !== replyId)
+          } : c
         )
       };
     });
@@ -838,23 +800,22 @@ const PostDetails = () => {
     let prevComments;
     setPost((prev) => {
       prevComments = prev.comments;
-      const updateReplies = (replies) =>
-        replies.map((r) =>
-          r._id === replyId
-            ? {
-                ...r,
-                likes: liked
-                  ? (r.likes || []).filter((id) => id !== user._id)
-                  : [...new Set([...(r.likes || []), user._id])]
-              }
-            : r.replies
-            ? { ...r, replies: updateReplies(r.replies) }
-            : r
-        );
       return {
         ...prev,
         comments: prev.comments.map((c) =>
-          c._id === commentId ? { ...c, replies: updateReplies(c.replies || []) } : c
+          c._id === commentId ? { 
+            ...c, 
+            replies: c.replies.map((r) =>
+              r._id === replyId
+                ? {
+                    ...r,
+                    likes: liked
+                      ? (r.likes || []).filter((id) => id !== user._id)
+                      : [...new Set([...(r.likes || []), user._id])]
+                  }
+                : r
+            )
+          } : c
         )
       };
     });
@@ -871,18 +832,17 @@ const PostDetails = () => {
       if (!res.ok) throw new Error('Failed to like/unlike reply');
       const data = await res.json();
       setPost((prev) => {
-        const updateReplies = (replies) =>
-          replies.map((r) =>
-            r._id === replyId
-              ? { ...r, likes: Array.isArray(data.likes) ? data.likes : [] }
-              : r.replies
-              ? { ...r, replies: updateReplies(r.replies) }
-              : r
-          );
         return {
           ...prev,
           comments: prev.comments.map((c) =>
-            c._id === commentId ? { ...c, replies: updateReplies(c.replies || []) } : c
+            c._id === commentId ? { 
+              ...c, 
+              replies: c.replies.map((r) =>
+                r._id === replyId
+                  ? { ...r, likes: Array.isArray(data.likes) ? data.likes : [] }
+                  : r
+              )
+            } : c
           )
         };
       });
@@ -899,7 +859,17 @@ const PostDetails = () => {
         const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}`);
         if (!res.ok) throw new Error('Failed to fetch post');
         const data = await res.json();
-        setPost(data.post || data);
+        const postData = data.post || data;
+        // Sort replies within each comment so newest appear at the top
+        if (postData.comments) {
+          postData.comments = postData.comments.map(comment => ({
+            ...comment,
+            replies: [...(comment.replies || [])].sort((a, b) => 
+              new Date(b.createdAt) - new Date(a.createdAt)
+            )
+          }));
+        }
+        setPost(postData);
       } catch (err) {
         setError(err.message);
       } finally {

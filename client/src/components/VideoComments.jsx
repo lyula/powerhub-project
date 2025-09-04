@@ -14,7 +14,6 @@ const Comments = ({ videoId, channel }) => {
   const [editCommentText, setEditCommentText] = useState('');
   const [editReplyId, setEditReplyId] = useState(null);
   const [editReplyText, setEditReplyText] = useState('');
-  const [editReplyParentId, setEditReplyParentId] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalData, setModalData] = useState({});
   const [previewedId, setPreviewedId] = useState(null);
@@ -50,11 +49,27 @@ const Comments = ({ videoId, channel }) => {
   // Helper to get total comment count
   const getTotalCommentCount = (commentsList) => {
     return commentsList.reduce((total, comment) => {
-      const repliesCount = comment.replies?.reduce((acc, reply) => {
-        return acc + 1 + (reply.replies?.length || 0);
-      }, 0) || 0;
+      const repliesCount = comment.replies?.length || 0;
       return total + 1 + repliesCount;
     }, 0);
+  };
+
+  // Helper to render text with styled @usernames
+  const renderTextWithStyledMentions = (text) => {
+    if (!text) return text;
+    
+    // Split text by @mentions and render with blue styling
+    const parts = text.split(/(@\w+)/g);
+    return parts.map((part, index) => {
+      if (part.startsWith('@')) {
+        return (
+          <span key={index} className="text-[#0bb6bc] font-medium">
+            {part}
+          </span>
+        );
+      }
+      return part;
+    });
   };
 
   // Handle adding a comment
@@ -96,9 +111,20 @@ const Comments = ({ videoId, channel }) => {
   const handleAddReply = async (e) => {
     e.preventDefault();
     if (!replyText.trim() || !user || !token || !replyingTo) return;
+    
+    // For replies to replies, add @tag but store as regular reply to the main comment
+    let replyTextWithTag = replyText;
+    if (replyingTo.replyId) {
+      const parentComment = comments.find(c => c._id === replyingTo.commentId);
+      const repliedToReply = parentComment?.replies.find(r => r._id === replyingTo.replyId);
+      if (repliedToReply) {
+        replyTextWithTag = `@${getDisplayName(repliedToReply.author)} ${replyText}`;
+      }
+    }
+    
     const optimisticReply = {
       _id: `temp_${Date.now()}`,
-      text: replyingTo.replyId ? `@${getDisplayName(comments.find(c => c._id === replyingTo.commentId)?.replies.find(r => r._id === replyingTo.replyId)?.author)} ${replyText}` : replyText,
+      text: replyTextWithTag,
       author: { _id: user._id, ...user },
       createdAt: new Date().toISOString(),
       likes: [],
@@ -107,28 +133,21 @@ const Comments = ({ videoId, channel }) => {
     };
     setComments((prev) => prev.map(comment => {
       if (comment._id === replyingTo.commentId) {
-        if (replyingTo.replyId) {
-          return {
-            ...comment,
-            replies: comment.replies.map(reply => {
-              if (reply._id === replyingTo.replyId) {
-                return { ...reply, replies: [...(reply.replies || []), optimisticReply] };
-              }
-              return reply;
-            })
-          };
-        } else {
-          return { ...comment, replies: [...(comment.replies || []), optimisticReply] };
-        }
+        // Always add as a direct reply to the main comment (flatten structure)
+        return { ...comment, replies: [...(comment.replies || []), optimisticReply] };
       }
       return comment;
     }));
+    
+    // Store replyingTo before clearing it
+    const currentReplyingTo = replyingTo;
     setReplyText('');
     setReplyingTo(null);
+    
     try {
-      const url = `${API_BASE_URL}/videos/${videoId}/comment/reply`;
-      const body = replyingTo.replyId ? { text: replyText, commentId: replyingTo.commentId, parentReplyId: replyingTo.replyId } : { text: replyText, commentId: replyingTo.commentId };
-      const res = await fetch(url, {
+      // Always send as reply to main comment, even if replying to a reply
+      const body = { text: replyTextWithTag, commentId: currentReplyingTo.commentId };
+      const res = await fetch(`${API_BASE_URL}/videos/${videoId}/comment/reply`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -137,61 +156,34 @@ const Comments = ({ videoId, channel }) => {
         body: JSON.stringify(body)
       });
       if (res.ok) {
-        const newReply = await res.json();
-        setComments((prev) => prev.map(comment => {
-          if (comment._id === replyingTo.commentId) {
-            if (replyingTo.replyId) {
-              return {
-                ...comment,
-                replies: comment.replies.map(reply => {
-                  if (reply._id === replyingTo.replyId) {
-                    return { ...reply, replies: [...(reply.replies || []).filter(r => !r._posting), newReply] };
-                  }
-                  return reply;
-                })
-              };
-            } else {
-              return { ...comment, replies: [...(comment.replies || []).filter(r => !r._posting), newReply] };
+        const updatedVideo = await res.json();
+        // Find the updated comment and extract the new reply
+        const updatedComment = updatedVideo.comments?.find(c => c._id === currentReplyingTo.commentId);
+        if (updatedComment) {
+          setComments((prev) => prev.map(comment => {
+            if (comment._id === currentReplyingTo.commentId) {
+              // Use the replies from the server response which have populated author data
+              // Sort replies so newest appear at the top
+              const sortedReplies = [...(updatedComment.replies || [])].sort((a, b) => 
+                new Date(b.createdAt) - new Date(a.createdAt)
+              );
+              return { ...comment, replies: sortedReplies };
             }
-          }
-          return comment;
-        }));
+            return comment;
+          }));
+        }
       } else {
         setComments((prev) => prev.map(comment => {
-          if (comment._id === replyingTo.commentId) {
-            if (replyingTo.replyId) {
-              return {
-                ...comment,
-                replies: comment.replies.map(reply => {
-                  if (reply._id === replyingTo.replyId) {
-                    return { ...reply, replies: (reply.replies || []).filter(r => !r._posting) };
-                  }
-                  return reply;
-                })
-              };
-            } else {
-              return { ...comment, replies: (comment.replies || []).filter(r => !r._posting) };
-            }
+          if (comment._id === currentReplyingTo.commentId) {
+            return { ...comment, replies: (comment.replies || []).filter(r => !r._posting) };
           }
           return comment;
         }));
       }
     } catch (err) {
       setComments((prev) => prev.map(comment => {
-        if (comment._id === replyingTo.commentId) {
-          if (replyingTo.replyId) {
-            return {
-              ...comment,
-              replies: comment.replies.map(reply => {
-                if (reply._id === replyingTo.replyId) {
-                  return { ...reply, replies: (reply.replies || []).filter(r => !r._posting) };
-                }
-                return reply;
-              })
-            };
-          } else {
-            return { ...comment, replies: (comment.replies || []).filter(r => !r._posting) };
-          }
+        if (comment._id === currentReplyingTo.commentId) {
+          return { ...comment, replies: (comment.replies || []).filter(r => !r._posting) };
         }
         return comment;
       }));
@@ -229,51 +221,32 @@ const Comments = ({ videoId, channel }) => {
   };
 
   // Handle editing a reply
-  const handleEditReplySubmit = async (e, commentId, replyId, parentReplyId = null) => {
+  const handleEditReplySubmit = async (e, commentId, replyId) => {
     e.preventDefault();
     if (!editReplyText.trim() || !user || !token) return;
     const prevComments = comments;
+    
     setComments((prev) => prev.map(comment => {
       if (comment._id === commentId) {
-        if (parentReplyId) {
-          return {
-            ...comment,
-            replies: comment.replies.map(reply => {
-              if (reply._id === parentReplyId) {
-                return {
-                  ...reply,
-                  replies: reply.replies.map(subReply => {
-                    if (subReply._id === replyId) {
-                      return { ...subReply, text: editReplyText, editedAt: new Date().toISOString() };
-                    }
-                    return subReply;
-                  })
-                };
-              }
-              return reply;
-            })
-          };
-        } else {
-          return {
-            ...comment,
-            replies: comment.replies.map(reply => {
-              if (reply._id === replyId) {
-                return { ...reply, text: editReplyText, editedAt: new Date().toISOString() };
-              }
-              return reply;
-            })
-          };
-        }
+        return {
+          ...comment,
+          replies: comment.replies.map(reply => {
+            if (reply._id === replyId) {
+              return { ...reply, text: editReplyText, editedAt: new Date().toISOString() };
+            }
+            return reply;
+          })
+        };
       }
       return comment;
     }));
+    
     setEditReplyId(null);
     setEditReplyText('');
-    setEditReplyParentId(null);
+    
     try {
-      const url = `${API_BASE_URL}/videos/${videoId}/comment/reply`;
-      const body = parentReplyId ? { commentId, replyId, text: editReplyText, parentReplyId } : { commentId, replyId, text: editReplyText };
-      const res = await fetch(url, {
+      const body = { commentId, replyId, text: editReplyText };
+      const res = await fetch(`${API_BASE_URL}/videos/${videoId}/comment/reply`, {
   method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -313,12 +286,11 @@ const Comments = ({ videoId, channel }) => {
   };
 
   // Handle deleting a reply
-  const handleDeleteReply = async (commentId, replyId, parentReplyId = null) => {
+  const handleDeleteReply = async (commentId, replyId) => {
     const prevComments = comments;
     try {
-      const url = `${API_BASE_URL}/videos/${videoId}/comment/reply`;
-      const body = parentReplyId ? { commentId, replyId, parentReplyId } : { commentId, replyId };
-      const res = await fetch(url, {
+      const body = { commentId, replyId };
+      const res = await fetch(`${API_BASE_URL}/videos/${videoId}/comment/reply`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -329,19 +301,7 @@ const Comments = ({ videoId, channel }) => {
       if (res.ok) {
         setComments((prev) => prev.map(comment => {
           if (comment._id === commentId) {
-            if (parentReplyId) {
-              return {
-                ...comment,
-                replies: comment.replies.map(reply => {
-                  if (reply._id === parentReplyId) {
-                    return { ...reply, replies: reply.replies.filter(subReply => subReply._id !== replyId) };
-                  }
-                  return reply;
-                })
-              };
-            } else {
-              return { ...comment, replies: comment.replies.filter(reply => reply._id !== replyId) };
-            }
+            return { ...comment, replies: comment.replies.filter(reply => reply._id !== replyId) };
           }
           return comment;
         }));
@@ -417,46 +377,32 @@ const Comments = ({ videoId, channel }) => {
   };
 
   // Like or unlike a reply
-  const handleLikeReply = async (commentId, replyId, liked, parentReplyId = null) => {
+  const handleLikeReply = async (commentId, replyId, liked) => {
     if (!user || !token) return;
-    const updateReplyLikes = (replies) => {
-      return replies.map(reply => {
-        if (parentReplyId && reply._id === parentReplyId && reply.replies) {
-          return {
-            ...reply,
-            replies: reply.replies.map(subReply => {
-              if (subReply._id === replyId) {
-                let likesArr = Array.isArray(subReply.likes) ? subReply.likes : [];
-                let newLikes = liked
-                  ? likesArr.filter(id => id !== user._id)
-                  : [...new Set([...likesArr, user._id])];
-                return { ...subReply, likes: newLikes };
-              }
-              return subReply;
-            })
-          };
-        } else if (!parentReplyId && reply._id === replyId) {
-          let likesArr = Array.isArray(reply.likes) ? reply.likes : [];
-          let newLikes = liked
-            ? likesArr.filter(id => id !== user._id)
-            : [...new Set([...likesArr, user._id])];
-          return { ...reply, likes: newLikes };
-        } else if (reply.replies && reply.replies.length > 0) {
-          return { ...reply, replies: updateReplyLikes(reply.replies) };
-        }
-        return reply;
-      });
-    };
+    
     setComments((prev) => prev.map(comment => {
       if (comment._id === commentId) {
-        return { ...comment, replies: updateReplyLikes(comment.replies || []) };
+        return {
+          ...comment,
+          replies: comment.replies.map(reply => {
+            if (reply._id === replyId) {
+              let likesArr = Array.isArray(reply.likes) ? reply.likes : [];
+              let newLikes = liked
+                ? likesArr.filter(id => id !== user._id)
+                : [...new Set([...likesArr, user._id])];
+              return { ...reply, likes: newLikes };
+            }
+            return reply;
+          })
+        };
       }
       return comment;
     }));
+    
     try {
       const endpoint = liked ? 'unlike' : 'like';
       const url = `${API_BASE_URL}/videos/${videoId}/comment/reply/${endpoint}`;
-      const body = parentReplyId ? { commentId, replyId, parentReplyId } : { commentId, replyId };
+      const body = { commentId, replyId };
       const res = await fetch(url, {
         method: 'POST',
         headers: {
@@ -467,34 +413,42 @@ const Comments = ({ videoId, channel }) => {
       });
       if (res.ok) {
         const data = await res.json();
-        const updateReplyLikesFromBackend = (replies) => {
-          return replies.map(reply => {
-            if (parentReplyId && reply._id === parentReplyId && reply.replies) {
-              return {
-                ...reply,
-                replies: reply.replies.map(subReply => {
-                  if (subReply._id === replyId) {
-                    return { ...subReply, likes: Array.isArray(data.likes) ? data.likes : [] };
-                  }
-                  return subReply;
-                })
-              };
-            } else if (!parentReplyId && reply._id === replyId) {
-              return { ...reply, likes: Array.isArray(data.likes) ? data.likes : [] };
-            } else if (reply.replies && reply.replies.length > 0) {
-              return { ...reply, replies: updateReplyLikesFromBackend(reply.replies) };
-            }
-            return reply;
-          });
-        };
         setComments((prev) => prev.map(comment => {
           if (comment._id === commentId) {
-            return { ...comment, replies: updateReplyLikesFromBackend(comment.replies || []) };
+            return {
+              ...comment,
+              replies: comment.replies.map(reply => {
+                if (reply._id === replyId && Array.isArray(data.likes)) {
+                  return { ...reply, likes: data.likes };
+                }
+                return reply;
+              })
+            };
           }
           return comment;
         }));
       }
-    } catch (err) {}
+    } catch (err) {
+      // Revert on error
+      setComments((prev) => prev.map(comment => {
+        if (comment._id === commentId) {
+          return {
+            ...comment,
+            replies: comment.replies.map(reply => {
+              if (reply._id === replyId) {
+                let likesArr = Array.isArray(reply.likes) ? reply.likes : [];
+                let newLikes = liked
+                  ? [...new Set([...likesArr, user._id])]
+                  : likesArr.filter(id => id !== user._id);
+                return { ...reply, likes: newLikes };
+              }
+              return reply;
+            })
+          };
+        }
+        return comment;
+      }));
+    }
   };
 
   // Handle viewing replies
@@ -667,7 +621,7 @@ const Comments = ({ videoId, channel }) => {
                               )}
                               <span className="text-xs text-gray-400 font-normal ml-2">{formatRelativeTime(reply.createdAt)}</span>
                             </span>
-                            {editReplyId === reply._id && !editReplyParentId ? (
+                            {editReplyId === reply._id ? (
                               <form onSubmit={(e) => handleEditReplySubmit(e, comment._id, reply._id)} className="flex gap-2 mb-2">
                                 <input
                                   type="text"
@@ -680,7 +634,9 @@ const Comments = ({ videoId, channel }) => {
                                 <button type="button" className="bg-gray-300 text-black px-3 py-1 rounded hover:bg-gray-400 transition" onClick={() => setEditReplyId(null)}>Cancel</button>
                               </form>
                             ) : (
-                              <span className="text-gray-800 dark:text-gray-200">{reply.text}</span>
+                              <span className="text-gray-800 dark:text-gray-200">
+                                {renderTextWithStyledMentions(reply.text)}
+                              </span>
                             )}
                             <div className="flex items-center gap-4 mt-1">
                               <button
@@ -702,7 +658,7 @@ const Comments = ({ videoId, channel }) => {
                                 <div className="flex gap-2 ml-auto">
                                   <button
                                     className="text-xs text-blue-500 hover:underline"
-                                    onClick={() => { setEditReplyId(reply._id); setEditReplyText(reply.text); setEditReplyParentId(null); }}
+                                    onClick={() => { setEditReplyId(reply._id); setEditReplyText(reply.text); }}
                                   >
                                     Edit
                                   </button>
@@ -726,64 +682,6 @@ const Comments = ({ videoId, channel }) => {
                                 />
                                 <button type="submit" className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition">Reply</button>
                               </form>
-                            )}
-                            {reply.replies && reply.replies.length > 0 && (
-                              <div className="mt-2 flex flex-col gap-2">
-                                {reply.replies.map((subReply) => {
-                                  const isSubReplyAuthor = user?._id === subReply.author?._id;
-                                  return (
-                                    <div key={subReply._id} className="flex gap-2 items-start">
-                                      <img
-                                        src={getAvatar(subReply.author)}
-                                        alt={getDisplayName(subReply.author)}
-                                        className="w-7 h-7 rounded-full border cursor-pointer"
-                                        onClick={() => handleProfilePictureClick(subReply.author)}
-                                      />
-                                      <div className="flex flex-col flex-1">
-                                        <span className="font-semibold text-black dark:text-white">
-                                          {getDisplayName(subReply.author)}
-                                          {subReply.editedAt && (
-                                            <span className="text-xs text-gray-500 font-normal ml-2">Edited</span>
-                                          )}
-                                          <span className="text-xs text-gray-400 font-normal ml-2">{formatRelativeTime(subReply.createdAt)}</span>
-                                        </span>
-                                        {editReplyId === subReply._id && editReplyParentId === reply._id ? (
-                                          <EditPortal isOpen={editReplyId === subReply._id && editReplyParentId === reply._id} onClose={() => setEditReplyId(null)}>
-                                            <form onSubmit={(e) => handleEditReplySubmit(e, comment._id, subReply._id, reply._id)} className="flex flex-col gap-2">
-                                              <input
-                                                type="text"
-                                                className="border rounded px-2 py-1 text-black dark:text-white bg-gray-100 dark:bg-gray-800"
-                                                value={editReplyText}
-                                                onChange={(e) => setEditReplyText(e.target.value)}
-                                              />
-                                              <div className="flex gap-2 justify-end">
-                                                <button type="submit" className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition">Save</button>
-                                                <button type="button" className="bg-gray-300 text-black px-3 py-1 rounded hover:bg-gray-400 transition" onClick={() => setEditReplyId(null)}>Cancel</button>
-                                              </div>
-                                            </form>
-                                          </EditPortal>
-                                        ) : (
-                                          <span className="text-gray-800 dark:text-gray-200">
-                                            {reply.author && <span className="text-blue-500 font-semibold mr-1">@{getDisplayName(reply.author)}</span>}
-                                            {subReply.text.replace(new RegExp(`^@${getDisplayName(reply.author)}\\s*`), '')}
-                                          </span>
-                                        )}
-                                        <div className="flex items-center gap-4 mt-1">
-                                          <button
-                                            className="flex items-center gap-1 text-gray-700 dark:text-gray-200 hover:text-pink-500 transition bg-transparent border-none p-0"
-                                            onClick={() => handleLikeReply(comment._id, subReply._id, subReply.likes?.includes(user?._id), reply._id)}
-                                          >
-                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill={subReply.likes?.includes(user?._id) ? '#c42152' : 'none'} stroke={subReply.likes?.includes(user?._id) ? '#c42152' : 'currentColor'} strokeWidth="2">
-                                              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41 1.01 4.5 2.09C13.09 4.01 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                                            </svg>
-                                            <span className="text-xs">{subReply.likes?.length || 0}</span>
-                                          </button>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
                             )}
                           </div>
                         </div>
@@ -824,9 +722,16 @@ const Comments = ({ videoId, channel }) => {
         const res = await fetch(`${API_BASE_URL}/videos/${videoId}`);
         if (res.ok) {
           const data = await res.json();
+          // Sort replies within each comment so newest appear at the top
+          const commentsWithSortedReplies = (data.comments || []).map(comment => ({
+            ...comment,
+            replies: [...(comment.replies || [])].sort((a, b) => 
+              new Date(b.createdAt) - new Date(a.createdAt)
+            )
+          }));
           setComments(prev => {
             const posting = prev.filter(c => c._posting);
-            return [...posting, ...(data.comments || [])];
+            return [...posting, ...commentsWithSortedReplies];
           });
         }
       } catch (err) {}

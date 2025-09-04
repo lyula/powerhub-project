@@ -12,26 +12,20 @@ import SubscribeButton from '../components/SubscribeButton';
 import ProgressBar from '../components/ProgressBar';
 import SimilarContentThumbnail from '../components/SimilarContentThumbnail';
 
-// Helper to count all comments, replies to comments, and replies to replies
+// Helper to count all comments and replies
 function getTotalCommentCount(comments) {
-  let count = 0;
-  function countReplies(replies) {
-    let replyCount = 0;
-    for (const reply of replies || []) {
-      replyCount++;
-      if (reply.replies && reply.replies.length > 0) {
-        replyCount += countReplies(reply.replies);
-      }
+  if (!comments || !Array.isArray(comments)) return 0;
+  
+  let total = comments.length; // Count the main comments
+  
+  // Add count of all replies
+  comments.forEach(comment => {
+    if (comment.replies && Array.isArray(comment.replies)) {
+      total += comment.replies.length;
     }
-    return replyCount;
-  }
-  for (const comment of comments || []) {
-    count++;
-    if (comment.replies && comment.replies.length > 0) {
-      count += countReplies(comment.replies);
-    }
-  }
-  return count;
+  });
+  
+  return total;
 }
 
 export default function Watch() {

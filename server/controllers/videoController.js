@@ -664,32 +664,32 @@ exports.deleteComment = async (req, res) => {
 // Delete a reply
 exports.deleteReply = async (req, res) => {
   try {
+    console.log('Delete reply request:', { videoId: req.params.id, body: req.body });
     const video = await require('../models/Video').findById(req.params.id);
     if (!video) return res.status(404).json({ error: 'Video not found' });
-    const { commentId, replyId, parentReplyId } = req.body;
+    const { commentId, replyId } = req.body;
+    console.log('Looking for comment:', commentId);
     const comment = video.comments.id(commentId);
     if (!comment) return res.status(404).json({ error: 'Comment not found' });
-    let reply;
-    if (parentReplyId) {
-      const parentReply = comment.replies.id(parentReplyId);
-      if (!parentReply || !parentReply.replies) return res.status(404).json({ error: 'Parent reply not found' });
-      reply = parentReply.replies.id(replyId);
-      if (!reply) return res.status(404).json({ error: 'Reply not found' });
-      if (reply.author.toString() !== req.user._id.toString()) {
-        return res.status(403).json({ error: 'Not authorized to delete this reply' });
-      }
-      reply.remove();
-    } else {
-      reply = comment.replies.id(replyId);
-      if (!reply) return res.status(404).json({ error: 'Reply not found' });
-      if (reply.author.toString() !== req.user._id.toString()) {
-        return res.status(403).json({ error: 'Not authorized to delete this reply' });
-      }
-      reply.remove();
+    
+    console.log('Looking for reply:', replyId, 'in', comment.replies.length, 'replies');
+    // With flattened structure, all replies are direct replies to the main comment
+    const reply = comment.replies.id(replyId);
+    if (!reply) return res.status(404).json({ error: 'Reply not found' });
+    
+    console.log('Found reply, checking authorization');
+    if (reply.author.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: 'Not authorized to delete this reply' });
     }
+    
+    console.log('Removing reply');
+    // Use pull method to remove the reply
+    comment.replies.pull(replyId);
     await video.save();
+    console.log('Reply deleted successfully');
     res.json({ success: true });
   } catch (err) {
+    console.error('Delete reply error:', err);
     res.status(500).json({ error: 'Failed to delete reply', details: err.message });
   }
 };
