@@ -244,3 +244,79 @@ exports.getPostsBySpecialization = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch specialization posts', details: err.message });
   }
 };
+
+// Edit a comment
+exports.editComment = async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+    const comment = post.comments.id(req.params.commentId);
+    if (!comment) return res.status(404).json({ error: 'Comment not found' });
+    if (comment.author.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    comment.content = req.body.content;
+    await post.save();
+    res.json({ comment });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to edit comment', details: err.message });
+  }
+};
+
+// Delete a comment
+exports.deleteComment = async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+    const comment = post.comments.id(req.params.commentId);
+    if (!comment) return res.status(404).json({ error: 'Comment not found' });
+    if (comment.author.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    comment.remove();
+    await post.save();
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete comment', details: err.message });
+  }
+};
+
+// Edit a reply
+exports.editReply = async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+    const comment = post.comments.id(req.params.commentId);
+    if (!comment) return res.status(404).json({ error: 'Comment not found' });
+    const reply = comment.replies.id(req.params.replyId);
+    if (!reply) return res.status(404).json({ error: 'Reply not found' });
+    if (reply.author.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    reply.content = req.body.content;
+    await post.save();
+    res.json({ reply });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to edit reply', details: err.message });
+  }
+};
+
+// Delete a reply
+exports.deleteReply = async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+    const comment = post.comments.id(req.params.commentId);
+    if (!comment) return res.status(404).json({ error: 'Comment not found' });
+    const reply = comment.replies.id(req.params.replyId);
+    if (!reply) return res.status(404).json({ error: 'Reply not found' });
+    if (reply.author.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    reply.remove();
+    await post.save();
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete reply', details: err.message });
+  }
+};

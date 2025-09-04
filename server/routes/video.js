@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const videoController = require('../controllers/videoController');
@@ -31,6 +30,12 @@ router.post('/:id/comment/reply', auth, videoController.replyComment);
 router.post('/:id/comment/reply/like', auth, videoController.likeReply);
 router.post('/:id/comment/reply/unlike', auth, videoController.unlikeReply);
 
+// Edit video title/description
+router.put('/:id', auth, videoController.editVideo);
+// Edit a comment
+router.put('/:id/comment', auth, videoController.editComment);
+// Edit a reply
+router.put('/:id/comment/reply', auth, videoController.editReply);
 
 // Get all videos liked by the current user
 router.get('/liked', auth, videoController.getLikedVideos);

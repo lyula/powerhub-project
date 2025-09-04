@@ -39,7 +39,16 @@ router.get('/user/:userId', postController.getPostsByUser);
 // Get posts by specialization
 router.get('/specialization/:specialization', postController.getPostsBySpecialization);
 
-module.exports = router;
-
 // Increment view count
 router.post('/:id/view', auth, postController.incrementViewCount);
+
+// Edit comment
+router.put('/:id/comment/:commentId', auth, postController.editComment);
+// Delete comment
+router.delete('/:id/comment/:commentId', auth, postController.deleteComment);
+// Edit reply
+router.put('/:id/comment/:commentId/reply/:replyId', auth, postController.editReply);
+// Delete reply
+router.delete('/:id/comment/:commentId/reply/:replyId', auth, postController.deleteReply);
+
+module.exports = router;

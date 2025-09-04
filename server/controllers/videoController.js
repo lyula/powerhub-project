@@ -571,3 +571,68 @@ exports.getVideo = async (req, res) => {
     res.status(500).json({ error: 'Get video failed', details: err });
   }
 };
+
+// Edit video title/description
+exports.editVideo = async (req, res) => {
+  try {
+    const video = await require('../models/Video').findById(req.params.id);
+    if (!video) return res.status(404).json({ error: 'Video not found' });
+    if (video.channel.toString() !== req.user.channel?.toString()) {
+      return res.status(403).json({ error: 'Not authorized to edit this video' });
+    }
+    const { title, description } = req.body;
+    if (title) video.title = title;
+    if (description) video.description = description;
+    await video.save();
+    res.json(video);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to edit video', details: err.message });
+  }
+};
+
+// Edit a comment
+exports.editComment = async (req, res) => {
+  try {
+    const video = await require('../models/Video').findById(req.params.id);
+    if (!video) return res.status(404).json({ error: 'Video not found' });
+    const { commentId, text } = req.body;
+    const comment = video.comments.id(commentId);
+    if (!comment) return res.status(404).json({ error: 'Comment not found' });
+    if (comment.author.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: 'Not authorized to edit this comment' });
+    }
+    comment.text = text;
+    await video.save();
+    res.json(comment);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to edit comment', details: err.message });
+  }
+};
+
+// Edit a reply
+exports.editReply = async (req, res) => {
+  try {
+    const video = await require('../models/Video').findById(req.params.id);
+    if (!video) return res.status(404).json({ error: 'Video not found' });
+    const { commentId, replyId, text, parentReplyId } = req.body;
+    const comment = video.comments.id(commentId);
+    if (!comment) return res.status(404).json({ error: 'Comment not found' });
+    let reply;
+    if (parentReplyId) {
+      const parentReply = comment.replies.id(parentReplyId);
+      if (!parentReply || !parentReply.replies) return res.status(404).json({ error: 'Parent reply not found' });
+      reply = parentReply.replies.id(replyId);
+    } else {
+      reply = comment.replies.id(replyId);
+    }
+    if (!reply) return res.status(404).json({ error: 'Reply not found' });
+    if (reply.author.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: 'Not authorized to edit this reply' });
+    }
+    reply.text = text;
+    await video.save();
+    res.json(reply);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to edit reply', details: err.message });
+  }
+};
