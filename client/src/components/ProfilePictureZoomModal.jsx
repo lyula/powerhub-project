@@ -27,17 +27,28 @@ export default function ProfilePictureZoomModal({ open, onClose, profilePicture,
             </div>
           )}
           <div className="flex gap-3 items-center">
-            {/* Always show these icons, use socialLinks if available, else '#' */}
-            <a href={socialLinks?.linkedin || '#'} target="_blank" rel="noopener noreferrer" title="LinkedIn"><FaLinkedin className="text-blue-700 text-2xl" /></a>
-            <a href={socialLinks?.instagram || '#'} target="_blank" rel="noopener noreferrer" title="Instagram"><FaInstagram className="text-pink-500 text-2xl" /></a>
-            <a href={socialLinks?.whatsapp || '#'} target="_blank" rel="noopener noreferrer" title="WhatsApp"><FaWhatsapp className="text-green-500 text-2xl" /></a>
-            <a href={socialLinks?.github || '#'} target="_blank" rel="noopener noreferrer" title="GitHub"><FaGithub className="text-gray-200 text-2xl" /></a>
-            <a href={socialLinks?.email ? `mailto:${socialLinks.email}` : '#'} target="_blank" rel="noopener noreferrer" title="Email"><FaEnvelope className="text-yellow-400 text-2xl" /></a>
-            {/* Optionally show other icons if present */}
-            {socialLinks?.youtube && <a href={socialLinks.youtube} target="_blank" rel="noopener noreferrer" title="YouTube"><FaYoutube className="text-red-600 text-2xl" /></a>}
-            {socialLinks?.twitter && <a href={socialLinks.twitter} target="_blank" rel="noopener noreferrer" title="Twitter"><FaTwitter className="text-blue-400 text-2xl" /></a>}
-            {socialLinks?.facebook && <a href={socialLinks.facebook} target="_blank" rel="noopener noreferrer" title="Facebook"><FaFacebook className="text-blue-700 text-2xl" /></a>}
-            {socialLinks?.tiktok && <a href={socialLinks.tiktok} target="_blank" rel="noopener noreferrer" title="TikTok"><FaTiktok className="text-black text-2xl" /></a>}
+            {/* Only render icons for contact info that exists. If none, show only email. */}
+            {(() => {
+              const icons = [];
+              // Always show email icon if present
+              if (socialLinks?.email) {
+                icons.push(<a href={`mailto:${socialLinks.email}`} target="_blank" rel="noopener noreferrer" title={socialLinks.email} key="email"><FaEnvelope className="text-yellow-400 text-2xl" /></a>);
+              }
+              // Show other icons only if present
+              if (socialLinks?.linkedin) icons.push(<a href={socialLinks.linkedin} target="_blank" rel="noopener noreferrer" title="LinkedIn" key="linkedin"><FaLinkedin className="text-blue-700 text-2xl" /></a>);
+              if (socialLinks?.instagram) icons.push(<a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer" title="Instagram" key="instagram"><FaInstagram className="text-pink-500 text-2xl" /></a>);
+              if (socialLinks?.whatsapp) icons.push(<a href={socialLinks.whatsapp} target="_blank" rel="noopener noreferrer" title="WhatsApp" key="whatsapp"><FaWhatsapp className="text-green-500 text-2xl" /></a>);
+              if (socialLinks?.github) icons.push(<a href={socialLinks.github} target="_blank" rel="noopener noreferrer" title="GitHub" key="github"><FaGithub className="text-gray-200 text-2xl" /></a>);
+              if (socialLinks?.youtube) icons.push(<a href={socialLinks.youtube} target="_blank" rel="noopener noreferrer" title="YouTube" key="youtube"><FaYoutube className="text-red-600 text-2xl" /></a>);
+              if (socialLinks?.twitter) icons.push(<a href={socialLinks.twitter} target="_blank" rel="noopener noreferrer" title="Twitter" key="twitter"><FaTwitter className="text-blue-400 text-2xl" /></a>);
+              if (socialLinks?.facebook) icons.push(<a href={socialLinks.facebook} target="_blank" rel="noopener noreferrer" title="Facebook" key="facebook"><FaFacebook className="text-blue-700 text-2xl" /></a>);
+              if (socialLinks?.tiktok) icons.push(<a href={socialLinks.tiktok} target="_blank" rel="noopener noreferrer" title="TikTok" key="tiktok"><FaTiktok className="text-black text-2xl" /></a>);
+              // If no email, show disabled email icon
+              if (!socialLinks?.email && icons.length === 0) {
+                icons.push(<span title="No email available" key="email"><FaEnvelope className="text-gray-500 text-2xl opacity-50" /></span>);
+              }
+              return icons;
+            })()}
           </div>
         </div>
         <button

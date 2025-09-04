@@ -326,14 +326,7 @@ const PostDetails = () => {
   // Helper to open modal with profile picture and channel info
   const handleProfileClick = async (author) => {
     if (!author) return;
-    setModalData({
-      profilePicture: author.profilePicture || author.avatar || '/default-avatar.png',
-      channelName: author.username || '',
-      socialLinks: {},
-      hasChannel: false,
-      authorId: author._id || author.id || ''
-    });
-    // Fetch channel info if author has a channel
+    // Always fetch channel info and user contact info before opening modal
     if (author._id || author.id) {
       try {
         const apiUrl = import.meta.env.VITE_API_URL;
@@ -343,23 +336,42 @@ const PostDetails = () => {
           let hasChannel = false;
           let channelName = author.username || '';
           let socialLinks = {};
+          // Use contactInfo from user model for icons
+          if (data.contactInfo) {
+            socialLinks = data.contactInfo;
+          }
           if (data && data._id) {
             hasChannel = true;
             channelName = data.name || channelName;
-            socialLinks = data.socialLinks || {};
           } else if (data.channel && data.channel._id) {
             hasChannel = true;
             channelName = data.channel.name || channelName;
-            socialLinks = data.channel.socialLinks || {};
           }
-          setModalData(prev => ({
-            ...prev,
-            hasChannel,
+          setModalData({
+            profilePicture: author.profilePicture || author.avatar || '/default-avatar.png',
             channelName,
-            socialLinks
-          }));
+            socialLinks,
+            hasChannel,
+            authorId: author._id || author.id || ''
+          });
         }
-      } catch {}
+      } catch {
+        setModalData({
+          profilePicture: author.profilePicture || author.avatar || '/default-avatar.png',
+          channelName: author.username || '',
+          socialLinks: {},
+          hasChannel: false,
+          authorId: author._id || author.id || ''
+        });
+      }
+    } else {
+      setModalData({
+        profilePicture: author.profilePicture || author.avatar || '/default-avatar.png',
+        channelName: author.username || '',
+        socialLinks: {},
+        hasChannel: false,
+        authorId: author._id || author.id || ''
+      });
     }
     setModalOpen(true);
   };
@@ -552,7 +564,7 @@ const PostDetails = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                       </svg>
                     </button>
-                    <img src={post.author?.profilePicture || post.author?.avatar || post.author?.profile || '/default-avatar.png'} alt={post.author?.username || 'User'} className="w-12 h-12 rounded-full border-2 border-gray-300 dark:border-gray-700 flex-shrink-0" style={{ width: '48px', height: '48px', objectFit: 'cover', aspectRatio: '1/1', minWidth: '48px', minHeight: '48px', maxWidth: '48px', maxHeight: '48px' }} />
+                    <img src={post.author?.profilePicture || post.author?.avatar || post.author?.profile || '/default-avatar.png'} alt={post.author?.username || 'User'} className="w-12 h-12 rounded-full border-2 border-gray-300 dark:border-gray-700 flex-shrink-0 cursor-pointer" style={{ width: '48px', height: '48px', objectFit: 'cover', aspectRatio: '1/1', minWidth: '48px', minHeight: '48px', maxWidth: '48px', maxHeight: '48px' }} onClick={() => handleProfileClick(post.author)} />
                     <div className="flex flex-col min-w-0" style={{ flex: 1, minWidth: 0 }}>
                       <span className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{post.author?.username || 'Unknown'}</span>
                       {post.createdAt && (

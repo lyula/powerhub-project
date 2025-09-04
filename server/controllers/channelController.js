@@ -6,10 +6,21 @@ exports.getChannelByOwner = async (req, res) => {
     if (!channel) {
       return res.status(404).json({ error: 'Channel not found.' });
     }
+    // Fetch contact details from User model
+    const User = require('../models/User');
+    const user = await User.findById(ownerId).lean();
     // Optionally fetch videos for this channel
     const Video = require('../models/Video');
     const videos = await Video.find({ channel: channel._id }).sort({ createdAt: -1 });
-    res.json({ ...channel.toObject(), videos });
+    // Prepare contact info
+    const contactInfo = {
+      email: user?.email || '',
+      github: user?.github || '',
+      whatsapp: user?.whatsapp || '',
+      linkedin: user?.linkedin || '',
+      instagram: user?.instagram || ''
+    };
+    res.json({ ...channel.toObject(), videos, contactInfo });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

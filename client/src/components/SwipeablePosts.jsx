@@ -52,6 +52,8 @@ const ExpandablePostCard = ({ post }) => {
   const handleProfilePictureClick = async (author) => {
     const authorId = author._id || author.id;
     let hasChannel = false;
+    let channelName = author.username || author.firstName || 'Unknown';
+    let socialLinks = {};
     if (authorId) {
       try {
         const apiUrl = import.meta.env.VITE_API_URL;
@@ -60,14 +62,18 @@ const ExpandablePostCard = ({ post }) => {
           const data = await res.json();
           if (data && data._id) {
             hasChannel = true;
+            channelName = data.name || channelName;
+          }
+          if (data.contactInfo) {
+            socialLinks = data.contactInfo;
           }
         }
       } catch (err) {}
     }
     setModalData({
       profilePicture: author.profilePicture || author.avatar || author.profile || '/default-avatar.png',
-      channelName: author.username || author.firstName || 'Unknown',
-      socialLinks: author.socialLinks || {},
+      channelName,
+      socialLinks,
       authorId,
       hasChannel
     });
