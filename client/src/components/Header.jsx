@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import ThemeToggle from './ThemeToggle';
 import NotificationModal from './NotificationModal';
 
-export default function Header({ onToggleSidebar }) {
+export default function Header({ onToggleSidebar, searchTerm, onSearchChange }) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showNotifModal, setShowNotifModal] = useState(false);
   const modalRoot = typeof window !== 'undefined' ? document.body : null;
@@ -16,6 +16,18 @@ export default function Header({ onToggleSidebar }) {
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const accountRef = useRef(null);
+  
+  const handleSearchChange = (e) => {
+    if (onSearchChange) {
+      onSearchChange(e.target.value);
+    }
+  };
+
+  const handleClearSearch = () => {
+    if (onSearchChange) {
+      onSearchChange('');
+    }
+  };
   
   const handleThemeToggle = () => {
     if (document.documentElement.classList.contains('dark')) {
@@ -77,19 +89,34 @@ export default function Header({ onToggleSidebar }) {
           <input
             type="text"
             placeholder="Search"
+            value={searchTerm || ''}
+            onChange={handleSearchChange}
             className="pl-4 pr-12 py-2 rounded-full bg-gray-200 dark:bg-gray-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0bb6bc] placeholder-gray-400 w-full text-base border border-gray-300 dark:border-gray-700"
             style={{ height: '40px' }}
           />
-          <button
-            type="button"
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-gray-300 dark:hover:bg-gray-700 transition"
-            aria-label="Search"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-5 h-5 text-gray-600 dark:text-gray-300">
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-          </button>
+          {searchTerm ? (
+            <button
+              type="button"
+              onClick={handleClearSearch}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-gray-300 dark:hover:bg-gray-700 transition"
+              aria-label="Clear search"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-5 h-5 text-gray-600 dark:text-gray-300">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-gray-300 dark:hover:bg-gray-700 transition"
+              aria-label="Search"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-5 h-5 text-gray-600 dark:text-gray-300">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
   <div className="flex items-center gap-6 ml-4">

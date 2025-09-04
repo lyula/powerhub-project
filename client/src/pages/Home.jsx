@@ -9,6 +9,7 @@ import BottomTabs from '../components/BottomTabs';
 import Filters from '../components/Filters';
 // import removed: fetchThumbnails
 import HomeThumbnail from '../components/HomeThumbnail';
+import { searchAndSortContent } from '../utils/searchUtility';
 
 // Format duration as h:mm:ss or m:ss
 function formatDuration(seconds) {
@@ -31,6 +32,9 @@ function formatViews(views) {
 export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [videos, setVideos] = useState([]);
+  const [allVideos, setAllVideos] = useState([]); // Store original videos for search
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchLoading, setSearchLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -45,6 +49,26 @@ export default function Home() {
 
   const handleToggleSidebar = () => setSidebarOpen((open) => !open);
   const [initialPreview, setInitialPreview] = useState(true);
+
+  // Handle search functionality with debouncing
+  const handleSearchChange = (term) => {
+    setSearchTerm(term);
+  };
+
+  // Debounced search effect
+  useEffect(() => {
+    if (searchTerm !== '') {
+      setSearchLoading(true);
+    }
+    
+    const timeoutId = setTimeout(() => {
+      const sortedVideos = searchAndSortContent(allVideos, searchTerm);
+      setVideos(sortedVideos);
+      setSearchLoading(false);
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, allVideos]);
 
   // Load videos from API or fallback to sample
   useEffect(() => {
@@ -72,19 +96,25 @@ export default function Home() {
                 videoUrl: v.videoUrl,
                 thumbnailUrl: v.thumbnailUrl || v.thumbnail || '/vite.svg',
                 title: v.title,
+                description: v.description || '',
+                hashtags: v.hashtags || [],
                 author: v.channel?.name || v.author || 'Unknown',
                 profile: v.channel?.avatar || 'https://randomuser.me/api/portraits/men/32.jpg',
                 views: v.viewCount || 0,
+                comments: v.comments || [],
+                likes: v.likes || [],
                 posted: postedAgo,
                 duration: typeof v.duration === 'number' ? v.duration : 0,
                 _id: v._id,
                 channelId: v.channel?._id || v.channel, // ensure channelId is present
+                channel: v.channel || {},
                 createdAt: v.createdAt ? new Date(v.createdAt) : null
               };
             });
             // Sort by createdAt descending (latest first)
-            formattedVideos.sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
-            setVideos(formattedVideos);
+            const sortedVideos = searchAndSortContent(formattedVideos, '');
+            setAllVideos(formattedVideos); // Store original videos
+            setVideos(sortedVideos);
             setLoading(false);
             return;
           }
@@ -94,8 +124,10 @@ export default function Home() {
           // ...existing code...
         ];
     // Load videos from API only
+        setAllVideos(sampleVideos);
         setVideos(sampleVideos);
       } catch (err) {
+        setAllVideos([]);
         setVideos([]);
       } finally {
         setLoading(false);
@@ -147,7 +179,13 @@ export default function Home() {
         </div>
       )}
       <div className="min-h-screen bg-gray-100 dark:bg-[#111111] w-full" style={{ overflowX: 'hidden', scrollbarWidth: 'none', maxWidth: '100vw' }}>
-        <HeaderFixed onToggleSidebar={handleToggleSidebar} showCreateModal={showCreateModal} setShowCreateModal={setShowCreateModal} />
+        <HeaderFixed 
+          onToggleSidebar={handleToggleSidebar} 
+          showCreateModal={showCreateModal} 
+          setShowCreateModal={setShowCreateModal}
+          searchTerm={searchTerm}
+          onSearchChange={handleSearchChange}
+        />
   <div className="flex flex-row w-full" style={{ height: '100vh', maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
           <SidebarFixed sidebarOpen={sidebarOpen} />
           {!sidebarOpen && (
@@ -155,12 +193,35 @@ export default function Home() {
               <StudentUtility />
             </div>
           )}
-          <div className={`flex-1 flex flex-col ${sidebarOpen ? 'ml-0 md:ml-64' : 'ml-0 md:ml-0'} w-full`} style={{ maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
+          <div className={`flex-1 flex flex-col ${sidebarOpen ? 'ml-0 md:ml-64' : 'ml-0 md:ml-0'} w-full pt-12`} style={{ maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
             <div className="p-2 md:p-4">
-              <h2 className="text-lg md:text-xl font-bold mb-2 text-[#0bb6bc] dark:text-[#0bb6bc]">Welcome to PowerHub</h2>
-              <div className="mt-4 md:mt-6">
-                <Filters />
-              </div>
+              {searchTerm && (
+                <div className="mb-4 px-3 py-2 bg-blue-50 dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-gray-700">
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    <span className="font-medium">Search results for:</span> "{searchTerm}"
+                    {searchLoading ? (
+                      <span className="ml-2 text-gray-600 dark:text-gray-400">
+                        <span className="inline-block animate-spin mr-1">⟳</span>
+                        Searching videos...
+                      </span>
+                    ) : (
+                      <span className="ml-2 text-gray-600 dark:text-gray-400">
+                        ({videos.length} video{videos.length !== 1 ? 's' : ''} found)
+                      </span>
+                    )}
+                  </p>
+                  {!searchLoading && videos.length === 0 && (
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      No videos found matching your search. Try different keywords.
+                    </p>
+                  )}
+                </div>
+              )}
+              {!searchTerm && (
+                <div className="mt-4 md:mt-6">
+                  <Filters />
+                </div>
+              )}
             </div>
             <main className="flex-1 p-1 sm:p-2 pb-0 overflow-y-auto w-full" style={{ maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
               <div
@@ -383,10 +444,16 @@ export default function Home() {
   );
 }
 
-function HeaderFixed({ onToggleSidebar, showCreateModal, setShowCreateModal }) {
+function HeaderFixed({ onToggleSidebar, showCreateModal, setShowCreateModal, searchTerm, onSearchChange }) {
   return (
     <div className="fixed top-0 left-0 w-full z-40" style={{ height: '44px' }}>
-      <Header onToggleSidebar={onToggleSidebar} showCreateModal={showCreateModal} setShowCreateModal={setShowCreateModal} />
+      <Header 
+        onToggleSidebar={onToggleSidebar} 
+        showCreateModal={showCreateModal} 
+        setShowCreateModal={setShowCreateModal}
+        searchTerm={searchTerm}
+        onSearchChange={onSearchChange}
+      />
     </div>
   );
 }
