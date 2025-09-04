@@ -103,21 +103,34 @@ exports.addReply = async (req, res) => {
     const comment = post.comments.id(commentId);
     if (!comment) return res.status(404).json({ error: 'Comment not found' });
 
+    let newReply;
     // If replyId is provided, reply to a reply (nested)
     if (replyId) {
       const parentReply = comment.replies.id(replyId);
       if (!parentReply) return res.status(404).json({ error: 'Parent reply not found' });
       parentReply.replies = parentReply.replies || [];
-      parentReply.replies.push({ author, content, taggedUser });
+      newReply = { author, content, taggedUser };
+      parentReply.replies.unshift(newReply); // Add at the beginning
     } else {
       // Reply to comment
-      comment.replies.push({ author, content, taggedUser });
+      newReply = { author, content, taggedUser };
+      comment.replies.unshift(newReply); // Add at the beginning
     }
     await post.save();
-    // Populate author for replies and nested replies
+    // Populate author for the new reply
     await post.populate('comments.replies.author', 'username profilePicture');
     await post.populate('comments.replies.replies.author', 'username profilePicture');
-    res.status(201).json(comment.replies);
+    
+    // Find and return the newly created reply with populated author
+    let populatedReply;
+    if (replyId) {
+      const parentReply = comment.replies.id(replyId);
+      populatedReply = parentReply.replies[0]; // First item since we used unshift
+    } else {
+      populatedReply = comment.replies[0]; // First item since we used unshift
+    }
+    
+    res.status(201).json({ reply: populatedReply });
   } catch (err) {
     res.status(500).json({ error: 'Failed to add reply', details: err.message });
   }
@@ -273,7 +286,7 @@ exports.deleteComment = async (req, res) => {
     if (comment.author.toString() !== req.user._id.toString()) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
-    comment.remove();
+    post.comments.pull(req.params.commentId);
     await post.save();
     res.json({ success: true });
   } catch (err) {
@@ -308,15 +321,39 @@ exports.deleteReply = async (req, res) => {
     if (!post) return res.status(404).json({ error: 'Post not found' });
     const comment = post.comments.id(req.params.commentId);
     if (!comment) return res.status(404).json({ error: 'Comment not found' });
-    const reply = comment.replies.id(req.params.replyId);
-    if (!reply) return res.status(404).json({ error: 'Reply not found' });
-    if (reply.author.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ error: 'Unauthorized' });
+    
+    // Function to recursively find and remove reply
+    const findAndRemoveReply = (replies, replyId, userId) => {
+      for (let i = 0; i < replies.length; i++) {
+        if (replies[i]._id.toString() === replyId) {
+          // Check if user is authorized to delete this reply
+          if (replies[i].author.toString() !== userId.toString()) {
+            throw new Error('Unauthorized');
+          }
+          replies.splice(i, 1);
+          return true;
+        }
+        // Check nested replies
+        if (replies[i].replies && replies[i].replies.length > 0) {
+          if (findAndRemoveReply(replies[i].replies, replyId, userId)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    };
+
+    const removed = findAndRemoveReply(comment.replies, req.params.replyId, req.user._id);
+    if (!removed) {
+      return res.status(404).json({ error: 'Reply not found' });
     }
-    reply.remove();
+
     await post.save();
     res.json({ success: true });
   } catch (err) {
+    if (err.message === 'Unauthorized') {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
     res.status(500).json({ error: 'Failed to delete reply', details: err.message });
   }
 };

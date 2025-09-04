@@ -7,6 +7,7 @@ import Sidebar from '../components/Sidebar';
 import StudentUtility from '../components/StudentUtility';
 import BottomTabs from '../components/BottomTabs';
 import ProfilePictureZoomModal from '../components/ProfilePictureZoomModal';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 // Helper to format relative time
 const formatRelativeTime = (dateString) => {
@@ -25,24 +26,50 @@ const formatRelativeTime = (dateString) => {
 
 // Helper to count all comments and replies recursively
 const countAllComments = (comments) => {
+  if (!comments || !Array.isArray(comments)) return 0;
+  
   let count = 0;
   const countRecursive = (arr) => {
+    if (!arr || !Array.isArray(arr)) return;
+    
     for (const item of arr) {
+      if (!item) continue;
       count++;
-      if (item.replies && item.replies.length > 0) {
+      if (item.replies && Array.isArray(item.replies) && item.replies.length > 0) {
         countRecursive(item.replies);
       }
     }
   };
-  if (Array.isArray(comments)) countRecursive(comments);
+  
+  countRecursive(comments);
   return count;
 };
 
 // CommentThread component for rendering comments and replies
-const CommentThread = ({ comments, postId, token, userId, onReply, replyingTo, replyText, setReplyText, handleAddReply, handleLike, handleLikeReply, onProfileClick, editingCommentId, editContent, setEditContent, handleEditComment, handleEditCommentSave, handleEditCommentCancel, editingReply, handleEditReply, handleEditReplySave, handleEditReplyCancel }) => {
+const CommentThread = ({ comments, postId, token, userId, onReply, replyingTo, replyText, setReplyText, handleAddReply, handleLike, handleLikeReply, onProfileClick, editingCommentId, editContent, setEditContent, handleEditComment, handleEditCommentSave, handleEditCommentCancel, editingReply, handleEditReply, handleEditReplySave, handleEditReplyCancel, handleDeleteComment, handleDeleteReply, autoExpandReplies, onRemoveAutoExpand }) => {
   const [expandedReplies, setExpandedReplies] = useState({});
   const [shownReplies, setShownReplies] = useState({});
   const REPLIES_BATCH = 3;
+
+  // Auto-expand effect: when a comment is added to autoExpandReplies, set its state
+  React.useEffect(() => {
+    if (autoExpandReplies && autoExpandReplies.size > 0) {
+      autoExpandReplies.forEach(commentId => {
+        if (!expandedReplies[commentId]) {
+          setExpandedReplies(prev => ({ ...prev, [commentId]: true }));
+          // Find the comment to get the total replies count
+          const comment = comments.find(c => c._id === commentId);
+          if (comment && comment.replies) {
+            const totalReplies = countAllComments(comment.replies);
+            setShownReplies(prev => ({ 
+              ...prev, 
+              [commentId]: Math.min(REPLIES_BATCH, totalReplies) 
+            }));
+          }
+        }
+      });
+    }
+  }, [autoExpandReplies, comments, expandedReplies]);
 
   const handleViewReplies = (commentId, total) => {
     setExpandedReplies((prev) => ({ ...prev, [commentId]: true }));
@@ -56,6 +83,10 @@ const CommentThread = ({ comments, postId, token, userId, onReply, replyingTo, r
   const handleHideReplies = (commentId) => {
     setExpandedReplies((prev) => ({ ...prev, [commentId]: false }));
     setShownReplies((prev) => ({ ...prev, [commentId]: 0 }));
+    // Remove from auto-expand set when manually collapsed
+    if (onRemoveAutoExpand) {
+      onRemoveAutoExpand(commentId);
+    }
   };
 
   return (
@@ -190,7 +221,7 @@ const CommentThread = ({ comments, postId, token, userId, onReply, replyingTo, r
                   </button>
                 ) : (
                   <>
-                    {comment.replies.slice(0, numToShow).map((reply) => (
+                    {comment.replies.slice(0, numToShow).filter(reply => reply).map((reply) => (
                       <div key={reply._id} className="py-2 px-0">
                         <div className="flex items-center gap-2 mb-1">
                           <img
@@ -318,6 +349,10 @@ const CommentThread = ({ comments, postId, token, userId, onReply, replyingTo, r
                               setReplyText={setReplyText}
                               handleAddReply={handleAddReply}
                               onProfileClick={onProfileClick}
+                              handleDeleteComment={handleDeleteComment}
+                              handleDeleteReply={handleDeleteReply}
+                              autoExpandReplies={autoExpandReplies}
+                              onRemoveAutoExpand={onRemoveAutoExpand}
                             />
                           </div>
                         )}
@@ -395,6 +430,13 @@ const PostDetails = () => {
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editContent, setEditContent] = useState('');
   const [editingReply, setEditingReply] = useState({ commentId: null, replyId: null });
+  const [autoExpandReplies, setAutoExpandReplies] = useState(new Set());
+  const [confirmationModal, setConfirmationModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: null
+  });
   const [modalOpen, setModalOpen] = useState(false);
   const [modalData, setModalData] = useState({
     profilePicture: '',
@@ -495,12 +537,12 @@ const PostDetails = () => {
       const data = await res.json();
       setPost((prev) => ({
         ...prev,
-        comments: [data.comment, ...prev.comments.filter((c) => !c._posting)]
+        comments: [data.comment, ...prev.comments.filter((c) => c && !c._posting)]
       }));
     } catch (err) {
       setPost((prev) => ({
         ...prev,
-        comments: prev.comments.filter((c) => !c._posting)
+        comments: prev.comments.filter((c) => c && !c._posting)
       }));
       setCommentError(err.message || 'Failed to post comment');
     } finally {
@@ -508,41 +550,30 @@ const PostDetails = () => {
     }
   };
 
+  const handleRemoveAutoExpand = (commentId) => {
+    setAutoExpandReplies(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(commentId);
+      return newSet;
+    });
+  };
+
+  const handleSetShownReplies = (commentId, count) => {
+    // This will be passed to CommentThread to allow it to update shownReplies state
+    // when auto-expanding
+  };
+
   const handleAddReply = async (e, commentId, replyId, taggedUser) => {
     e.preventDefault();
     if (!replyText.trim() || !user || !token) return;
-    const optimisticReply = {
-      _id: `temp_${Date.now()}`,
-      content: replyId ? `@${taggedUser} ${replyText}` : replyText,
-      author: { _id: user._id, ...user },
-      createdAt: new Date().toISOString(),
-      likes: [],
-      replies: [],
-      _posting: true
-    };
-    setPost((prev) => ({
-      ...prev,
-      comments: prev.comments.map((c) => {
-        if (c._id === commentId) {
-          if (replyId) {
-            const updateReplies = (replies) =>
-              replies.map((r) =>
-                r._id === replyId
-                  ? { ...r, replies: [...(r.replies || []), optimisticReply] }
-                  : r.replies
-                  ? { ...r, replies: updateReplies(r.replies) }
-                  : r
-              );
-            return { ...c, replies: updateReplies(c.replies || []) };
-          } else {
-            return { ...c, replies: [...(c.replies || []), optimisticReply] };
-          }
-        }
-        return c;
-      })
-    }));
+    
+    const replyContent = replyText;
     setReplyText('');
     setReplyingTo(null);
+    
+    // Auto-expand replies for this comment
+    setAutoExpandReplies(prev => new Set([...prev, commentId]));
+    
     try {
       const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}/comment/reply`, {
         method: 'POST',
@@ -550,53 +581,46 @@ const PostDetails = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ commentId, content: replyText, taggedUser: replyId ? taggedUser : undefined })
+        body: JSON.stringify({ 
+          commentId, 
+          content: replyContent, 
+          replyId: replyId || undefined,
+          taggedUser: taggedUser || undefined 
+        })
       });
       if (!res.ok) throw new Error('Failed to add reply');
       const data = await res.json();
-      setPost((prev) => ({
-        ...prev,
-        comments: prev.comments.map((c) => {
-          if (c._id === commentId) {
-            if (replyId) {
-              const updateReplies = (replies) =>
-                replies.map((r) =>
-                  r._id === replyId
-                    ? { ...r, replies: [...(r.replies || []).filter((r) => !r._posting), data.reply] }
-                    : r.replies
-                    ? { ...r, replies: updateReplies(r.replies) }
-                    : r
-                );
-              return { ...c, replies: updateReplies(c.replies || []) };
-            } else {
-              return { ...c, replies: [...(c.replies || []).filter((r) => !r._posting), data.reply] };
+      
+      // Simply add the server reply at the top
+      setPost((prev) => {
+        const newPost = {
+          ...prev,
+          comments: prev.comments.map((c) => {
+            if (c._id === commentId) {
+              if (replyId) {
+                // For nested replies
+                const updateReplies = (replies) =>
+                  replies.map((r) =>
+                    r && r._id === replyId
+                      ? { ...r, replies: [data.reply, ...(r.replies || [])] }
+                      : r && r.replies
+                      ? { ...r, replies: updateReplies(r.replies) }
+                      : r
+                  );
+                return { ...c, replies: updateReplies(c.replies || []) };
+              } else {
+                // For direct replies to comment - add at the top
+                return { ...c, replies: [data.reply, ...(c.replies || [])] };
+              }
             }
-          }
-          return c;
-        })
-      }));
-    } catch {
-      setPost((prev) => ({
-        ...prev,
-        comments: prev.comments.map((c) => {
-          if (c._id === commentId) {
-            if (replyId) {
-              const updateReplies = (replies) =>
-                replies.map((r) =>
-                  r._id === replyId
-                    ? { ...r, replies: (r.replies || []).filter((r) => !r._posting) }
-                    : r.replies
-                    ? { ...r, replies: updateReplies(r.replies) }
-                    : r
-                );
-              return { ...c, replies: updateReplies(c.replies || []) };
-            } else {
-              return { ...c, replies: (c.replies || []).filter((r) => !r._posting) };
-            }
-          }
-          return c;
-        })
-      }));
+            return c;
+          })
+        };
+        return newPost;
+      });
+    } catch (error) {
+      console.error('Error adding reply:', error);
+      setReplyText(replyContent); // Restore text on error
     }
   };
 
@@ -691,7 +715,20 @@ const PostDetails = () => {
   };
 
   const handleDeleteComment = async (commentId) => {
-    if (!window.confirm('Delete this comment?')) return;
+    const confirmDelete = () => {
+      setConfirmationModal({ isOpen: false, title: '', message: '', onConfirm: null });
+      performDeleteComment(commentId);
+    };
+
+    setConfirmationModal({
+      isOpen: true,
+      title: 'Delete Comment',
+      message: 'Are you sure you want to delete this comment? This action cannot be undone.',
+      onConfirm: confirmDelete
+    });
+  };
+
+  const performDeleteComment = async (commentId) => {
     let prevComments;
     setPost((prev) => {
       prevComments = prev.comments;
@@ -705,13 +742,27 @@ const PostDetails = () => {
         }
       });
       if (!res.ok) throw new Error('Failed to delete comment');
-    } catch {
+    } catch (error) {
+      console.error('Error deleting comment:', error);
       setPost((prev) => ({ ...prev, comments: prevComments }));
     }
   };
 
   const handleDeleteReply = async (commentId, replyId) => {
-    if (!window.confirm('Delete this reply?')) return;
+    const confirmDelete = () => {
+      setConfirmationModal({ isOpen: false, title: '', message: '', onConfirm: null });
+      performDeleteReply(commentId, replyId);
+    };
+
+    setConfirmationModal({
+      isOpen: true,
+      title: 'Delete Reply',
+      message: 'Are you sure you want to delete this reply? This action cannot be undone.',
+      onConfirm: confirmDelete
+    });
+  };
+
+  const performDeleteReply = async (commentId, replyId) => {
     let prevComments;
     setPost((prev) => {
       prevComments = prev.comments;
@@ -734,7 +785,8 @@ const PostDetails = () => {
         }
       });
       if (!res.ok) throw new Error('Failed to delete reply');
-    } catch {
+    } catch (error) {
+      console.error('Error deleting reply:', error);
       setPost((prev) => ({ ...prev, comments: prevComments }));
     }
   };
@@ -860,6 +912,33 @@ const PostDetails = () => {
     localStorage.removeItem('postDetailsData');
   }, [postId]);
 
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-100 dark:bg-[#111111] flex items-center justify-center">
+        <div className="text-xl text-gray-600 dark:text-gray-400">Loading post...</div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-100 dark:bg-[#111111] flex items-center justify-center">
+        <div className="text-xl text-red-600 dark:text-red-400">Error: {error}</div>
+      </div>
+    );
+  }
+
+  // Show not found state
+  if (!post) {
+    return (
+      <div className="min-h-screen bg-gray-100 dark:bg-[#111111] flex items-center justify-center">
+        <div className="text-xl text-gray-600 dark:text-gray-400">Post not found</div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div
@@ -968,7 +1047,7 @@ const PostDetails = () => {
                   <div className="p-4 pt-0 border-t border-gray-200 dark:border-gray-700">
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="text-lg font-bold text-black dark:text-white">
-                        Comments ({countAllComments(post.comments)})
+                        Comments ({countAllComments(post?.comments || [])})
                       </h3>
                       <div className="flex items-center gap-1">
                         <FaChartBar className="w-5 h-5 text-gray-500 dark:text-gray-400" />
@@ -1022,6 +1101,10 @@ const PostDetails = () => {
                           handleEditReply={handleEditReply}
                           handleEditReplySave={handleEditReplySave}
                           handleEditReplyCancel={handleEditReplyCancel}
+                          handleDeleteComment={handleDeleteComment}
+                          handleDeleteReply={handleDeleteReply}
+                          autoExpandReplies={autoExpandReplies}
+                          onRemoveAutoExpand={handleRemoveAutoExpand}
                         />
                       </div>
                     ) : (
@@ -1051,6 +1134,16 @@ const PostDetails = () => {
           }}
         />
       )}
+      
+      <ConfirmationModal
+        isOpen={confirmationModal.isOpen}
+        onClose={() => setConfirmationModal({ isOpen: false, title: '', message: '', onConfirm: null })}
+        onConfirm={confirmationModal.onConfirm}
+        title={confirmationModal.title}
+        message={confirmationModal.message}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
     </>
   );
 };
