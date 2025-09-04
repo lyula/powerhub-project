@@ -92,7 +92,26 @@ export default function LikedVideos() {
               {/* Video list (vertical) */}
               <div className="flex-1">
                 {loading ? (
-                  <div className="text-center text-gray-500 dark:text-gray-400">Loading liked videos...</div>
+                  <div className="flex flex-col gap-2" aria-label="Loading skeleton">
+                    {[...Array(6)].map((_, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-4 bg-white dark:bg-[#222] rounded-lg shadow-md overflow-hidden animate-pulse"
+                        style={{ minHeight: '80px' }}
+                      >
+                        <div className="relative w-32 h-20 bg-gray-200 dark:bg-gray-700 rounded-l-lg" />
+                        <div className="flex-1 min-w-0 py-2">
+                          <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2" />
+                          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-1" />
+                          <div className="flex gap-2">
+                            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-12" />
+                            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-4" />
+                            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-16" />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 ) : error ? (
                   <div className="text-center text-red-500">{error}</div>
                 ) : paginatedVideos.length === 0 ? (
