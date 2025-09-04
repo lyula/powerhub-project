@@ -410,14 +410,16 @@ exports.addComment = async (req, res) => {
     const author = req.user._id;
     video.comments.push({ author, text });
     await video.save();
-    // Populate author for all comments and replies
-    let updatedVideo = await Video.findById(video._id)
-      .populate('comments.author', 'username avatar profilePicture firstName lastName')
-      .populate('comments.replies.author', 'username avatar profilePicture firstName lastName')
-      .lean();
-    res.json(updatedVideo);
+    // Re-fetch video and populate author for comments
+    const populatedVideo = await Video.findById(video._id)
+      .populate('comments.author', 'username avatar profilePicture firstName lastName');
+    // Get the last comment (just added)
+    const newComment = populatedVideo.comments[populatedVideo.comments.length - 1];
+    console.log('Returning new comment:', newComment);
+    res.json(newComment);
   } catch (err) {
-    res.status(500).json({ error: 'Comment failed', details: err });
+    console.error('Add comment error:', err);
+    res.status(500).json({ error: 'Comment failed', details: err.message });
   }
 };
 
@@ -602,6 +604,7 @@ exports.editComment = async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to edit this comment' });
     }
     comment.text = text;
+    comment.editedAt = new Date();
     await video.save();
     res.json(comment);
   } catch (err) {
@@ -630,9 +633,63 @@ exports.editReply = async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to edit this reply' });
     }
     reply.text = text;
+    reply.editedAt = new Date();
     await video.save();
     res.json(reply);
   } catch (err) {
     res.status(500).json({ error: 'Failed to edit reply', details: err.message });
+  }
+};
+
+// Delete a comment
+exports.deleteComment = async (req, res) => {
+  try {
+    const video = await require('../models/Video').findById(req.params.id);
+    if (!video) return res.status(404).json({ error: 'Video not found' });
+    const { commentId } = req.body;
+    const comment = video.comments.id(commentId);
+    if (!comment) return res.status(404).json({ error: 'Comment not found' });
+    if (comment.author.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: 'Not authorized to delete this comment' });
+    }
+  // Remove the comment using Mongoose array pull
+  video.comments.pull(commentId);
+  await video.save();
+  res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete comment', details: err.message });
+  }
+};
+
+// Delete a reply
+exports.deleteReply = async (req, res) => {
+  try {
+    const video = await require('../models/Video').findById(req.params.id);
+    if (!video) return res.status(404).json({ error: 'Video not found' });
+    const { commentId, replyId, parentReplyId } = req.body;
+    const comment = video.comments.id(commentId);
+    if (!comment) return res.status(404).json({ error: 'Comment not found' });
+    let reply;
+    if (parentReplyId) {
+      const parentReply = comment.replies.id(parentReplyId);
+      if (!parentReply || !parentReply.replies) return res.status(404).json({ error: 'Parent reply not found' });
+      reply = parentReply.replies.id(replyId);
+      if (!reply) return res.status(404).json({ error: 'Reply not found' });
+      if (reply.author.toString() !== req.user._id.toString()) {
+        return res.status(403).json({ error: 'Not authorized to delete this reply' });
+      }
+      reply.remove();
+    } else {
+      reply = comment.replies.id(replyId);
+      if (!reply) return res.status(404).json({ error: 'Reply not found' });
+      if (reply.author.toString() !== req.user._id.toString()) {
+        return res.status(403).json({ error: 'Not authorized to delete this reply' });
+      }
+      reply.remove();
+    }
+    await video.save();
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete reply', details: err.message });
   }
 };

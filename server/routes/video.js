@@ -37,6 +37,11 @@ router.put('/:id/comment', auth, videoController.editComment);
 // Edit a reply
 router.put('/:id/comment/reply', auth, videoController.editReply);
 
+// Delete a comment
+router.delete('/:id/comment', auth, videoController.deleteComment);
+// Delete a reply
+router.delete('/:id/comment/reply', auth, videoController.deleteReply);
+
 // Get all videos liked by the current user
 router.get('/liked', auth, videoController.getLikedVideos);
 

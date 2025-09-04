@@ -58,16 +58,6 @@ const Comments = ({ videoId, channel }) => {
   const handleAddComment = async (e) => {
     e.preventDefault();
     if (!commentText.trim() || !user || !token) return;
-    const optimisticComment = {
-      _id: `temp_${Date.now()}`,
-      text: commentText,
-      author: { _id: user._id, username: user.username, profilePicture: user.profilePicture },
-      createdAt: new Date().toISOString(),
-      likes: [],
-      replies: []
-    };
-    setComments((prev) => [optimisticComment, ...prev]);
-    setCommentText('');
     try {
       const res = await fetch(`${API_BASE_URL}/videos/${videoId}/comment`, {
         method: 'POST',
@@ -79,12 +69,11 @@ const Comments = ({ videoId, channel }) => {
       });
       if (res.ok) {
         const data = await res.json();
-        setComments((prev) => [data, ...prev.filter(c => c._id !== optimisticComment._id)]);
-      } else {
-        setComments((prev) => prev.filter(c => c._id !== optimisticComment._id));
+        setComments((prev) => [data, ...prev]);
+        setCommentText('');
       }
     } catch (err) {
-      setComments((prev) => prev.filter(c => c._id !== optimisticComment._id));
+      // Optionally show error to user
     }
   };
 
@@ -334,8 +323,12 @@ const Comments = ({ videoId, channel }) => {
         },
         body: JSON.stringify({ commentId })
       });
-      if (!res.ok) {
+      const result = await res.json().catch(() => null);
+      if (res.ok) {
+        setComments((prev) => prev.filter(comment => comment._id !== commentId));
+      } else {
         setComments(prevComments);
+        alert(`Delete failed: ${result?.error || res.status}`);
       }
     } catch (err) {
       setComments(prevComments);
@@ -345,28 +338,8 @@ const Comments = ({ videoId, channel }) => {
   // Handle deleting a reply
   const handleDeleteReply = async (commentId, replyId, parentReplyId = null) => {
     const prevComments = comments;
-    setComments((prev) => prev.map(comment => {
-      if (comment._id === commentId) {
-        if (parentReplyId) {
-          return {
-            ...comment,
-            replies: comment.replies.map(reply => {
-              if (reply._id === parentReplyId) {
-                return { ...reply, replies: reply.replies.filter(subReply => subReply._id !== replyId) };
-              }
-              return reply;
-            })
-          };
-        } else {
-          return { ...comment, replies: comment.replies.filter(reply => reply._id !== replyId) };
-        }
-      }
-      return comment;
-    }));
     try {
-      const url = parentReplyId
-        ? `${API_BASE_URL}/videos/${videoId}/comment/reply/reply`
-        : `${API_BASE_URL}/videos/${videoId}/comment/reply`;
+      const url = `${API_BASE_URL}/videos/${videoId}/comment/reply`;
       const body = parentReplyId ? { commentId, replyId, parentReplyId } : { commentId, replyId };
       const res = await fetch(url, {
         method: 'DELETE',
@@ -376,7 +349,26 @@ const Comments = ({ videoId, channel }) => {
         },
         body: JSON.stringify(body)
       });
-      if (!res.ok) {
+      if (res.ok) {
+        setComments((prev) => prev.map(comment => {
+          if (comment._id === commentId) {
+            if (parentReplyId) {
+              return {
+                ...comment,
+                replies: comment.replies.map(reply => {
+                  if (reply._id === parentReplyId) {
+                    return { ...reply, replies: reply.replies.filter(subReply => subReply._id !== replyId) };
+                  }
+                  return reply;
+                })
+              };
+            } else {
+              return { ...comment, replies: comment.replies.filter(reply => reply._id !== replyId) };
+            }
+          }
+          return comment;
+        }));
+      } else {
         setComments(prevComments);
       }
     } catch (err) {
@@ -625,9 +617,6 @@ const Comments = ({ videoId, channel }) => {
                   className="flex items-center gap-1 text-gray-700 dark:text-gray-200 hover:text-blue-500 transition bg-transparent border-none p-0"
                   onClick={() => handleReply(comment._id)}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h10a8 8 0 018 8v2M3 10l6-6m0 0l6 6" />
-                  </svg>
                   <span className="text-xs">Reply ({totalReplies})</span>
                 </button>
               </div>
@@ -740,9 +729,6 @@ const Comments = ({ videoId, channel }) => {
                                 className="flex items-center gap-1 text-gray-700 dark:text-gray-200 hover:text-blue-500 transition bg-transparent border-none p-0"
                                 onClick={() => handleReply(comment._id, reply._id)}
                               >
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h10a8 8 0 018 8v2M3 10l6-6m0 0l6 6" />
-                                </svg>
                                 <span className="text-xs">Reply</span>
                               </button>
                               {isReplyAuthor && (
@@ -896,7 +882,11 @@ const Comments = ({ videoId, channel }) => {
         const res = await fetch(`${API_BASE_URL}/videos/${videoId}`);
         if (res.ok) {
           const data = await res.json();
-          setComments(data.comments || []);
+          setComments(prev => {
+            // Keep any optimistic comments still posting
+            const posting = prev.filter(c => c._posting);
+            return [...posting, ...(data.comments || [])];
+          });
         }
       } catch (err) {}
     };
