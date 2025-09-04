@@ -213,7 +213,7 @@ const Comments = ({ videoId, channel }) => {
     setEditCommentText('');
     try {
       const res = await fetch(`${API_BASE_URL}/videos/${videoId}/comment`, {
-        method: 'PATCH',
+  method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -274,7 +274,7 @@ const Comments = ({ videoId, channel }) => {
       const url = `${API_BASE_URL}/videos/${videoId}/comment/reply`;
       const body = parentReplyId ? { commentId, replyId, text: editReplyText, parentReplyId } : { commentId, replyId, text: editReplyText };
       const res = await fetch(url, {
-        method: 'PATCH',
+  method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
