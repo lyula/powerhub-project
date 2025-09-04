@@ -182,7 +182,7 @@ const ExpandablePostCard = ({ post }) => {
               target="_blank"
               rel="noopener noreferrer"
               className="text-[#0bb6bc] dark:text-[#0bb6bc] font-medium underline hover:text-[#099ca1] text-[15px] mt-1"
-              onClick={e => e.stopPropagation()}
+              onClick={e => { e.stopPropagation(); navigateToPostDetails(); }}
             >
               Learn more
             </a>
@@ -195,7 +195,7 @@ const ExpandablePostCard = ({ post }) => {
               alt={post.content?.slice(0, 20) || 'Post image'}
               className="w-32 h-32 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
               style={{ minWidth: '8rem', minHeight: '8rem' }}
-              onClick={e => e.stopPropagation()}
+              onClick={e => { e.stopPropagation(); navigateToPostDetails(); }}
             />
           </div>
         ) : null}
