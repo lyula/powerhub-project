@@ -33,7 +33,15 @@ export default function Filters() {
         style={{ minWidth: 0, overflowX: 'auto', width: '100%' }}
       >
         {loading ? (
-          <span className="text-gray-400">Loading filters...</span>
+          Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className="px-3 py-1 rounded-full text-xs sm:text-sm md:text-base font-medium bg-gray-200 dark:bg-gray-700 animate-pulse"
+              style={{ minWidth: 'max-content', wordBreak: 'keep-all', fontSize: 'inherit' }}
+            >
+              &nbsp;
+            </div>
+          ))
         ) : categories.length === 0 ? (
           <span className="text-gray-400">No filters found</span>
         ) : (
