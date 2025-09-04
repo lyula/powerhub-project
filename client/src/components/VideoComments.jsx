@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from '../context/AuthContext';
 import ProfilePictureZoomModal from './ProfilePictureZoomModal';
-import ThreeDotsMenu from './ThreeDotsMenu'; // Added missing import
+import ThreeDotsMenu from './ThreeDotsMenu';
 import EditPortal from './EditPortal';
 
 const Comments = ({ videoId, channel }) => {
@@ -17,6 +17,7 @@ const Comments = ({ videoId, channel }) => {
   const [editReplyParentId, setEditReplyParentId] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalData, setModalData] = useState({});
+  const [previewedId, setPreviewedId] = useState(null);
   const [likeLoading, setLikeLoading] = useState({});
   const [expandedReplies, setExpandedReplies] = useState({}); // { [commentId]: number }
   const API_BASE_URL = import.meta.env.VITE_API_URL;
@@ -26,18 +27,14 @@ const Comments = ({ videoId, channel }) => {
     if (!dateString) return 'just now';
     const posted = new Date(dateString);
     const now = new Date();
-    const diff = Math.floor((now - posted) / 1000);
-    if (diff < 60) return 'just now';
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    if (diff < 2592000) return `${Math.floor(diff / 86400)}d ago`;
-    if (diff < 31536000) return `${Math.floor(diff / 2592000)}mth ago`;
-    return `${Math.floor(diff / 31536000)}yr ago`;
-  };
-
-  // Helper to get display name
-  const getDisplayName = (author, channel) => {
-    return author?.username || author?.firstName || channel?.name || 'Unknown';
+    const diffInSeconds = Math.floor((now - posted) / 1000);
+    if (diffInSeconds < 60) return 'just now';
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    if (diffInMinutes < 60) return `${diffInMinutes} minute${diffInMinutes === 1 ? '' : 's'} ago`;
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `${diffInHours} hour${diffInHours === 1 ? '' : 's'} ago`;
+    const diffInDays = Math.floor(diffInHours / 24);
+    return `${diffInDays} day${diffInDays === 1 ? '' : 's'} ago`;
   };
 
   // Helper to get avatar
@@ -45,19 +42,36 @@ const Comments = ({ videoId, channel }) => {
     return author?.profilePicture || author?.avatar || 'https://randomuser.me/api/portraits/lego/1.jpg';
   };
 
-  // Helper to get total comment count (including replies)
+  // Helper to get display name
+  const getDisplayName = (author) => {
+    return author?.username || author?.firstName || 'Unknown';
+  };
+
+  // Helper to get total comment count
   const getTotalCommentCount = (commentsList) => {
-    return commentsList.reduce((count, comment) => {
-      return count + 1 + (comment.replies ? comment.replies.reduce((replyCount, reply) => {
-        return replyCount + 1 + (reply.replies ? reply.replies.length : 0);
-      }, 0) : 0);
+    return commentsList.reduce((total, comment) => {
+      const repliesCount = comment.replies?.reduce((acc, reply) => {
+        return acc + 1 + (reply.replies?.length || 0);
+      }, 0) || 0;
+      return total + 1 + repliesCount;
     }, 0);
   };
 
-  // Handle adding a new comment
+  // Handle adding a comment
   const handleAddComment = async (e) => {
     e.preventDefault();
     if (!commentText.trim() || !user || !token) return;
+    const optimisticComment = {
+      _id: `temp_${Date.now()}`,
+      text: commentText,
+      author: { _id: user._id, ...user },
+      createdAt: new Date().toISOString(),
+      likes: [],
+      replies: [],
+      _posting: true
+    };
+    setComments((prev) => [optimisticComment, ...prev]);
+    setCommentText('');
     try {
       const res = await fetch(`${API_BASE_URL}/videos/${videoId}/comment`, {
         method: 'POST',
@@ -68,44 +82,39 @@ const Comments = ({ videoId, channel }) => {
         body: JSON.stringify({ text: commentText })
       });
       if (res.ok) {
-        const data = await res.json();
-        setComments((prev) => [data, ...prev]);
-        setCommentText('');
+        const newComment = await res.json();
+        setComments((prev) => [newComment, ...prev.filter(c => !c._posting)]);
+      } else {
+        setComments((prev) => prev.filter(c => !c._posting));
       }
     } catch (err) {
-      // Optionally show error to user
+      setComments((prev) => prev.filter(c => !c._posting));
     }
-  };
-
-  // Handle replying to a comment or reply
-  const handleReply = (commentId, replyId = null) => {
-    setReplyingTo({ commentId, replyId });
-    setReplyText('');
   };
 
   // Handle adding a reply
   const handleAddReply = async (e) => {
     e.preventDefault();
     if (!replyText.trim() || !user || !token || !replyingTo) return;
-    const { commentId, replyId } = replyingTo;
     const optimisticReply = {
       _id: `temp_${Date.now()}`,
-      text: replyId ? `@${getDisplayName(comments.find(c => c._id === commentId)?.replies?.find(r => r._id === replyId)?.author)} ${replyText}` : replyText,
-      author: { _id: user._id, username: user.username, profilePicture: user.profilePicture },
+      text: replyingTo.replyId ? `@${getDisplayName(comments.find(c => c._id === replyingTo.commentId)?.replies.find(r => r._id === replyingTo.replyId)?.author)} ${replyText}` : replyText,
+      author: { _id: user._id, ...user },
       createdAt: new Date().toISOString(),
       likes: [],
-      replies: []
+      replies: [],
+      _posting: true
     };
     setComments((prev) => prev.map(comment => {
-      if (comment._id === commentId) {
-        if (replyId) {
+      if (comment._id === replyingTo.commentId) {
+        if (replyingTo.replyId) {
           return {
             ...comment,
-            replies: comment.replies.map(r => {
-              if (r._id === replyId) {
-                return { ...r, replies: [...(r.replies || []), optimisticReply] };
+            replies: comment.replies.map(reply => {
+              if (reply._id === replyingTo.replyId) {
+                return { ...reply, replies: [...(reply.replies || []), optimisticReply] };
               }
-              return r;
+              return reply;
             })
           };
         } else {
@@ -117,10 +126,8 @@ const Comments = ({ videoId, channel }) => {
     setReplyText('');
     setReplyingTo(null);
     try {
-      const url = replyId
-        ? `${API_BASE_URL}/videos/${videoId}/comment/reply/reply`
-        : `${API_BASE_URL}/videos/${videoId}/comment/reply`;
-      const body = replyId ? { commentId, text: replyText, parentReplyId: replyId } : { commentId, text: replyText };
+      const url = `${API_BASE_URL}/videos/${videoId}/comment/reply`;
+      const body = replyingTo.replyId ? { text: replyText, commentId: replyingTo.commentId, parentReplyId: replyingTo.replyId } : { text: replyText, commentId: replyingTo.commentId };
       const res = await fetch(url, {
         method: 'POST',
         headers: {
@@ -130,40 +137,40 @@ const Comments = ({ videoId, channel }) => {
         body: JSON.stringify(body)
       });
       if (res.ok) {
-        const data = await res.json();
+        const newReply = await res.json();
         setComments((prev) => prev.map(comment => {
-          if (comment._id === commentId) {
-            if (replyId) {
+          if (comment._id === replyingTo.commentId) {
+            if (replyingTo.replyId) {
               return {
                 ...comment,
-                replies: comment.replies.map(r => {
-                  if (r._id === replyId) {
-                    return { ...r, replies: [...(r.replies.filter(r => !r._id.startsWith('temp_')) || []), data] };
+                replies: comment.replies.map(reply => {
+                  if (reply._id === replyingTo.replyId) {
+                    return { ...reply, replies: [...(reply.replies || []).filter(r => !r._posting), newReply] };
                   }
-                  return r;
+                  return reply;
                 })
               };
             } else {
-              return { ...comment, replies: [...(comment.replies.filter(r => !r._id.startsWith('temp_')) || []), data] };
+              return { ...comment, replies: [...(comment.replies || []).filter(r => !r._posting), newReply] };
             }
           }
           return comment;
         }));
       } else {
         setComments((prev) => prev.map(comment => {
-          if (comment._id === commentId) {
-            if (replyId) {
+          if (comment._id === replyingTo.commentId) {
+            if (replyingTo.replyId) {
               return {
                 ...comment,
-                replies: comment.replies.map(r => {
-                  if (r._id === replyId) {
-                    return { ...r, replies: (r.replies || []).filter(r => !r._id.startsWith('temp_')) };
+                replies: comment.replies.map(reply => {
+                  if (reply._id === replyingTo.replyId) {
+                    return { ...reply, replies: (reply.replies || []).filter(r => !r._posting) };
                   }
-                  return r;
+                  return reply;
                 })
               };
             } else {
-              return { ...comment, replies: (comment.replies || []).filter(r => !r._id.startsWith('temp_')) };
+              return { ...comment, replies: (comment.replies || []).filter(r => !r._posting) };
             }
           }
           return comment;
@@ -171,19 +178,19 @@ const Comments = ({ videoId, channel }) => {
       }
     } catch (err) {
       setComments((prev) => prev.map(comment => {
-        if (comment._id === commentId) {
-          if (replyId) {
+        if (comment._id === replyingTo.commentId) {
+          if (replyingTo.replyId) {
             return {
               ...comment,
-              replies: comment.replies.map(r => {
-                if (r._id === replyId) {
-                  return { ...r, replies: (r.replies || []).filter(r => !r._id.startsWith('temp_')) };
+              replies: comment.replies.map(reply => {
+                if (reply._id === replyingTo.replyId) {
+                  return { ...reply, replies: (reply.replies || []).filter(r => !r._posting) };
                 }
-                return r;
+                return reply;
               })
             };
           } else {
-            return { ...comment, replies: (comment.replies || []).filter(r => !r._id.startsWith('temp_')) };
+            return { ...comment, replies: (comment.replies || []).filter(r => !r._posting) };
           }
         }
         return comment;
@@ -198,24 +205,22 @@ const Comments = ({ videoId, channel }) => {
     const prevComments = comments;
     setComments((prev) => prev.map(comment => {
       if (comment._id === commentId) {
-        return { ...comment, text: editCommentText };
+        return { ...comment, text: editCommentText, editedAt: new Date().toISOString() };
       }
       return comment;
     }));
     setEditCommentId(null);
+    setEditCommentText('');
     try {
       const res = await fetch(`${API_BASE_URL}/videos/${videoId}/comment`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ commentId, text: editCommentText })
       });
-      if (res.ok) {
-        const updatedComment = await res.json();
-        setComments((prev) => prev.map(comment => comment._id === commentId ? { ...comment, text: updatedComment.text } : comment));
-      } else {
+      if (!res.ok) {
         setComments(prevComments);
       }
     } catch (err) {
@@ -239,7 +244,7 @@ const Comments = ({ videoId, channel }) => {
                   ...reply,
                   replies: reply.replies.map(subReply => {
                     if (subReply._id === replyId) {
-                      return { ...subReply, text: editReplyText };
+                      return { ...subReply, text: editReplyText, editedAt: new Date().toISOString() };
                     }
                     return subReply;
                   })
@@ -253,7 +258,7 @@ const Comments = ({ videoId, channel }) => {
             ...comment,
             replies: comment.replies.map(reply => {
               if (reply._id === replyId) {
-                return { ...reply, text: editReplyText };
+                return { ...reply, text: editReplyText, editedAt: new Date().toISOString() };
               }
               return reply;
             })
@@ -269,40 +274,14 @@ const Comments = ({ videoId, channel }) => {
       const url = `${API_BASE_URL}/videos/${videoId}/comment/reply`;
       const body = parentReplyId ? { commentId, replyId, text: editReplyText, parentReplyId } : { commentId, replyId, text: editReplyText };
       const res = await fetch(url, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(body)
       });
-      if (res.ok) {
-        const updatedReply = await res.json();
-        setComments((prev) => prev.map(comment => {
-          if (comment._id === commentId) {
-            if (parentReplyId) {
-              return {
-                ...comment,
-                replies: comment.replies.map(reply => {
-                  if (reply._id === parentReplyId) {
-                    return {
-                      ...reply,
-                      replies: reply.replies.map(subReply => subReply._id === replyId ? { ...subReply, text: updatedReply.text } : subReply)
-                    };
-                  }
-                  return reply;
-                })
-              };
-            } else {
-              return {
-                ...comment,
-                replies: comment.replies.map(reply => reply._id === replyId ? { ...reply, text: updatedReply.text } : reply)
-              };
-            }
-          }
-          return comment;
-        }));
-      } else {
+      if (!res.ok) {
         setComments(prevComments);
       }
     } catch (err) {
@@ -324,9 +303,7 @@ const Comments = ({ videoId, channel }) => {
         body: JSON.stringify({ commentId })
       });
       const result = await res.json().catch(() => null);
-      if (res.ok) {
-        setComments((prev) => prev.filter(comment => comment._id !== commentId));
-      } else {
+      if (!res.ok) {
         setComments(prevComments);
         alert(`Delete failed: ${result?.error || res.status}`);
       }
@@ -543,6 +520,8 @@ const Comments = ({ videoId, channel }) => {
   const handleProfilePictureClick = async (author) => {
     const authorId = author._id || author.id;
     let hasChannel = false;
+    let channelName = author.username || author.firstName || 'Unknown';
+    let socialLinks = {};
     if (authorId) {
       try {
         const res = await fetch(`${API_BASE_URL}/channel/by-owner/${authorId}`);
@@ -550,18 +529,28 @@ const Comments = ({ videoId, channel }) => {
           const data = await res.json();
           if (data && data._id) {
             hasChannel = true;
+            channelName = data.name || channelName;
+          }
+          if (data.contactInfo) {
+            socialLinks = data.contactInfo;
           }
         }
       } catch (err) {}
     }
     setModalData({
       profilePicture: author.profilePicture || author.avatar || 'https://randomuser.me/api/portraits/lego/1.jpg',
-      channelName: author.username || author.firstName || 'Unknown',
-      socialLinks: author.socialLinks || channel?.socialLinks || {},
+      channelName,
+      socialLinks,
       authorId,
       hasChannel
     });
     setModalOpen(true);
+  };
+
+  // Handle reply
+  const handleReply = (commentId, replyId = null) => {
+    setReplyingTo({ commentId, replyId });
+    setReplyText('');
   };
 
   // Render comments and replies
@@ -636,28 +625,6 @@ const Comments = ({ videoId, channel }) => {
                   </button>
                 </div>
               )}
-      {/* Delete confirmation popup (outside comment map loop) */}
-      {modalData?.type === 'delete' && modalData?.commentId && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6 min-w-[280px] max-w-[90vw]">
-            <div className="mb-4 text-black dark:text-white">Delete this comment?</div>
-            <div className="flex gap-2 justify-end">
-              <button
-                className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition"
-                onClick={() => { handleDeleteComment(modalData.commentId); setModalData({}); }}
-              >
-                Delete
-              </button>
-              <button
-                className="bg-gray-300 text-black px-3 py-1 rounded hover:bg-gray-400 transition"
-                onClick={() => setModalData({})}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
             </div>
             {replyingTo && replyingTo.commentId === comment._id && !replyingTo.replyId && (
               <form onSubmit={handleAddReply} className="flex gap-2 mb-2">
@@ -747,28 +714,6 @@ const Comments = ({ videoId, channel }) => {
                                   </button>
                                 </div>
                               )}
-      {/* Delete reply confirmation popup (outside reply map loop) */}
-      {modalData?.type === 'deleteReply' && modalData?.commentId && modalData?.replyId && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6 min-w-[280px] max-w-[90vw]">
-            <div className="mb-4 text-black dark:text-white">Delete this reply?</div>
-            <div className="flex gap-2 justify-end">
-              <button
-                className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition"
-                onClick={() => { handleDeleteReply(modalData.commentId, modalData.replyId); setModalData({}); }}
-              >
-                Delete
-              </button>
-              <button
-                className="bg-gray-300 text-black px-3 py-1 rounded hover:bg-gray-400 transition"
-                onClick={() => setModalData({})}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
                             </div>
                             {replyingTo && replyingTo.commentId === comment._id && replyingTo.replyId === reply._id && (
                               <form onSubmit={handleAddReply} className="flex gap-2 mb-2 mt-1">
@@ -833,9 +778,6 @@ const Comments = ({ videoId, channel }) => {
                                             </svg>
                                             <span className="text-xs">{subReply.likes?.length || 0}</span>
                                           </button>
-                                          {isSubReplyAuthor && (
-                                            {/* Removed ThreeDotsMenu from subReplies as requested */}
-                                          )}
                                         </div>
                                       </div>
                                     </div>
@@ -883,7 +825,6 @@ const Comments = ({ videoId, channel }) => {
         if (res.ok) {
           const data = await res.json();
           setComments(prev => {
-            // Keep any optimistic comments still posting
             const posting = prev.filter(c => c._posting);
             return [...posting, ...(data.comments || [])];
           });
@@ -921,6 +862,48 @@ const Comments = ({ videoId, channel }) => {
           }
         }}
       />
+      {modalData?.type === 'delete' && modalData?.commentId && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6 min-w-[280px] max-w-[90vw]">
+            <div className="mb-4 text-black dark:text-white">Delete this comment?</div>
+            <div className="flex gap-2 justify-end">
+              <button
+                className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition"
+                onClick={() => { handleDeleteComment(modalData.commentId); setModalData({}); }}
+              >
+                Delete
+              </button>
+              <button
+                className="bg-gray-300 text-black px-3 py-1 rounded hover:bg-gray-400 transition"
+                onClick={() => setModalData({})}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {modalData?.type === 'deleteReply' && modalData?.commentId && modalData?.replyId && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6 min-w-[280px] max-w-[90vw]">
+            <div className="mb-4 text-black dark:text-white">Delete this reply?</div>
+            <div className="flex gap-2 justify-end">
+              <button
+                className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition"
+                onClick={() => { handleDeleteReply(modalData.commentId, modalData.replyId); setModalData({}); }}
+              >
+                Delete
+              </button>
+              <button
+                className="bg-gray-300 text-black px-3 py-1 rounded hover:bg-gray-400 transition"
+                onClick={() => setModalData({})}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="w-full max-w-3xl bg-white dark:bg-[#222] rounded-lg shadow p-4 mt-4">
         <h3 className="text-lg font-bold mb-3 text-black dark:text-white flex items-center gap-2">
           Comments
