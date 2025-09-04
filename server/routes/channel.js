@@ -27,4 +27,13 @@ router.get('/:id', channelController.getChannelById);
 // Get channel by owner user ID
 router.get('/by-owner/:ownerId', channelController.getChannelByOwner);
 
+// Update channel profile (authenticated)
+router.put('/:id', auth, upload.fields([
+	{ name: 'avatar', maxCount: 1 },
+	{ name: 'banner', maxCount: 1 }
+]), channelController.updateChannel);
+
+// Delete channel and all content (authenticated)
+router.delete('/:id', auth, channelController.deleteChannel);
+
 module.exports = router;

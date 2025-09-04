@@ -77,6 +77,14 @@ const PublicRoute = ({ children }) => {
 
 function AppRoutes() {
   const { channel } = useAuth();
+  // Helper to get query string
+  const getQuery = () => {
+    if (typeof window !== 'undefined') {
+      return window.location.search;
+    }
+    return '';
+  };
+  const isEditingChannel = getQuery().includes('edit=true');
   return (
     <Routes>
       <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
@@ -85,7 +93,7 @@ function AppRoutes() {
       <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="/upload" element={channel ? <ProtectedRoute><UploadVideo /></ProtectedRoute> : <Navigate to="/channel-setup" replace />} />
-      <Route path="/channel-setup" element={channel ? <Navigate to="/home" replace /> : <ProtectedRoute><ChannelSetup /></ProtectedRoute>} />
+      <Route path="/channel-setup" element={channel && !isEditingChannel ? <Navigate to="/home" replace /> : <ProtectedRoute><ChannelSetup /></ProtectedRoute>} />
       <Route path="/create-post" element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
       <Route path="/channel/:author" element={<ProtectedRoute><ChannelProfile /></ProtectedRoute>} />
       <Route path="/watch/:id" element={<ProtectedRoute><Watch /></ProtectedRoute>} />
@@ -98,7 +106,7 @@ function AppRoutes() {
       <Route path="/course-videos" element={<ProtectedRoute><CourseVideos /></ProtectedRoute>} />
       <Route path="/watch-history" element={<ProtectedRoute><WatchHistory /></ProtectedRoute>} />
       <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-  <Route path="/post/:postId" element={<ProtectedRoute><PostDetails /></ProtectedRoute>} />
+      <Route path="/post/:postId" element={<ProtectedRoute><PostDetails /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );

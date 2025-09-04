@@ -176,3 +176,72 @@ exports.getChannelById = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+// Update channel profile
+exports.updateChannel = async (req, res) => {
+  try {
+    const channelId = req.params.id;
+    const userId = req.user._id;
+    const channel = await Channel.findById(channelId);
+    if (!channel) {
+      return res.status(404).json({ error: 'Channel not found.' });
+    }
+    if (channel.owner.toString() !== userId.toString()) {
+      return res.status(403).json({ error: 'Unauthorized.' });
+    }
+    const { name, description } = req.body;
+    if (name) channel.name = name;
+    if (description) channel.description = description;
+    // Handle avatar upload
+    if (req.body.avatar) {
+      channel.avatar = req.body.avatar;
+    } else if (req.files && req.files.avatar) {
+      const avatarPath = req.files.avatar[0].path;
+      const avatarUpload = await cloudinary.uploader.upload(avatarPath, {
+        folder: 'powerhub/channels/avatars',
+        resource_type: 'image',
+      });
+      channel.avatar = avatarUpload.secure_url;
+      require('fs').unlink(avatarPath, () => {});
+    }
+    // Handle banner upload
+    if (req.body.banner) {
+      channel.banner = req.body.banner;
+    } else if (req.files && req.files.banner) {
+      const bannerPath = req.files.banner[0].path;
+      const bannerUpload = await cloudinary.uploader.upload(bannerPath, {
+        folder: 'powerhub/channels/banners',
+        resource_type: 'image',
+      });
+      channel.banner = bannerUpload.secure_url;
+      require('fs').unlink(bannerPath, () => {});
+    }
+    await channel.save();
+    res.json(channel);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Delete channel and all content
+exports.deleteChannel = async (req, res) => {
+  try {
+    const channelId = req.params.id;
+    const userId = req.user._id;
+    const channel = await Channel.findById(channelId);
+    if (!channel) {
+      return res.status(404).json({ error: 'Channel not found.' });
+    }
+    if (channel.owner.toString() !== userId.toString()) {
+      return res.status(403).json({ error: 'Unauthorized.' });
+    }
+    // Delete all videos for this channel
+    const Video = require('../models/Video');
+    await Video.deleteMany({ channel: channel._id });
+    // TODO: Delete other related content if needed (posts, notifications, etc)
+    await channel.deleteOne();
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Header from '../components/Header';
+import ThreeDotsMenu from '../components/ThreeDotsMenu';
 import Sidebar from '../components/Sidebar';
 import SubscribeButton from '../components/SubscribeButton';
 import AboutChannelModal from '../components/AboutChannelModal';
@@ -24,6 +25,8 @@ export default function ChannelProfile() {
   const { user, token } = useAuth();
   const { author } = useParams();
   const navigate = useNavigate();
+  // Modal for delete confirmation
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [channel, setChannel] = useState(null);
   const [loading, setLoading] = useState(true);
   const [progressLoading, setProgressLoading] = useState(false);
@@ -37,6 +40,35 @@ export default function ChannelProfile() {
   // Sidebar expand/collapse state
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const handleToggleSidebar = () => setSidebarCollapsed((prev) => !prev);
+
+  // Redirect to channel setup if user is viewing their own channel and has no channel
+  React.useEffect(() => {
+    if (!loading && user && author === user._id && !channel) {
+      navigate('/channel-setup');
+    }
+  }, [loading, user, author, channel, navigate]);
+
+  const handleEditChannel = () => {
+    // Navigate to ChannelSetup with channel data
+    navigate(`/channel-setup?edit=true`, { state: { channel } });
+  };
+  const handleDeleteChannel = async () => {
+    setShowDeleteModal(false);
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL;
+      const response = await fetch(`${apiUrl}/channel/${channel._id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (response.ok) {
+        navigate('/');
+      } else {
+        alert('Failed to delete channel.');
+      }
+    } catch (err) {
+      alert('Error deleting channel.');
+    }
+  };
 
   useEffect(() => {
     const fetchChannel = async () => {
@@ -161,9 +193,31 @@ export default function ChannelProfile() {
           {/* Banner styled like YouTube */}
           <div className="w-full h-56 md:h-72 lg:h-80 relative bg-black mb-0 mt-6">
             <img src={channel.banner} alt="Channel Banner" className="w-full h-full rounded-lg object-cover bg-black" style={{ objectPosition: 'center' }} />
+            {/* Three dots menu for channel owner - top right of banner */}
+            {user && channel && user._id === channel.owner && (
+              <div style={{ position: 'absolute', top: 16, right: 24, zIndex: 30 }}>
+                <ThreeDotsMenu
+                  onEdit={handleEditChannel}
+                  onDelete={() => setShowDeleteModal(true)}
+                />
+              </div>
+            )}
             <div className="absolute left-8 bottom-[-48px] flex items-end">
               <img src={channel.avatar} alt="Channel Avatar" className="w-28 h-28 rounded-full border-4 border-white dark:border-[#222] shadow-lg" />
             </div>
+          {/* Delete confirmation modal */}
+          {showDeleteModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+              <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6 w-full max-w-sm">
+                <h2 className="text-lg font-bold mb-4 text-red-600">Delete Channel?</h2>
+                <p className="mb-4 text-gray-700 dark:text-gray-300">Are you sure you want to delete your channel? This action cannot be undone.</p>
+                <div className="flex justify-end gap-2">
+                  <button className="px-4 py-2 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200" onClick={() => setShowDeleteModal(false)}>Cancel</button>
+                  <button className="px-4 py-2 rounded bg-red-600 text-white" onClick={handleDeleteChannel}>Delete</button>
+                </div>
+              </div>
+            </div>
+          )}
           </div>
           {/* About this channel link below the banner */}
           <div className="w-full flex flex-col md:flex-row justify-end items-end gap-2 md:gap-4 px-8 mt-2 mb-2 text-right">
