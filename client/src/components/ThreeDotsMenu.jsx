@@ -1,11 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { FiMoreVertical } from 'react-icons/fi';
 
 export default function ThreeDotsMenu({ onEdit, onDelete }) {
   const [open, setOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClickOutside(event) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [open]);
 
   return (
-    <div className="relative inline-block text-left" style={{ minWidth: 0 }}>
+    <div className="relative inline-block text-left" style={{ minWidth: 0 }} ref={menuRef}>
       <button
         className="p-2 rounded-full bg-white/80 hover:bg-gray-200 dark:bg-black/60 dark:hover:bg-gray-800 shadow"
         aria-label="Channel options"
@@ -22,14 +36,14 @@ export default function ThreeDotsMenu({ onEdit, onDelete }) {
           <button
             className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
             onClick={() => { setOpen(false); onEdit && onEdit(); }}
-          >
-            Edit Comment
+            >
+              Edit Channel Profile
           </button>
           <button
             className="block w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900"
             onClick={() => { setOpen(false); onDelete && onDelete(); }}
-          >
-            Delete Comment
+            >
+              Delete Channel
           </button>
         </div>
       )}
