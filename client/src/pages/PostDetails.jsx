@@ -1,283 +1,308 @@
-// Recursively count all comments, replies, and replies to replies
-function countAllComments(comments) {
+import React, { useState, useEffect, useRef } from 'react';
+import { FaChartBar } from 'react-icons/fa';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import Header from '../components/Header';
+import Sidebar from '../components/Sidebar';
+import StudentUtility from '../components/StudentUtility';
+import BottomTabs from '../components/BottomTabs';
+import ProfilePictureZoomModal from '../components/ProfilePictureZoomModal';
+
+// Helper to format relative time
+const formatRelativeTime = (dateString) => {
+  if (!dateString) return 'just now';
+  const posted = new Date(dateString);
+  const now = new Date();
+  const diffInSeconds = Math.floor((now - posted) / 1000);
+  if (diffInSeconds < 60) return 'just now';
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) return `${diffInMinutes} minute${diffInMinutes === 1 ? '' : 's'} ago`;
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `${diffInHours} hour${diffInHours === 1 ? '' : 's'} ago`;
+  const diffInDays = Math.floor(diffInHours / 24);
+  return `${diffInDays} day${diffInDays === 1 ? '' : 's'} ago`;
+};
+
+// Helper to count all comments and replies recursively
+const countAllComments = (comments) => {
   let count = 0;
-  function countRecursive(arr) {
+  const countRecursive = (arr) => {
     for (const item of arr) {
       count++;
       if (item.replies && item.replies.length > 0) {
         countRecursive(item.replies);
       }
     }
-  }
+  };
   if (Array.isArray(comments)) countRecursive(comments);
   return count;
-}
-import React, { useEffect, useState } from 'react';
-import { FaChartBar } from 'react-icons/fa';
-import Header from '../components/Header';
-import Sidebar from '../components/Sidebar';
-import StudentUtility from '../components/StudentUtility';
-import BottomTabs from '../components/BottomTabs';
-import { useParams, useNavigate } from 'react-router-dom';
-import { timeAgo } from '../utils/timeAgo';
-import { useAuth } from '../context/AuthContext';
-import ProfilePictureZoomModal from '../components/ProfilePictureZoomModal';
+};
 
-// Recursive comment/reply renderer
-function CommentThread({ comments, postId, token, userId, onReply, replyingTo, replyText, setReplyText, handleAddReply, handleLike, handleLikeReply, onProfileClick }) {
-  // Helper to count all replies and subreplies recursively
-  function countReplies(replies) {
-    let count = 0;
-    function recurse(arr) {
-      for (const r of arr) {
-        count++;
-        if (r.replies && r.replies.length > 0) recurse(r.replies);
-      }
-    }
-    if (Array.isArray(replies)) recurse(replies);
-    return count;
-  }
-
-  // State to track expanded replies per comment
+// CommentThread component for rendering comments and replies
+const CommentThread = ({ comments, postId, token, userId, onReply, replyingTo, replyText, setReplyText, handleAddReply, handleLike, handleLikeReply, onProfileClick, editingCommentId, editContent, setEditContent, handleEditComment, handleEditCommentSave, handleEditCommentCancel, editingReply, handleEditReply, handleEditReplySave, handleEditReplyCancel }) => {
   const [expandedReplies, setExpandedReplies] = useState({});
-  const [shownReplies, setShownReplies] = useState({}); // how many replies to show per comment
+  const [shownReplies, setShownReplies] = useState({});
   const REPLIES_BATCH = 3;
-  // Edit state for comments and replies
-  const [editingCommentId, setEditingCommentId] = useState(null);
-  const [editingReply, setEditingReply] = useState({ commentId: null, replyId: null });
-  const [editContent, setEditContent] = useState('');
 
   const handleViewReplies = (commentId, total) => {
-    setExpandedReplies(prev => ({ ...prev, [commentId]: true }));
-    setShownReplies(prev => ({ ...prev, [commentId]: Math.min(REPLIES_BATCH, total) }));
-  };
-  const handleShowMoreReplies = (commentId, total) => {
-    setShownReplies(prev => ({ ...prev, [commentId]: Math.min((prev[commentId] || REPLIES_BATCH) + REPLIES_BATCH, total) }));
-  };
-  const handleHideReplies = (commentId) => {
-    setExpandedReplies(prev => ({ ...prev, [commentId]: false }));
-    setShownReplies(prev => ({ ...prev, [commentId]: 0 }));
+    setExpandedReplies((prev) => ({ ...prev, [commentId]: true }));
+    setShownReplies((prev) => ({ ...prev, [commentId]: Math.min(REPLIES_BATCH, total) }));
   };
 
-  // Edit comment handler
-  const handleEditComment = (commentId, currentContent) => {
-    setEditingCommentId(commentId);
-    setEditContent(currentContent);
+  const handleShowMoreReplies = (commentId, total) => {
+    setShownReplies((prev) => ({ ...prev, [commentId]: Math.min((prev[commentId] || REPLIES_BATCH) + REPLIES_BATCH, total) }));
   };
-  const handleEditCommentSave = async (commentId) => {
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}/comment/${commentId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({ content: editContent })
-      });
-      if (!res.ok) throw new Error('Failed to edit comment');
-      const data = await res.json();
-      setEditingCommentId(null);
-      setEditContent('');
-      // Update comment in state
-      if (data.comment) {
-        setPost(prev => ({
-          ...prev,
-          comments: prev.comments.map(c => c._id === commentId ? { ...c, content: data.comment.content } : c)
-        }));
-      }
-    } catch {}
-  };
-  const handleEditCommentCancel = () => {
-    setEditingCommentId(null);
-    setEditContent('');
-  };
-  // Delete comment handler
-  const handleDeleteComment = async (commentId) => {
-    if (!window.confirm('Delete this comment?')) return;
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}/comment/${commentId}`, {
-        method: 'DELETE',
-        headers: {
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        }
-      });
-      if (!res.ok) throw new Error('Failed to delete comment');
-      setPost(prev => ({
-        ...prev,
-        comments: prev.comments.filter(c => c._id !== commentId)
-      }));
-    } catch {}
-  };
-  // Edit reply handler
-  const handleEditReply = (commentId, replyId, currentContent) => {
-    setEditingReply({ commentId, replyId });
-    setEditContent(currentContent);
-  };
-  const handleEditReplySave = async (commentId, replyId) => {
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}/comment/${commentId}/reply/${replyId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({ content: editContent })
-      });
-      if (!res.ok) throw new Error('Failed to edit reply');
-      const data = await res.json();
-      setEditingReply({ commentId: null, replyId: null });
-      setEditContent('');
-      // Update reply in state (recursive)
-      function updateReplies(replies) {
-        return replies.map(r =>
-          r._id === replyId ? { ...r, content: data.reply.content } :
-          r.replies ? { ...r, replies: updateReplies(r.replies) } : r
-        );
-      }
-      setPost(prev => ({
-        ...prev,
-        comments: prev.comments.map(c =>
-          c._id === commentId ? { ...c, replies: updateReplies(c.replies) } : c
-        )
-      }));
-    } catch {}
-  };
-  const handleEditReplyCancel = () => {
-    setEditingReply({ commentId: null, replyId: null });
-    setEditContent('');
-  };
-  // Delete reply handler
-  const handleDeleteReply = async (commentId, replyId) => {
-    if (!window.confirm('Delete this reply?')) return;
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}/comment/${commentId}/reply/${replyId}`, {
-        method: 'DELETE',
-        headers: {
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        }
-      });
-      if (!res.ok) throw new Error('Failed to delete reply');
-      // Update reply in state (recursive)
-      function removeReply(replies) {
-        return replies.filter(r => r._id !== replyId).map(r =>
-          r.replies ? { ...r, replies: removeReply(r.replies) } : r
-        );
-      }
-      setPost(prev => ({
-        ...prev,
-        comments: prev.comments.map(c =>
-          c._id === commentId ? { ...c, replies: removeReply(c.replies) } : c
-        )
-      }));
-    } catch {}
+
+  const handleHideReplies = (commentId) => {
+    setExpandedReplies((prev) => ({ ...prev, [commentId]: false }));
+    setShownReplies((prev) => ({ ...prev, [commentId]: 0 }));
   };
 
   return (
     <div className="flex flex-col gap-2">
       {comments.map((comment) => {
-        const totalReplies = countReplies(comment.replies || []);
+        const totalReplies = countAllComments(comment.replies || []);
         const isExpanded = expandedReplies[comment._id];
         const numToShow = shownReplies[comment._id] || 0;
+        const isAuthor = comment.author?._id === userId || comment.author?.id === userId;
+
         return (
           <div key={comment._id} className="py-2 px-0">
             <div className="flex items-center gap-2 mb-1">
-              <img src={comment.author?.profilePicture || comment.author?.avatar || '/default-avatar.png'} alt={comment.author?.username || 'User'} className="w-7 h-7 rounded-full object-cover border border-gray-300 dark:border-gray-700 cursor-pointer" onClick={() => onProfileClick(comment.author)} />
+              <img
+                src={comment.author?.profilePicture || comment.author?.avatar || '/default-avatar.png'}
+                alt={comment.author?.username || 'User'}
+                className="w-7 h-7 rounded-full object-cover border border-gray-300 dark:border-gray-700 cursor-pointer"
+                onClick={() => onProfileClick(comment.author)}
+              />
               <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{comment.author?.username || 'Unknown'}</span>
               {comment.createdAt && (
-                <span className="text-xs text-gray-400 ml-2">{timeAgo(comment.createdAt)}</span>
+                <span className="text-xs text-gray-400 ml-2">{formatRelativeTime(comment.createdAt)}</span>
               )}
             </div>
             <div className="flex flex-col pl-9">
               <div className="text-gray-800 dark:text-gray-200 text-sm mb-1">
-                {comment.taggedUser ? <span className="text-[#0bb6bc] font-semibold mr-1">@{comment.taggedUser}</span> : null}
+                {comment.taggedUser && <span className="text-[#0bb6bc] font-semibold mr-1">@{comment.taggedUser}</span>}
                 {editingCommentId === comment._id ? (
-                  <form onSubmit={e => { e.preventDefault(); handleEditCommentSave(comment._id); }} className="flex gap-2 mt-1">
-                    <input type="text" className="flex-1 rounded px-2 py-1 text-black dark:text-white bg-gray-100 dark:bg-gray-800 border-0 focus:ring-2 focus:ring-[#0bb6bc]" value={editContent} onChange={e => setEditContent(e.target.value)} />
-                    <button type="submit" className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition">Save</button>
-                    <button type="button" className="bg-gray-400 text-white px-3 py-1 rounded hover:bg-gray-500 transition" onClick={handleEditCommentCancel}>Cancel</button>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleEditCommentSave(comment._id);
+                    }}
+                    className="flex gap-2 mt-1"
+                  >
+                    <input
+                      type="text"
+                      className="flex-1 rounded px-2 py-1 text-black dark:text-white bg-gray-100 dark:bg-gray-800 border-0 focus:ring-2 focus:ring-[#0bb6bc]"
+                      value={editContent}
+                      onChange={(e) => setEditContent(e.target.value)}
+                      autoFocus
+                    />
+                    <button type="submit" className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition">
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      className="bg-gray-400 text-white px-3 py-1 rounded hover:bg-gray-500 transition"
+                      onClick={handleEditCommentCancel}
+                    >
+                      Cancel
+                    </button>
                   </form>
-                ) : comment.content}
+                ) : (
+                  comment.content
+                )}
               </div>
               <div className="flex gap-4 items-center mt-1">
-                <button className={`text-xs flex items-center ${Array.isArray(comment.likes) && comment.likes.includes(userId) ? 'text-pink-500' : 'text-gray-500'} hover:text-pink-500 font-medium px-2 py-1 rounded transition`} onClick={() => handleLike(comment._id, Array.isArray(comment.likes) && comment.likes.includes(userId))}>
-                  <svg xmlns="http://www.w3.org/2000/svg" fill={Array.isArray(comment.likes) && comment.likes.includes(userId) ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" className="w-4 h-4 mr-1">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 21.682l-7.682-7.682a4.5 4.5 0 010-6.364z" />
+                <button
+                  className={`text-xs flex items-center ${
+                    Array.isArray(comment.likes) && comment.likes.includes(userId) ? 'text-pink-500' : 'text-gray-500'
+                  } hover:text-pink-500 font-medium px-2 py-1 rounded transition`}
+                  onClick={() => handleLike(comment._id, Array.isArray(comment.likes) && comment.likes.includes(userId))}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill={Array.isArray(comment.likes) && comment.likes.includes(userId) ? 'currentColor' : 'none'}
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    className="w-4 h-4 mr-1"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 21.682l-7.682-7.682a4.5 4.5 0 010-6.364z"
+                    />
                   </svg>
                   <span className="ml-1">{Array.isArray(comment.likes) ? comment.likes.length : 0}</span>
                 </button>
-                <button className="text-xs text-gray-500 hover:text-[#0bb6bc] font-medium px-2 py-1 rounded transition" onClick={() => onReply(comment._id, null, comment.author?.username)}>
+                <button
+                  className="text-xs text-gray-500 hover:text-[#0bb6bc] font-medium px-2 py-1 rounded transition"
+                  onClick={() => onReply(comment._id, null, comment.author?.username)}
+                >
                   Reply
                 </button>
-                {(comment.author?._id === userId || comment.author?.id === userId) && (
+                {isAuthor && (
                   <>
-                    <button className="text-xs text-blue-500 hover:underline ml-2" onClick={() => handleEditComment(comment._id, comment.content)}>Edit</button>
-                    <button className="text-xs text-red-500 hover:underline ml-1" onClick={() => handleDeleteComment(comment._id)}>Delete</button>
+                    <button
+                      className="text-xs text-blue-500 hover:underline ml-2"
+                      onClick={() => handleEditComment(comment._id, comment.content)}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="text-xs text-red-500 hover:underline ml-1"
+                      onClick={() => handleDeleteComment(comment._id)}
+                    >
+                      Delete
+                    </button>
                   </>
                 )}
               </div>
             </div>
             {replyingTo && replyingTo.commentId === comment._id && !replyingTo.replyId && (
-              <form onSubmit={e => handleAddReply(e, comment._id, null, comment.author?.username)} className="flex gap-2 mt-2 ml-9">
-                <input type="text" className="flex-1 rounded px-2 py-1 text-black dark:text-white bg-gray-100 dark:bg-gray-800 border-0 focus:ring-2 focus:ring-[#0bb6bc]" placeholder={`Reply to @${replyingTo.taggedUser || comment.author?.username}...`} value={replyText} onChange={e => setReplyText(e.target.value)} />
+              <form
+                onSubmit={(e) => handleAddReply(e, comment._id, null, comment.author?.username)}
+                className="flex gap-2 mt-2 ml-9"
+              >
+                <input
+                  type="text"
+                  className="flex-1 rounded px-2 py-1 text-black dark:text-white bg-gray-100 dark:bg-gray-800 border-0 focus:ring-2 focus:ring-[#0bb6bc]"
+                  placeholder={`Reply to @${replyingTo.taggedUser || comment.author?.username}...`}
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                />
                 {replyText.trim() && (
-                  <button type="submit" className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition">Reply</button>
+                  <button type="submit" className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition">
+                    Reply
+                  </button>
                 )}
               </form>
             )}
-            {/* Replies section: show view/hide link and replies batch */}
             {comment.replies && comment.replies.length > 0 && (
               <div className="ml-8 mt-2 flex flex-col gap-2">
                 {!isExpanded ? (
-                  <button className="text-xs text-blue-500 hover:underline w-fit" onClick={() => handleViewReplies(comment._id, totalReplies)}>
+                  <button
+                    className="text-xs text-blue-500 hover:underline w-fit"
+                    onClick={() => handleViewReplies(comment._id, totalReplies)}
+                  >
                     View replies ({totalReplies})
                   </button>
                 ) : (
                   <>
-                    {comment.replies.slice(0, numToShow).map(reply => (
+                    {comment.replies.slice(0, numToShow).map((reply) => (
                       <div key={reply._id} className="py-2 px-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <img src={reply.author?.profilePicture || reply.author?.avatar || '/default-avatar.png'} alt={reply.author?.username || 'User'} className="w-7 h-7 rounded-full object-cover border border-gray-300 dark:border-gray-700 cursor-pointer" onClick={() => onProfileClick(reply.author)} />
+                          <img
+                            src={reply.author?.profilePicture || reply.author?.avatar || '/default-avatar.png'}
+                            alt={reply.author?.username || 'User'}
+                            className="w-7 h-7 rounded-full object-cover border border-gray-300 dark:border-gray-700 cursor-pointer"
+                            onClick={() => onProfileClick(reply.author)}
+                          />
                           <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{reply.author?.username || 'Unknown'}</span>
                           {reply.createdAt && (
-                            <span className="text-xs text-gray-400 ml-2">{timeAgo(reply.createdAt)}</span>
+                            <span className="text-xs text-gray-400 ml-2">{formatRelativeTime(reply.createdAt)}</span>
                           )}
                         </div>
-                        <span className="text-gray-800 dark:text-gray-200 text-sm block mb-1 pl-9">
-                          {reply.taggedUser ? <span className="text-[#0bb6bc] font-semibold mr-1">@{reply.taggedUser}</span> : null}
-                          {editingReply.commentId === comment._id && editingReply.replyId === reply._id ? (
-                            <form onSubmit={e => { e.preventDefault(); handleEditReplySave(comment._id, reply._id); }} className="flex gap-2 mt-1">
-                              <input type="text" className="flex-1 rounded px-2 py-1 text-black dark:text-white bg-gray-100 dark:bg-gray-800 border-0 focus:ring-2 focus:ring-[#0bb6bc]" value={editContent} onChange={e => setEditContent(e.target.value)} />
-                              <button type="submit" className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition">Save</button>
-                              <button type="button" className="bg-gray-400 text-white px-3 py-1 rounded hover:bg-gray-500 transition" onClick={handleEditReplyCancel}>Cancel</button>
-                            </form>
-                          ) : reply.content}
-                        </span>
-                        <div className="flex gap-4 items-center mt-1 pl-9">
-                          <button className={`text-xs flex items-center ${Array.isArray(reply.likes) && reply.likes.includes(userId) ? 'text-pink-500' : 'text-gray-500'} hover:text-pink-500 font-medium px-2 py-1 rounded transition`} onClick={() => handleLikeReply(reply._id, comment._id, Array.isArray(reply.likes) && reply.likes.includes(userId))}>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill={Array.isArray(reply.likes) && reply.likes.includes(userId) ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" className="w-4 h-4 mr-1">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 21.682l-7.682-7.682a4.5 4.5 0 010-6.364z" />
-                            </svg>
-                            <span className="ml-1">{Array.isArray(reply.likes) ? reply.likes.length : 0}</span>
-                          </button>
-                          <button className="text-xs text-gray-500 hover:text-[#0bb6bc] font-medium px-2 py-1 rounded transition" onClick={() => onReply(comment._id, reply._id, reply.author?.username)}>
-                            Reply
-                          </button>
-                          {(reply.author?._id === userId || reply.author?.id === userId) && (
-                            <>
-                              <button className="text-xs text-blue-500 hover:underline ml-2" onClick={() => handleEditReply(comment._id, reply._id, reply.content)}>Edit</button>
-                              <button className="text-xs text-red-500 hover:underline ml-1" onClick={() => handleDeleteReply(comment._id, reply._id)}>Delete</button>
-                            </>
-                          )}
+                        <div className="flex flex-col pl-9">
+                          <span className="text-gray-800 dark:text-gray-200 text-sm mb-1">
+                            {reply.taggedUser && <span className="text-[#0bb6bc] font-semibold mr-1">@{reply.taggedUser}</span>}
+                            {editingReply.commentId === comment._id && editingReply.replyId === reply._id ? (
+                              <form
+                                onSubmit={(e) => {
+                                  e.preventDefault();
+                                  handleEditReplySave(comment._id, reply._id);
+                                }}
+                                className="flex gap-2 mt-1"
+                              >
+                                <input
+                                  type="text"
+                                  className="flex-1 rounded px-2 py-1 text-black dark:text-white bg-gray-100 dark:bg-gray-800 border-0 focus:ring-2 focus:ring-[#0bb6bc]"
+                                  value={editContent}
+                                  onChange={(e) => setEditContent(e.target.value)}
+                                  autoFocus
+                                />
+                                <button type="submit" className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition">
+                                  Save
+                                </button>
+                                <button
+                                  type="button"
+                                  className="bg-gray-400 text-white px-3 py-1 rounded hover:bg-gray-500 transition"
+                                  onClick={handleEditReplyCancel}
+                                >
+                                  Cancel
+                                </button>
+                              </form>
+                            ) : (
+                              reply.content
+                            )}
+                          </span>
+                          <div className="flex gap-4 items-center mt-1">
+                            <button
+                              className={`text-xs flex items-center ${
+                                Array.isArray(reply.likes) && reply.likes.includes(userId) ? 'text-pink-500' : 'text-gray-500'
+                              } hover:text-pink-500 font-medium px-2 py-1 rounded transition`}
+                              onClick={() => handleLikeReply(reply._id, comment._id, Array.isArray(reply.likes) && reply.likes.includes(userId))}
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill={Array.isArray(reply.likes) && reply.likes.includes(userId) ? 'currentColor' : 'none'}
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                className="w-4 h-4 mr-1"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 21.682l-7.682-7.682a4.5 4.5 0 010-6.364z"
+                                />
+                              </svg>
+                              <span className="ml-1">{Array.isArray(reply.likes) ? reply.likes.length : 0}</span>
+                            </button>
+                            <button
+                              className="text-xs text-gray-500 hover:text-[#0bb6bc] font-medium px-2 py-1 rounded transition"
+                              onClick={() => onReply(comment._id, reply._id, reply.author?.username)}
+                            >
+                              Reply
+                            </button>
+                            {(reply.author?._id === userId || reply.author?.id === userId) && (
+                              <>
+                                <button
+                                  className="text-xs text-blue-500 hover:underline ml-2"
+                                  onClick={() => handleEditReply(comment._id, reply._id, reply.content)}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  className="text-xs text-red-500 hover:underline ml-1"
+                                  onClick={() => handleDeleteReply(comment._id, reply._id)}
+                                >
+                                  Delete
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </div>
                         {replyingTo && replyingTo.commentId === comment._id && replyingTo.replyId === reply._id && (
-                          <form onSubmit={e => handleAddReply(e, comment._id, reply._id, reply.author?.username)} className="flex gap-2 mt-2 ml-9">
-                            <input type="text" className="flex-1 rounded px-2 py-1 text-black dark:text-white bg-gray-100 dark:bg-gray-800 border-0 focus:ring-2 focus:ring-[#0bb6bc]" placeholder={`Reply to @${replyingTo.taggedUser || reply.author?.username}...`} value={replyText} onChange={e => setReplyText(e.target.value)} />
+                          <form
+                            onSubmit={(e) => handleAddReply(e, comment._id, reply._id, reply.author?.username)}
+                            className="flex gap-2 mt-2 ml-9"
+                          >
+                            <input
+                              type="text"
+                              className="flex-1 rounded px-2 py-1 text-black dark:text-white bg-gray-100 dark:bg-gray-800 border-0 focus:ring-2 focus:ring-[#0bb6bc]"
+                              placeholder={`Reply to @${replyingTo.taggedUser || reply.author?.username}...`}
+                              value={replyText}
+                              onChange={(e) => setReplyText(e.target.value)}
+                            />
                             {replyText.trim() && (
-                              <button type="submit" className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition">Reply</button>
+                              <button type="submit" className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition">
+                                Reply
+                              </button>
                             )}
                           </form>
                         )}
-                        {/* Recursively render deeper replies if present */}
                         {reply.replies && reply.replies.length > 0 && (
                           <div className="ml-8 mt-2 flex flex-col gap-2">
                             <CommentThread
@@ -292,20 +317,28 @@ function CommentThread({ comments, postId, token, userId, onReply, replyingTo, r
                               replyText={replyText}
                               setReplyText={setReplyText}
                               handleAddReply={handleAddReply}
+                              onProfileClick={onProfileClick}
                             />
                           </div>
                         )}
                       </div>
                     ))}
-                    {/* Show more/hide buttons */}
                     {numToShow < totalReplies && (
-                      <button className="text-xs text-blue-500 hover:underline w-fit" onClick={() => handleShowMoreReplies(comment._id, totalReplies)}>
+                      <button
+                        className="text-xs text-blue-500 hover:underline w-fit"
+                        onClick={() => handleShowMoreReplies(comment._id, totalReplies)}
+                      >
                         Show more replies
                       </button>
                     )}
-                    <button className="text-xs text-gray-500 hover:underline w-fit" onClick={() => handleHideReplies(comment._id)}>
-                      Hide replies
-                    </button>
+                    {numToShow > 0 && (
+                      <button
+                        className="text-xs text-gray-500 hover:underline w-fit"
+                        onClick={() => handleHideReplies(comment._id)}
+                      >
+                        Hide replies
+                      </button>
+                    )}
                   </>
                 )}
               </div>
@@ -315,241 +348,549 @@ function CommentThread({ comments, postId, token, userId, onReply, replyingTo, r
       })}
     </div>
   );
-}
+};
 
+// HeaderFixed component
+const HeaderFixed = ({ onToggleSidebar }) => (
+  <div className="fixed top-0 left-0 w-full z-40" style={{ height: '44px' }}>
+    <Header onToggleSidebar={onToggleSidebar} />
+  </div>
+);
+
+// SidebarFixed component
+const SidebarFixed = ({ sidebarOpen }) => (
+  <div className={`fixed top-14 left-0 h-[calc(100vh-56px)] ${sidebarOpen ? 'w-64' : 'w-20'} z-30 bg-transparent md:block`}>
+    <Sidebar collapsed={!sidebarOpen} />
+  </div>
+);
+
+// Main PostDetails component
 const PostDetails = () => {
-  // Profile modal state
-  const hasIncrementedView = React.useRef(false);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalData, setModalData] = useState({ profilePicture: '', channelName: '', socialLinks: {}, hasChannel: false, authorId: '' });
-
-  // Helper to open modal with profile picture and channel info
-  const handleProfileClick = async (author) => {
-    if (!author) return;
-    // Always fetch channel info and user contact info before opening modal
-    if (author._id || author.id) {
-      try {
-        const apiUrl = import.meta.env.VITE_API_URL;
-        const res = await fetch(`${apiUrl}/channel/by-owner/${author._id || author.id}`);
-        if (res.ok) {
-          const data = await res.json();
-          let hasChannel = false;
-          let channelName = author.username || '';
-          let socialLinks = {};
-          // Use contactInfo from user model for icons
-          if (data.contactInfo) {
-            socialLinks = data.contactInfo;
-          }
-          if (data && data._id) {
-            hasChannel = true;
-            channelName = data.name || channelName;
-          } else if (data.channel && data.channel._id) {
-            hasChannel = true;
-            channelName = data.channel.name || channelName;
-          }
-          setModalData({
-            profilePicture: author.profilePicture || author.avatar || '/default-avatar.png',
-            channelName,
-            socialLinks,
-            hasChannel,
-            authorId: author._id || author.id || ''
-          });
-        }
-      } catch {
-        setModalData({
-          profilePicture: author.profilePicture || author.avatar || '/default-avatar.png',
-          channelName: author.username || '',
-          socialLinks: {},
-          hasChannel: false,
-          authorId: author._id || author.id || ''
-        });
-      }
-    } else {
-      setModalData({
-        profilePicture: author.profilePicture || author.avatar || '/default-avatar.png',
-        channelName: author.username || '',
-        socialLinks: {},
-        hasChannel: false,
-        authorId: author._id || author.id || ''
-      });
-    }
-    setModalOpen(true);
-  };
-  // Reply state for comments
-  const [replyingTo, setReplyingTo] = useState(null);
-  const [replyText, setReplyText] = useState('');
-
-  // Handler to show reply input
-  const handleReply = (commentId, replyId, taggedUser) => {
-    setReplyingTo({ commentId, replyId, taggedUser });
-    setReplyText('');
-  };
-
-  // Handler to add reply
-  const handleAddReply = async (e, commentId, replyId, taggedUser) => {
-    e.preventDefault();
-    if (!replyText.trim()) return;
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}/comment/reply`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({ commentId, content: replyText, taggedUser })
-      });
-      if (!res.ok) throw new Error('Failed to add reply');
-      const data = await res.json();
-      // Update replies in state (recursive update)
-      setPost(prev => ({
-        ...prev,
-        comments: prev.comments.map(c =>
-          c._id === commentId
-            ? { ...c, replies: data }
-            : c
-        )
-      }));
-      setReplyingTo(null);
-      setReplyText('');
-    } catch (err) {
-      // Optionally handle error
-    }
-  };
-  // Like a comment
-  const handleLike = async (commentId, liked) => {
-    try {
-      const endpoint = liked
-        ? `${import.meta.env.VITE_API_URL}/posts/${postId}/comment/unlike`
-        : `${import.meta.env.VITE_API_URL}/posts/${postId}/comment/like`;
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({ commentId })
-      });
-      if (!res.ok) throw new Error('Failed to like/unlike comment');
-      const data = await res.json();
-      setPost(prev => ({
-        ...prev,
-        comments: prev.comments.map(c =>
-          c._id === commentId ? { ...c, likes: data.likes } : c
-        )
-      }));
-    } catch (err) {
-      // Optionally handle error
-    }
-  };
-
-  // Like a reply
-  const handleLikeReply = async (replyId, commentId, liked) => {
-    try {
-      const endpoint = liked
-        ? `${import.meta.env.VITE_API_URL}/posts/${postId}/comment/reply/unlike`
-        : `${import.meta.env.VITE_API_URL}/posts/${postId}/comment/reply/like`;
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({ commentId, replyId })
-      });
-      if (!res.ok) throw new Error('Failed to like/unlike reply');
-      const data = await res.json();
-      function updateReplies(replies) {
-        return replies.map(r =>
-          r._id === replyId ? { ...r, likes: data.likes } :
-          r.replies ? { ...r, replies: updateReplies(r.replies) } : r
-        );
-      }
-      setPost(prev => ({
-        ...prev,
-        comments: prev.comments.map(c =>
-          c.replies ? { ...c, replies: updateReplies(c.replies) } : c
-        )
-      }));
-    } catch (err) {
-      // Optionally handle error
-    }
-  };
-  // Auth context for token
   const { token, user } = useAuth();
-  // Comment input state
-  const [commentInput, setCommentInput] = useState('');
-  const [commentLoading, setCommentLoading] = useState(false);
-  const [commentError, setCommentError] = useState('');
   const { postId } = useParams();
-  const location = typeof window !== 'undefined' && window.location && window.location.state ? window.location : null;
+  const navigate = useNavigate();
+  const hasIncrementedView = useRef(false);
   const [post, setPost] = useState(() => {
-    // Try to get post from route state
+    const location = typeof window !== 'undefined' && window.location && window.location.state ? window.location : null;
     if (location && location.state && location.state.post) {
       return location.state.post;
     }
-    // Fallback: try localStorage
     const localPost = localStorage.getItem('postDetailsData');
     if (localPost) {
       try {
         return JSON.parse(localPost);
-      } catch {}
+      } catch {
+        return null;
+      }
     }
     return null;
   });
   const [loading, setLoading] = useState(!post);
   const [error, setError] = useState('');
+  const [commentInput, setCommentInput] = useState('');
+  const [commentLoading, setCommentLoading] = useState(false);
+  const [commentError, setCommentError] = useState('');
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [replyText, setReplyText] = useState('');
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editContent, setEditContent] = useState('');
+  const [editingReply, setEditingReply] = useState({ commentId: null, replyId: null });
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalData, setModalData] = useState({
+    profilePicture: '',
+    channelName: '',
+    socialLinks: {},
+    hasChannel: false,
+    authorId: ''
+  });
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const handleToggleSidebar = () => setSidebarOpen((open) => !open);
+
+  const handleProfileClick = async (author) => {
+    if (!author) return;
+    const authorId = author._id || author.id;
+    let hasChannel = false;
+    let channelName = author.username || 'Unknown';
+    let socialLinks = {};
+    if (authorId) {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/channel/by-owner/${authorId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data._id) {
+            hasChannel = true;
+            channelName = data.name || channelName;
+          }
+          if (data.contactInfo) {
+            socialLinks = data.contactInfo;
+          }
+        }
+      } catch {}
+    }
+    setModalData({
+      profilePicture: author.profilePicture || author.avatar || '/default-avatar.png',
+      channelName,
+      socialLinks,
+      hasChannel,
+      authorId
+    });
+    setModalOpen(true);
+  };
+
+  const handleReply = (commentId, replyId, taggedUser) => {
+    setReplyingTo({ commentId, replyId, taggedUser });
+    setReplyText('');
+  };
+
+  const handleEditComment = (commentId, currentContent) => {
+    setEditingCommentId(commentId);
+    setEditContent(currentContent);
+  };
+
+  const handleEditCommentCancel = () => {
+    setEditingCommentId(null);
+    setEditContent('');
+  };
+
+  const handleEditReply = (commentId, replyId, currentContent) => {
+    setEditingReply({ commentId, replyId });
+    setEditContent(currentContent);
+  };
+
+  const handleEditReplyCancel = () => {
+    setEditingReply({ commentId: null, replyId: null });
+    setEditContent('');
+  };
+
+  const handleAddComment = async (e) => {
+    e.preventDefault();
+    if (!commentInput.trim() || !user || !token) return;
+    setCommentLoading(true);
+    setCommentError('');
+    const optimisticComment = {
+      _id: `temp_${Date.now()}`,
+      content: commentInput,
+      author: { _id: user._id, ...user },
+      createdAt: new Date().toISOString(),
+      likes: [],
+      replies: [],
+      _posting: true
+    };
+    setPost((prev) => ({
+      ...prev,
+      comments: [optimisticComment, ...(prev.comments || [])]
+    }));
+    setCommentInput('');
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}/comment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ text: commentInput })
+      });
+      if (!res.ok) throw new Error('Failed to post comment');
+      const data = await res.json();
+      setPost((prev) => ({
+        ...prev,
+        comments: [data.comment, ...prev.comments.filter((c) => !c._posting)]
+      }));
+    } catch (err) {
+      setPost((prev) => ({
+        ...prev,
+        comments: prev.comments.filter((c) => !c._posting)
+      }));
+      setCommentError(err.message || 'Failed to post comment');
+    } finally {
+      setCommentLoading(false);
+    }
+  };
+
+  const handleAddReply = async (e, commentId, replyId, taggedUser) => {
+    e.preventDefault();
+    if (!replyText.trim() || !user || !token) return;
+    const optimisticReply = {
+      _id: `temp_${Date.now()}`,
+      content: replyId ? `@${taggedUser} ${replyText}` : replyText,
+      author: { _id: user._id, ...user },
+      createdAt: new Date().toISOString(),
+      likes: [],
+      replies: [],
+      _posting: true
+    };
+    setPost((prev) => ({
+      ...prev,
+      comments: prev.comments.map((c) => {
+        if (c._id === commentId) {
+          if (replyId) {
+            const updateReplies = (replies) =>
+              replies.map((r) =>
+                r._id === replyId
+                  ? { ...r, replies: [...(r.replies || []), optimisticReply] }
+                  : r.replies
+                  ? { ...r, replies: updateReplies(r.replies) }
+                  : r
+              );
+            return { ...c, replies: updateReplies(c.replies || []) };
+          } else {
+            return { ...c, replies: [...(c.replies || []), optimisticReply] };
+          }
+        }
+        return c;
+      })
+    }));
+    setReplyText('');
+    setReplyingTo(null);
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}/comment/reply`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ commentId, content: replyText, taggedUser: replyId ? taggedUser : undefined })
+      });
+      if (!res.ok) throw new Error('Failed to add reply');
+      const data = await res.json();
+      setPost((prev) => ({
+        ...prev,
+        comments: prev.comments.map((c) => {
+          if (c._id === commentId) {
+            if (replyId) {
+              const updateReplies = (replies) =>
+                replies.map((r) =>
+                  r._id === replyId
+                    ? { ...r, replies: [...(r.replies || []).filter((r) => !r._posting), data.reply] }
+                    : r.replies
+                    ? { ...r, replies: updateReplies(r.replies) }
+                    : r
+                );
+              return { ...c, replies: updateReplies(c.replies || []) };
+            } else {
+              return { ...c, replies: [...(c.replies || []).filter((r) => !r._posting), data.reply] };
+            }
+          }
+          return c;
+        })
+      }));
+    } catch {
+      setPost((prev) => ({
+        ...prev,
+        comments: prev.comments.map((c) => {
+          if (c._id === commentId) {
+            if (replyId) {
+              const updateReplies = (replies) =>
+                replies.map((r) =>
+                  r._id === replyId
+                    ? { ...r, replies: (r.replies || []).filter((r) => !r._posting) }
+                    : r.replies
+                    ? { ...r, replies: updateReplies(r.replies) }
+                    : r
+                );
+              return { ...c, replies: updateReplies(c.replies || []) };
+            } else {
+              return { ...c, replies: (c.replies || []).filter((r) => !r._posting) };
+            }
+          }
+          return c;
+        })
+      }));
+    }
+  };
+
+  const handleEditCommentSave = async (commentId) => {
+    if (!editContent.trim() || !user || !token) return;
+    let prevComments;
+    setPost((prev) => {
+      prevComments = prev.comments;
+      return {
+        ...prev,
+        comments: prev.comments.map((c) =>
+          c._id === commentId ? { ...c, content: editContent, _editing: true } : c
+        )
+      };
+    });
+    setEditingCommentId(null);
+    setEditContent('');
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}/comment/${commentId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ content: editContent })
+      });
+      if (!res.ok) throw new Error('Failed to edit comment');
+      const data = await res.json();
+      setPost((prev) => ({
+        ...prev,
+        comments: prev.comments.map((c) =>
+          c._id === commentId ? { ...c, content: data.comment?.content || editContent, _editing: undefined } : c
+        )
+      }));
+    } catch {
+      setPost((prev) => ({ ...prev, comments: prevComments }));
+    }
+  };
+
+  const handleEditReplySave = async (commentId, replyId) => {
+    if (!editContent.trim() || !user || !token) return;
+    let prevComments;
+    setPost((prev) => {
+      prevComments = prev.comments;
+      const updateReplies = (replies) =>
+        replies.map((r) =>
+          r._id === replyId
+            ? { ...r, content: editContent, _editing: true }
+            : r.replies
+            ? { ...r, replies: updateReplies(r.replies) }
+            : r
+        );
+      return {
+        ...prev,
+        comments: prev.comments.map((c) =>
+          c._id === commentId ? { ...c, replies: updateReplies(c.replies || []) } : c
+        )
+      };
+    });
+    setEditingReply({ commentId: null, replyId: null });
+    setEditContent('');
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}/comment/${commentId}/reply/${replyId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ content: editContent })
+      });
+      if (!res.ok) throw new Error('Failed to edit reply');
+      const data = await res.json();
+      setPost((prev) => {
+        const updateReplies = (replies) =>
+          replies.map((r) =>
+            r._id === replyId
+              ? { ...r, content: data.reply?.content || editContent, _editing: undefined }
+              : r.replies
+              ? { ...r, replies: updateReplies(r.replies) }
+              : r
+          );
+        return {
+          ...prev,
+          comments: prev.comments.map((c) =>
+            c._id === commentId ? { ...c, replies: updateReplies(c.replies || []) } : c
+          )
+        };
+      });
+    } catch {
+      setPost((prev) => ({ ...prev, comments: prevComments }));
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    if (!window.confirm('Delete this comment?')) return;
+    let prevComments;
+    setPost((prev) => {
+      prevComments = prev.comments;
+      return { ...prev, comments: prev.comments.filter((c) => c._id !== commentId) };
+    });
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}/comment/${commentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!res.ok) throw new Error('Failed to delete comment');
+    } catch {
+      setPost((prev) => ({ ...prev, comments: prevComments }));
+    }
+  };
+
+  const handleDeleteReply = async (commentId, replyId) => {
+    if (!window.confirm('Delete this reply?')) return;
+    let prevComments;
+    setPost((prev) => {
+      prevComments = prev.comments;
+      const updateReplies = (replies) =>
+        replies
+          .filter((r) => r._id !== replyId)
+          .map((r) => (r.replies ? { ...r, replies: updateReplies(r.replies) } : r));
+      return {
+        ...prev,
+        comments: prev.comments.map((c) =>
+          c._id === commentId ? { ...c, replies: updateReplies(c.replies || []) } : c
+        )
+      };
+    });
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}/comment/${commentId}/reply/${replyId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!res.ok) throw new Error('Failed to delete reply');
+    } catch {
+      setPost((prev) => ({ ...prev, comments: prevComments }));
+    }
+  };
+
+  const handleLike = async (commentId, liked) => {
+    if (!user || !token) return;
+    let prevComments;
+    setPost((prev) => {
+      prevComments = prev.comments;
+      return {
+        ...prev,
+        comments: prev.comments.map((c) => {
+          if (c._id === commentId) {
+            let likesArr = Array.isArray(c.likes) ? c.likes : [];
+            let newLikes = liked
+              ? likesArr.filter((id) => id !== user._id)
+              : [...new Set([...likesArr, user._id])];
+            return { ...c, likes: newLikes };
+          }
+          return c;
+        })
+      };
+    });
+    try {
+      const endpoint = liked ? 'unlike' : 'like';
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}/comment/${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ commentId })
+      });
+      if (!res.ok) throw new Error('Failed to like/unlike comment');
+      const data = await res.json();
+      setPost((prev) => ({
+        ...prev,
+        comments: prev.comments.map((c) =>
+          c._id === commentId ? { ...c, likes: Array.isArray(data.likes) ? data.likes : [] } : c
+        )
+      }));
+    } catch {
+      setPost((prev) => ({ ...prev, comments: prevComments }));
+    }
+  };
+
+  const handleLikeReply = async (replyId, commentId, liked) => {
+    if (!user || !token) return;
+    let prevComments;
+    setPost((prev) => {
+      prevComments = prev.comments;
+      const updateReplies = (replies) =>
+        replies.map((r) =>
+          r._id === replyId
+            ? {
+                ...r,
+                likes: liked
+                  ? (r.likes || []).filter((id) => id !== user._id)
+                  : [...new Set([...(r.likes || []), user._id])]
+              }
+            : r.replies
+            ? { ...r, replies: updateReplies(r.replies) }
+            : r
+        );
+      return {
+        ...prev,
+        comments: prev.comments.map((c) =>
+          c._id === commentId ? { ...c, replies: updateReplies(c.replies || []) } : c
+        )
+      };
+    });
+    try {
+      const endpoint = liked ? 'unlike' : 'like';
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}/comment/reply/${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ commentId, replyId })
+      });
+      if (!res.ok) throw new Error('Failed to like/unlike reply');
+      const data = await res.json();
+      setPost((prev) => {
+        const updateReplies = (replies) =>
+          replies.map((r) =>
+            r._id === replyId
+              ? { ...r, likes: Array.isArray(data.likes) ? data.likes : [] }
+              : r.replies
+              ? { ...r, replies: updateReplies(r.replies) }
+              : r
+          );
+        return {
+          ...prev,
+          comments: prev.comments.map((c) =>
+            c._id === commentId ? { ...c, replies: updateReplies(c.replies || []) } : c
+          )
+        };
+      });
+    } catch {
+      setPost((prev) => ({ ...prev, comments: prevComments }));
+    }
+  };
 
   useEffect(() => {
-    // Only run on mount or postId change
     const fetchPost = async () => {
       setLoading(true);
       setError('');
       try {
-        // If post is not present, fetch only
         const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}`);
         if (!res.ok) throw new Error('Failed to fetch post');
         const data = await res.json();
         setPost(data.post || data);
       } catch (err) {
         setError(err.message);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     if (!post) {
       fetchPost();
-    } else {
-      setLoading(false);
     }
     localStorage.removeItem('postDetailsData');
-    // eslint-disable-next-line
   }, [postId]);
 
-  // Sidebar expand/collapse logic
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const handleToggleSidebar = () => setSidebarOpen((open) => !open);
-
-  const navigate = useNavigate();
-
   return (
-    <React.Fragment>
-      <div className="min-h-screen bg-gray-100 dark:bg-[#111111] w-full" style={{ overflowX: 'hidden', scrollbarWidth: 'none', maxWidth: '100vw' }}>
+    <>
+      <div
+        className="min-h-screen bg-gray-100 dark:bg-[#111111] w-full"
+        style={{ overflowX: 'hidden', scrollbarWidth: 'none', maxWidth: '100vw' }}
+      >
         <HeaderFixed onToggleSidebar={handleToggleSidebar} />
-  <div className="flex flex-row w-full" style={{ height: '100vh', maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
+        <div className="flex flex-row w-full" style={{ height: '100vh', maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
           <SidebarFixed sidebarOpen={sidebarOpen} />
           {!sidebarOpen && (
             <div className="md:ml-20">
               <StudentUtility />
             </div>
           )}
-          <div className={`flex-1 flex flex-col ${sidebarOpen ? 'ml-0 md:ml-64' : 'ml-0 md:ml-0'} w-full`} style={{ maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
-            <main className="flex-1 p-4 md:p-8 pb-0 overflow-y-auto w-full" style={{ maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none', marginTop: '3.5rem' }}>
-              {/* ...existing code... */}
+          <div
+            className={`flex-1 flex flex-col ${sidebarOpen ? 'ml-0 md:ml-64' : 'ml-0 md:ml-0'} w-full`}
+            style={{ maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}
+          >
+            <main
+              className="flex-1 p-4 md:p-8 pb-0 overflow-y-auto w-full"
+              style={{ maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none', marginTop: '3.5rem' }}
+            >
               {loading ? (
                 <div className="text-gray-500 dark:text-gray-400 px-4 py-6">Loading post...</div>
               ) : error ? (
                 <div className="text-red-500 px-4 py-6">{error}</div>
               ) : post ? (
-                <div className="bg-white dark:bg-[#181818] rounded-lg shadow-md overflow-hidden flex flex-col min-w-0 w-full border border-gray-200 dark:border-gray-700" style={{ maxWidth: '100%', minWidth: 0, fontSize: '1.05em', padding: '0.5em', marginBottom: '0.75em' }}>
+                <div
+                  className="bg-white dark:bg-[#181818] rounded-lg shadow-md overflow-hidden flex flex-col min-w-0 w-full border border-gray-200 dark:border-gray-700"
+                  style={{ maxWidth: '100%', minWidth: 0, fontSize: '1.05em', padding: '0.5em', marginBottom: '0.75em' }}
+                >
                   <div className="p-3 flex items-start gap-3">
                     <button
                       onClick={() => {
@@ -560,19 +901,31 @@ const PostDetails = () => {
                       aria-label="Go back"
                       style={{ minWidth: '32px', minHeight: '32px', maxWidth: '32px', maxHeight: '32px', marginRight: '8px' }}
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-gray-700 dark:text-gray-200">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={2}
+                        stroke="currentColor"
+                        className="w-5 h-5 text-gray-700 dark:text-gray-200"
+                      >
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                       </svg>
                     </button>
-                    <img src={post.author?.profilePicture || post.author?.avatar || post.author?.profile || '/default-avatar.png'} alt={post.author?.username || 'User'} className="w-12 h-12 rounded-full border-2 border-gray-300 dark:border-gray-700 flex-shrink-0 cursor-pointer" style={{ width: '48px', height: '48px', objectFit: 'cover', aspectRatio: '1/1', minWidth: '48px', minHeight: '48px', maxWidth: '48px', maxHeight: '48px' }} onClick={() => handleProfileClick(post.author)} />
+                    <img
+                      src={post.author?.profilePicture || post.author?.avatar || post.author?.profile || '/default-avatar.png'}
+                      alt={post.author?.username || 'User'}
+                      className="w-12 h-12 rounded-full border-2 border-gray-300 dark:border-gray-700 flex-shrink-0 cursor-pointer"
+                      style={{ width: '48px', height: '48px', objectFit: 'cover', aspectRatio: '1/1', minWidth: '48px', minHeight: '48px', maxWidth: '48px', maxHeight: '48px' }}
+                      onClick={() => handleProfileClick(post.author)}
+                    />
                     <div className="flex flex-col min-w-0" style={{ flex: 1, minWidth: 0 }}>
                       <span className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{post.author?.username || 'Unknown'}</span>
                       {post.createdAt && (
-                        <span className="text-xs text-gray-500 dark:text-gray-400 mb-1">{timeAgo(post.createdAt)}</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 mb-1">{formatRelativeTime(post.createdAt)}</span>
                       )}
                       <span className="text-xs text-[#c42152] font-semibold">{post.specialization}</span>
                     </div>
-                    {/* Views icon and count */}
                   </div>
                   {post.images && post.images.length > 0 && (
                     <>
@@ -606,11 +959,12 @@ const PostDetails = () => {
                     {post.content}
                     {post.link && (
                       <div className="mt-2">
-                        <a href={post.link} target="_blank" rel="noopener noreferrer" className="text-[#0bb6bc] underline">View Link</a>
+                        <a href={post.link} target="_blank" rel="noopener noreferrer" className="text-[#0bb6bc] underline">
+                          View Link
+                        </a>
                       </div>
                     )}
                   </div>
-                  {/* Comments section */}
                   <div className="p-4 pt-0 border-t border-gray-200 dark:border-gray-700">
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="text-lg font-bold text-black dark:text-white">
@@ -618,65 +972,38 @@ const PostDetails = () => {
                       </h3>
                       <div className="flex items-center gap-1">
                         <FaChartBar className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-                        <span className="text-xs text-gray-600 dark:text-gray-400 font-semibold">{post.viewCount ?? (Array.isArray(post.views) ? post.views.length : 0)}</span>
+                        <span className="text-xs text-gray-600 dark:text-gray-400 font-semibold">
+                          {post.viewCount ?? (Array.isArray(post.views) ? post.views.length : 0)}
+                        </span>
                       </div>
                     </div>
-                    {/* Comments input for engagement */}
-                    <div className="mb-4">
-                      <form
-                        className="flex items-center gap-2"
-                        onSubmit={async e => {
-                          e.preventDefault();
-                          if (!commentInput.trim()) return;
-                          setCommentLoading(true);
-                          setCommentError('');
-                          try {
-                            const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}/comment`, {
-                              method: 'POST',
-                              headers: {
-                                'Content-Type': 'application/json',
-                                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-                              },
-                              body: JSON.stringify({ text: commentInput })
-                            });
-                            if (!res.ok) throw new Error('Failed to post comment');
-                            const data = await res.json();
-                            // Update comments list
-                            setPost(prev => ({ ...prev, comments: [data.comment, ...(prev.comments || [])] }));
-                            setCommentInput('');
-                          } catch (err) {
-                            setCommentError(err.message || 'Failed to post comment');
-                          }
-                          setCommentLoading(false);
-                        }}
-                      >
-                        <input
-                          type="text"
-                          value={commentInput}
-                          onChange={e => setCommentInput(e.target.value)}
-                          placeholder="Add a comment..."
-                          className="flex-1 px-3 py-2 rounded-lg border-0 bg-white dark:bg-[#222] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#0bb6bc]"
+                    <form onSubmit={handleAddComment} className="flex items-center gap-2 mb-4">
+                      <input
+                        type="text"
+                        value={commentInput}
+                        onChange={(e) => setCommentInput(e.target.value)}
+                        placeholder="Add a comment..."
+                        className="flex-1 px-3 py-2 rounded-lg border-0 bg-white dark:bg-[#222] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#0bb6bc]"
+                        disabled={commentLoading}
+                      />
+                      {commentInput.trim() && (
+                        <button
+                          type="submit"
+                          className="px-4 py-2 rounded-lg bg-[#0bb6bc] text-white font-semibold hover:bg-[#099ca1] transition"
                           disabled={commentLoading}
-                        />
-                        {commentInput.trim() && (
-                          <button
-                            type="submit"
-                            className="px-4 py-2 rounded-lg bg-[#0bb6bc] text-white font-semibold hover:bg-[#099ca1] transition"
-                            disabled={commentLoading}
-                          >
-                            {commentLoading ? 'Posting...' : 'Post'}
-                          </button>
-                        )}
-                    {commentError && <div className="text-red-500 text-sm mb-2">{commentError}</div>}
-                      </form>
-                    </div>
+                        >
+                          {commentLoading ? 'Posting...' : 'Post'}
+                        </button>
+                      )}
+                      {commentError && <div className="text-red-500 text-sm mt-2">{commentError}</div>}
+                    </form>
                     {Array.isArray(post.comments) && post.comments.length > 0 ? (
                       <div className="flex flex-col gap-4">
                         <CommentThread
                           comments={post.comments}
                           postId={postId}
                           token={token}
-                          userId={user?._id?.toString() || user?.id?.toString() || ""}
+                          userId={user?._id?.toString() || user?.id?.toString() || ''}
                           handleLike={handleLike}
                           handleLikeReply={handleLikeReply}
                           onReply={handleReply}
@@ -685,6 +1012,16 @@ const PostDetails = () => {
                           setReplyText={setReplyText}
                           handleAddReply={handleAddReply}
                           onProfileClick={handleProfileClick}
+                          editingCommentId={editingCommentId}
+                          editContent={editContent}
+                          setEditContent={setEditContent}
+                          handleEditComment={handleEditComment}
+                          handleEditCommentSave={handleEditCommentSave}
+                          handleEditCommentCancel={handleEditCommentCancel}
+                          editingReply={editingReply}
+                          handleEditReply={handleEditReply}
+                          handleEditReplySave={handleEditReplySave}
+                          handleEditReplyCancel={handleEditReplyCancel}
                         />
                       </div>
                     ) : (
@@ -696,54 +1033,26 @@ const PostDetails = () => {
             </main>
           </div>
         </div>
-  <BottomTabs />
+        <BottomTabs />
       </div>
-    {modalOpen && (
-      <ProfilePictureZoomModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        profilePicture={modalData.profilePicture}
-        channelName={modalData.channelName}
-        socialLinks={modalData.socialLinks}
-        hasChannel={modalData.hasChannel}
-        onViewChannel={() => {
-          if (modalData.authorId && modalData.hasChannel) {
-            window.open(`/channel/${modalData.authorId}`, '_blank');
-            setModalOpen(false);
-          }
-        }}
-      />
-    )}
-    </React.Fragment>
+      {modalOpen && (
+        <ProfilePictureZoomModal
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          profilePicture={modalData.profilePicture}
+          channelName={modalData.channelName}
+          socialLinks={modalData.socialLinks}
+          hasChannel={modalData.hasChannel}
+          onViewChannel={() => {
+            if (modalData.authorId && modalData.hasChannel) {
+              window.open(`/channel/${modalData.authorId}`, '_blank');
+              setModalOpen(false);
+            }
+          }}
+        />
+      )}
+    </>
   );
-}
-
-function HeaderFixed({ onToggleSidebar }) {
-  return (
-    <div className="fixed top-0 left-0 w-full z-40" style={{ height: '44px' }}>
-      <Header onToggleSidebar={onToggleSidebar} />
-    </div>
-  );
-}
-
-function SidebarFixed({ sidebarOpen }) {
-  return (
-    <div className={`fixed top-14 left-0 h-[calc(100vh-56px)] ${sidebarOpen ? 'w-64' : 'w-20'} z-30 bg-transparent md:block`}>
-      <Sidebar collapsed={!sidebarOpen} />
-    </div>
-  );
-}
+};
 
 export default PostDetails;
-
-// Helper to format relative time (e.g., '2 hours ago')
-function formatRelativeTime(dateString) {
-  const now = new Date();
-  const date = new Date(dateString);
-  const diff = Math.floor((now - date) / 1000); // seconds
-  if (diff < 60) return `${diff}s ago`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  if (diff < 2592000) return `${Math.floor(diff / 86400)}d ago`;
-  return date.toLocaleDateString();
-}
