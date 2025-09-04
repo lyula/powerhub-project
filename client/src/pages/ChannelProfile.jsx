@@ -34,6 +34,9 @@ export default function ChannelProfile() {
   const [durations, setDurations] = useState([]);
   // Remove impressionRefs from ChannelProfile; useImpression should only be called inside ChannelProfileThumbnail
   const [aboutOpen, setAboutOpen] = useState(false);
+  // Sidebar expand/collapse state
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const handleToggleSidebar = () => setSidebarCollapsed((prev) => !prev);
 
   useEffect(() => {
     const fetchChannel = async () => {
@@ -113,9 +116,9 @@ export default function ChannelProfile() {
     return (
       <div className="w-full min-h-screen bg-gray-100 dark:bg-[#181818]">
         <ProgressBar loading={true} />
-        <Header />
+        <Header onToggleSidebar={handleToggleSidebar} />
         <div className="flex flex-row w-full" style={{ height: 'calc(100vh - 56px)', maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
-          <Sidebar collapsed={true} />
+          <Sidebar collapsed={sidebarCollapsed} />
           <div className="flex-1 flex flex-col items-stretch px-0 md:px-8 py-0 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 56px)' }}>
             {/* Banner skeleton */}
             <div className="w-full h-56 md:h-72 lg:h-80 relative bg-gray-300 dark:bg-gray-800 animate-pulse mb-0 mt-6" />
@@ -144,10 +147,17 @@ export default function ChannelProfile() {
   return (
     <div className="w-full min-h-screen bg-gray-100 dark:bg-[#181818]">
       <ProgressBar loading={progressLoading} />
-      <Header />
+      <Header onToggleSidebar={handleToggleSidebar} />
       <div className="flex flex-row w-full" style={{ height: 'calc(100vh - 56px)', maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
-        <Sidebar collapsed={true} />
-        <div className="flex-1 flex flex-col items-stretch px-0 md:px-8 py-0 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 56px)' }}>
+        <Sidebar collapsed={sidebarCollapsed} />
+        <div
+          className="flex-1 flex flex-col items-stretch px-0 md:px-8 py-0 overflow-y-auto hide-scrollbar"
+          style={{ maxHeight: 'calc(100vh - 56px)', position: 'relative' }}
+        >
+          <style>{`
+            .hide-scrollbar::-webkit-scrollbar { display: none !important; }
+            .hide-scrollbar { scrollbar-width: none !important; -ms-overflow-style: none !important; }
+          `}</style>
           {/* Banner styled like YouTube */}
           <div className="w-full h-56 md:h-72 lg:h-80 relative bg-black mb-0 mt-6">
             <img src={channel.banner} alt="Channel Banner" className="w-full h-full rounded-lg object-cover bg-black" style={{ objectPosition: 'center' }} />
