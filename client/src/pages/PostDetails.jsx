@@ -42,6 +42,10 @@ function CommentThread({ comments, postId, token, userId, onReply, replyingTo, r
   const [expandedReplies, setExpandedReplies] = useState({});
   const [shownReplies, setShownReplies] = useState({}); // how many replies to show per comment
   const REPLIES_BATCH = 3;
+  // Edit state for comments and replies
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editingReply, setEditingReply] = useState({ commentId: null, replyId: null });
+  const [editContent, setEditContent] = useState('');
 
   const handleViewReplies = (commentId, total) => {
     setExpandedReplies(prev => ({ ...prev, [commentId]: true }));
@@ -53,6 +57,119 @@ function CommentThread({ comments, postId, token, userId, onReply, replyingTo, r
   const handleHideReplies = (commentId) => {
     setExpandedReplies(prev => ({ ...prev, [commentId]: false }));
     setShownReplies(prev => ({ ...prev, [commentId]: 0 }));
+  };
+
+  // Edit comment handler
+  const handleEditComment = (commentId, currentContent) => {
+    setEditingCommentId(commentId);
+    setEditContent(currentContent);
+  };
+  const handleEditCommentSave = async (commentId) => {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}/comment/${commentId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ content: editContent })
+      });
+      if (!res.ok) throw new Error('Failed to edit comment');
+      const data = await res.json();
+      setEditingCommentId(null);
+      setEditContent('');
+      // Update comment in state
+      if (data.comment) {
+        setPost(prev => ({
+          ...prev,
+          comments: prev.comments.map(c => c._id === commentId ? { ...c, content: data.comment.content } : c)
+        }));
+      }
+    } catch {}
+  };
+  const handleEditCommentCancel = () => {
+    setEditingCommentId(null);
+    setEditContent('');
+  };
+  // Delete comment handler
+  const handleDeleteComment = async (commentId) => {
+    if (!window.confirm('Delete this comment?')) return;
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}/comment/${commentId}`, {
+        method: 'DELETE',
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      if (!res.ok) throw new Error('Failed to delete comment');
+      setPost(prev => ({
+        ...prev,
+        comments: prev.comments.filter(c => c._id !== commentId)
+      }));
+    } catch {}
+  };
+  // Edit reply handler
+  const handleEditReply = (commentId, replyId, currentContent) => {
+    setEditingReply({ commentId, replyId });
+    setEditContent(currentContent);
+  };
+  const handleEditReplySave = async (commentId, replyId) => {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}/comment/${commentId}/reply/${replyId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ content: editContent })
+      });
+      if (!res.ok) throw new Error('Failed to edit reply');
+      const data = await res.json();
+      setEditingReply({ commentId: null, replyId: null });
+      setEditContent('');
+      // Update reply in state (recursive)
+      function updateReplies(replies) {
+        return replies.map(r =>
+          r._id === replyId ? { ...r, content: data.reply.content } :
+          r.replies ? { ...r, replies: updateReplies(r.replies) } : r
+        );
+      }
+      setPost(prev => ({
+        ...prev,
+        comments: prev.comments.map(c =>
+          c._id === commentId ? { ...c, replies: updateReplies(c.replies) } : c
+        )
+      }));
+    } catch {}
+  };
+  const handleEditReplyCancel = () => {
+    setEditingReply({ commentId: null, replyId: null });
+    setEditContent('');
+  };
+  // Delete reply handler
+  const handleDeleteReply = async (commentId, replyId) => {
+    if (!window.confirm('Delete this reply?')) return;
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/posts/${postId}/comment/${commentId}/reply/${replyId}`, {
+        method: 'DELETE',
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      if (!res.ok) throw new Error('Failed to delete reply');
+      // Update reply in state (recursive)
+      function removeReply(replies) {
+        return replies.filter(r => r._id !== replyId).map(r =>
+          r.replies ? { ...r, replies: removeReply(r.replies) } : r
+        );
+      }
+      setPost(prev => ({
+        ...prev,
+        comments: prev.comments.map(c =>
+          c._id === commentId ? { ...c, replies: removeReply(c.replies) } : c
+        )
+      }));
+    } catch {}
   };
 
   return (
@@ -70,20 +187,34 @@ function CommentThread({ comments, postId, token, userId, onReply, replyingTo, r
                 <span className="text-xs text-gray-400 ml-2">{timeAgo(comment.createdAt)}</span>
               )}
             </div>
-            <span className="text-gray-800 dark:text-gray-200 text-sm block mb-1 pl-9">
-              {comment.taggedUser ? <span className="text-[#0bb6bc] font-semibold mr-1">@{comment.taggedUser}</span> : null}
-              {comment.content}
-            </span>
-            <div className="flex gap-4 items-center mt-1 pl-9">
-              <button className={`text-xs flex items-center ${Array.isArray(comment.likes) && comment.likes.includes(userId) ? 'text-pink-500' : 'text-gray-500'} hover:text-pink-500 font-medium px-2 py-1 rounded transition`} onClick={() => handleLike(comment._id, Array.isArray(comment.likes) && comment.likes.includes(userId))}>
-                <svg xmlns="http://www.w3.org/2000/svg" fill={Array.isArray(comment.likes) && comment.likes.includes(userId) ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" className="w-4 h-4 mr-1">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 21.682l-7.682-7.682a4.5 4.5 0 010-6.364z" />
-                </svg>
-                <span className="ml-1">{Array.isArray(comment.likes) ? comment.likes.length : 0}</span>
-              </button>
-              <button className="text-xs text-gray-500 hover:text-[#0bb6bc] font-medium px-2 py-1 rounded transition" onClick={() => onReply(comment._id, null, comment.author?.username)}>
-                Reply
-              </button>
+            <div className="flex flex-col pl-9">
+              <div className="text-gray-800 dark:text-gray-200 text-sm mb-1">
+                {comment.taggedUser ? <span className="text-[#0bb6bc] font-semibold mr-1">@{comment.taggedUser}</span> : null}
+                {editingCommentId === comment._id ? (
+                  <form onSubmit={e => { e.preventDefault(); handleEditCommentSave(comment._id); }} className="flex gap-2 mt-1">
+                    <input type="text" className="flex-1 rounded px-2 py-1 text-black dark:text-white bg-gray-100 dark:bg-gray-800 border-0 focus:ring-2 focus:ring-[#0bb6bc]" value={editContent} onChange={e => setEditContent(e.target.value)} />
+                    <button type="submit" className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition">Save</button>
+                    <button type="button" className="bg-gray-400 text-white px-3 py-1 rounded hover:bg-gray-500 transition" onClick={handleEditCommentCancel}>Cancel</button>
+                  </form>
+                ) : comment.content}
+              </div>
+              <div className="flex gap-4 items-center mt-1">
+                <button className={`text-xs flex items-center ${Array.isArray(comment.likes) && comment.likes.includes(userId) ? 'text-pink-500' : 'text-gray-500'} hover:text-pink-500 font-medium px-2 py-1 rounded transition`} onClick={() => handleLike(comment._id, Array.isArray(comment.likes) && comment.likes.includes(userId))}>
+                  <svg xmlns="http://www.w3.org/2000/svg" fill={Array.isArray(comment.likes) && comment.likes.includes(userId) ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" className="w-4 h-4 mr-1">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 21.682l-7.682-7.682a4.5 4.5 0 010-6.364z" />
+                  </svg>
+                  <span className="ml-1">{Array.isArray(comment.likes) ? comment.likes.length : 0}</span>
+                </button>
+                <button className="text-xs text-gray-500 hover:text-[#0bb6bc] font-medium px-2 py-1 rounded transition" onClick={() => onReply(comment._id, null, comment.author?.username)}>
+                  Reply
+                </button>
+                {(comment.author?._id === userId || comment.author?.id === userId) && (
+                  <>
+                    <button className="text-xs text-blue-500 hover:underline ml-2" onClick={() => handleEditComment(comment._id, comment.content)}>Edit</button>
+                    <button className="text-xs text-red-500 hover:underline ml-1" onClick={() => handleDeleteComment(comment._id)}>Delete</button>
+                  </>
+                )}
+              </div>
             </div>
             {replyingTo && replyingTo.commentId === comment._id && !replyingTo.replyId && (
               <form onSubmit={e => handleAddReply(e, comment._id, null, comment.author?.username)} className="flex gap-2 mt-2 ml-9">
@@ -113,7 +244,13 @@ function CommentThread({ comments, postId, token, userId, onReply, replyingTo, r
                         </div>
                         <span className="text-gray-800 dark:text-gray-200 text-sm block mb-1 pl-9">
                           {reply.taggedUser ? <span className="text-[#0bb6bc] font-semibold mr-1">@{reply.taggedUser}</span> : null}
-                          {reply.content}
+                          {editingReply.commentId === comment._id && editingReply.replyId === reply._id ? (
+                            <form onSubmit={e => { e.preventDefault(); handleEditReplySave(comment._id, reply._id); }} className="flex gap-2 mt-1">
+                              <input type="text" className="flex-1 rounded px-2 py-1 text-black dark:text-white bg-gray-100 dark:bg-gray-800 border-0 focus:ring-2 focus:ring-[#0bb6bc]" value={editContent} onChange={e => setEditContent(e.target.value)} />
+                              <button type="submit" className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition">Save</button>
+                              <button type="button" className="bg-gray-400 text-white px-3 py-1 rounded hover:bg-gray-500 transition" onClick={handleEditReplyCancel}>Cancel</button>
+                            </form>
+                          ) : reply.content}
                         </span>
                         <div className="flex gap-4 items-center mt-1 pl-9">
                           <button className={`text-xs flex items-center ${Array.isArray(reply.likes) && reply.likes.includes(userId) ? 'text-pink-500' : 'text-gray-500'} hover:text-pink-500 font-medium px-2 py-1 rounded transition`} onClick={() => handleLikeReply(reply._id, comment._id, Array.isArray(reply.likes) && reply.likes.includes(userId))}>
@@ -125,6 +262,12 @@ function CommentThread({ comments, postId, token, userId, onReply, replyingTo, r
                           <button className="text-xs text-gray-500 hover:text-[#0bb6bc] font-medium px-2 py-1 rounded transition" onClick={() => onReply(comment._id, reply._id, reply.author?.username)}>
                             Reply
                           </button>
+                          {(reply.author?._id === userId || reply.author?.id === userId) && (
+                            <>
+                              <button className="text-xs text-blue-500 hover:underline ml-2" onClick={() => handleEditReply(comment._id, reply._id, reply.content)}>Edit</button>
+                              <button className="text-xs text-red-500 hover:underline ml-1" onClick={() => handleDeleteReply(comment._id, reply._id)}>Delete</button>
+                            </>
+                          )}
                         </div>
                         {replyingTo && replyingTo.commentId === comment._id && replyingTo.replyId === reply._id && (
                           <form onSubmit={e => handleAddReply(e, comment._id, reply._id, reply.author?.username)} className="flex gap-2 mt-2 ml-9">
@@ -521,7 +664,7 @@ const PostDetails = () => {
                           comments={post.comments}
                           postId={postId}
                           token={token}
-                          userId={user?._id}
+                          userId={user?._id?.toString() || user?.id?.toString() || ""}
                           handleLike={handleLike}
                           handleLikeReply={handleLikeReply}
                           onReply={handleReply}
