@@ -61,7 +61,7 @@ export default function ChannelProfile() {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       if (response.ok) {
-        navigate('/');
+        navigate('/home');
       } else {
         alert('Failed to delete channel.');
       }
