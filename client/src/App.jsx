@@ -1,4 +1,3 @@
-
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useEffect } from 'react';
@@ -26,6 +25,7 @@ import LandingPage from './pages/LandingPage';
 import PostDetails from './pages/PostDetails';
 import ITDashboard from './pages/ITDashboard'; // Added ITDashboard import
 import MaintenancePage from './pages/MaintenancePage';
+import CollaborationPlaceholder from './pages/CollaborationPlaceholder';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, requireRegularUser = false }) => {
@@ -146,6 +146,7 @@ function AppRoutes() {
       <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
       <Route path="/it-dashboard" element={<ProtectedRoute><ITDashboard /></ProtectedRoute>} />
   <Route path="/post/:postId" element={<ProtectedRoute><PostDetails /></ProtectedRoute>} />
+      <Route path="/collaborations/:category" element={<ProtectedRoute><CollaborationPlaceholder /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </>
