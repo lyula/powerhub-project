@@ -28,8 +28,8 @@ export default function Sidebar({ collapsed }) {
   ];
 
   return (
-    <aside className={`hidden md:flex flex-col min-h-screen bg-gray-100 dark:bg-[#111111] border-r border-gray-200 dark:border-gray-900 py-6 ${collapsed ? 'w-20 px-2' : 'w-64 px-4'}`}>
-  <nav className={`flex flex-col gap-2 ${collapsed ? 'overflow-visible' : 'overflow-y-auto'} max-h-[calc(100vh-48px)]`}>
+    <aside className={`hidden md:flex flex-col min-h-screen bg-gray-100 dark:bg-[#111111] border-r border-gray-200 dark:border-gray-900 py-6 ${collapsed ? 'w-20 px-2 overflow-visible' : 'w-64 px-4'}`}>
+  <nav className={`flex flex-col gap-2 ${collapsed ? 'overflow-visible' : 'overflow-y-auto scrollbar-hide'} max-h-[calc(100vh-48px)]`}>
         {sidebarItems.map((item) => {
           // Determine if the tab is active
           let isActive = false;
@@ -51,7 +51,7 @@ export default function Sidebar({ collapsed }) {
                   <span className="w-6 h-6 relative group flex items-center justify-center">
                     {item.icon}
                     {collapsed && (
-                      <span className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 rounded bg-gray-800 text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
+                      <span className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 rounded bg-gray-800 text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[9999] shadow-lg">
                         {item.label}
                       </span>
                     )}
@@ -76,7 +76,7 @@ export default function Sidebar({ collapsed }) {
                   <span className="w-6 h-6 relative group flex items-center justify-center">
                     {item.icon}
                     {collapsed && (
-                      <span className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 rounded bg-gray-800 text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
+                      <span className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 rounded bg-gray-800 text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[9999] shadow-lg">
                         {item.label}
                       </span>
                     )}
@@ -95,7 +95,7 @@ export default function Sidebar({ collapsed }) {
                   <span className="w-6 h-6 relative group flex items-center justify-center">
                     {item.icon}
                     {collapsed && (
-                      <span className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 rounded bg-gray-800 text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
+                      <span className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 rounded bg-gray-800 text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[9999] shadow-lg">
                         {item.label}
                       </span>
                     )}
