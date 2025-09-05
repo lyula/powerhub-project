@@ -288,7 +288,7 @@ export default function Home() {
                 </div>
               )}
             </div>
-            <main className="flex-1 p-1 sm:p-2 pb-0 overflow-y-auto w-full" style={{ maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
+            <main className="flex-1 p-1 sm:p-2 pb-0 overflow-y-auto w-full scrollbar-hide" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>
               <div
                 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-0 sm:gap-6 w-full"
                 style={{ margin: 0, maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}
@@ -409,10 +409,12 @@ export default function Home() {
                         </div>
                       );
                     })}
-                    {/* Swipeable Posts Section after first two video rows */}
-                    <div style={{ gridColumn: '1/-1', width: '100%' }}>
-                      <SwipeablePosts />
-                    </div>
+                    {/* Swipeable Posts Section after first two video rows - Hidden during search */}
+                    {!searchTerm && !selectedFilter && (
+                      <div style={{ gridColumn: '1/-1', width: '100%' }}>
+                        <SwipeablePosts />
+                      </div>
+                    )}
                     {/* Render remaining videos after swipeable posts */}
                     {displayVideos.slice(6).map((video, i) => {
                       const showDuration = videoDurations[i + 6];
