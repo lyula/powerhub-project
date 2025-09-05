@@ -108,7 +108,7 @@ exports.getSystemOverview = async (req, res) => {
         { $group: { _id: null, totalWatchTime: { $sum: '$videosWatched.watchTime' } } }
       ]);
       totalWatchTime = watchTimeResult.length > 0 ? watchTimeResult[0].totalWatchTime : 0;
-      
+
       console.log('UserAnalytics watch time result:', watchTimeResult);
       console.log('Total watch time from UserAnalytics:', totalWatchTime);
 
