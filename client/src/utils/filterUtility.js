@@ -45,6 +45,78 @@ const calculateFilterRelevanceScore = (item, filterName) => {
   const channelName = originalChannelName.toLowerCase();
   const originalSpecialization = (item.channel?.specialization || '');
   const specialization = originalSpecialization.toLowerCase();
+  // Video category (from upload) - highest priority
+  const originalCategory = (item.category || '');
+  const category = originalCategory.toLowerCase();
+
+  // Category matching (HIGHEST PRIORITY) - Direct database field from video upload
+  // Only proceed with category matching if the video has a category
+  if (originalCategory && originalCategory.trim() !== '') {
+    // Check for exact case-insensitive category match (most common case)
+    if (category === filter) {
+      return { 
+        score: 5000, 
+        matchType: 'category-exact-match' 
+      };
+    }
+    
+    // Check for exact case-sensitive category match 
+    if (originalCategory === originalFilter) {
+      return { 
+        score: 4900, 
+        matchType: 'category-case-sensitive-match' 
+      };
+    }
+    
+    // Check if filter is contained in category (e.g., "Web" matches "Web Development")
+    if (category.includes(filter)) {
+      return { 
+        score: 4500, 
+        matchType: 'category-contains' 
+      };
+    }
+    
+    // Check if category is contained in filter (e.g., "General Programming" matches "General")
+    if (filter.includes(category)) {
+      return { 
+        score: 4400, 
+        matchType: 'category-contained-in-filter' 
+      };
+    }
+    
+    // Check for category word matches (for multi-word categories/filters)
+    if (filterWords.length > 1 || originalFilterWords.length > 1) {
+      const originalCategoryWords = originalCategory.split(/\s+/);
+      const categoryWords = category.split(/\s+/);
+      
+      // Case-sensitive word matching in category
+      const caseSensitiveMatches = originalFilterWords.filter(word => 
+        originalCategoryWords.some(catWord => catWord.toLowerCase() === word.toLowerCase())
+      );
+      
+      // Case-insensitive word matching in category
+      const caseInsensitiveMatches = filterWords.filter(word => 
+        categoryWords.some(catWord => catWord === word)
+      );
+      
+      const matchingWords = caseSensitiveMatches.length > 0 ? caseSensitiveMatches : caseInsensitiveMatches;
+      const isCaseSensitive = caseSensitiveMatches.length > 0;
+      
+      if (matchingWords.length > 0) {
+        const allWordsMatch = matchingWords.length === (isCaseSensitive ? originalFilterWords.length : filterWords.length);
+        const wordMatchRatio = matchingWords.length / (isCaseSensitive ? originalFilterWords.length : filterWords.length);
+        
+        let categoryScore = 4000 + (wordMatchRatio * 300);
+        
+        if (allWordsMatch) {
+          categoryScore += 200;
+          return { score: categoryScore, matchType: 'category-all-words-match' };
+        } else {
+          return { score: categoryScore, matchType: 'category-partial-words-match' };
+        }
+      }
+    }
+  }
 
   // Title matching (highest priority) - case-sensitive first
   // Check for exact case-sensitive match first (highest priority)

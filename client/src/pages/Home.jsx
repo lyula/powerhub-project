@@ -127,6 +127,7 @@ export default function Home() {
                 title: v.title,
                 description: v.description || '',
                 hashtags: v.hashtags || [],
+                category: v.category || '', // Add category field from database
                 author: v.channel?.name || v.author || 'Unknown',
                 profile: v.channel?.avatar || 'https://randomuser.me/api/portraits/men/32.jpg',
                 views: v.viewCount || 0,
