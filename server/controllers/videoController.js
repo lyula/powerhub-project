@@ -293,6 +293,7 @@ exports.getAllVideos = async (req, res) => {
 const Video = require('../models/Video');
 const Channel = require('../models/Channel');
 const User = require('../models/User');
+const AuditLog = require('../models/AuditLog');
 const cloudinary = require('../config/cloudinary');
 const fs = require('fs');
 
@@ -332,6 +333,28 @@ exports.uploadVideo = async (req, res) => {
     });
     await video.save();
     console.log('Video document saved to MongoDB with duration:', finalDuration, video);
+
+    // Log video creation
+    await AuditLog.logAction({
+      action: 'video_upload',
+      category: 'content_management',
+      performedBy: uploader,
+      performedByRole: req.user.role,
+      targetType: 'video',
+      targetId: video._id,
+      targetName: video.title,
+      description: `Video "${video.title}" uploaded to channel ${channel.name}`,
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent'),
+      success: true,
+      metadata: {
+        category: video.category,
+        privacy: video.privacy,
+        duration: video.duration,
+        channelId: channel._id
+      }
+    });
+
     res.status(201).json(video);
   } catch (err) {
     console.error('Failed to save video document to MongoDB:', err);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, useParams } from 'react-router-dom';
 import VideoComments from '../components/VideoComments';
@@ -11,6 +11,7 @@ import { VideoCameraIcon } from '../components/icons';
 import SubscribeButton from '../components/SubscribeButton';
 import ProgressBar from '../components/ProgressBar';
 import SimilarContentThumbnail from '../components/SimilarContentThumbnail';
+import { trackVideoWatch } from '../utils/analytics';
 
 // Helper to count all comments, replies to comments, and replies to replies
 function getTotalCommentCount(comments) {
@@ -52,6 +53,49 @@ export default function Watch() {
   const [hoveredRecId, setHoveredRecId] = useState(null);
   const [progressLoading, setProgressLoading] = useState(false);
   const commentsRef = React.useRef(null);
+  
+  // Video analytics tracking
+  const videoRef = useRef(null);
+  const watchStartTime = useRef(null);
+  const totalWatchTime = useRef(0);
+
+  // Track video watch time
+  const handleVideoPlay = () => {
+    watchStartTime.current = Date.now();
+  };
+
+  const handleVideoPause = () => {
+    if (watchStartTime.current) {
+      const sessionTime = (Date.now() - watchStartTime.current) / 1000 / 60; // Convert to minutes
+      totalWatchTime.current += sessionTime;
+      console.log('=== VIDEO PAUSED ===');
+      console.log('Session time:', sessionTime, 'minutes');
+      console.log('Total watch time:', totalWatchTime.current, 'minutes');
+      watchStartTime.current = null;
+    }
+  };
+
+  const handleVideoEnded = () => {
+    handleVideoPause(); // Record the final session
+    console.log('=== VIDEO ENDED ===');
+    console.log('Total watch time:', totalWatchTime.current);
+    console.log('Video ID:', video?._id);
+    if (totalWatchTime.current > 0 && video?._id) {
+      console.log('Calling trackVideoWatch...');
+      trackVideoWatch(video._id, Math.round(totalWatchTime.current));
+    } else {
+      console.log('Not calling trackVideoWatch - no watch time or video ID');
+    }
+  };
+
+  // Send watch time when component unmounts or video changes
+  useEffect(() => {
+    return () => {
+      if (totalWatchTime.current > 0 && video?._id) {
+        trackVideoWatch(video._id, Math.round(totalWatchTime.current));
+      }
+    };
+  }, [video?._id]);
 
   // Helper to fetch video and recommendations
   const fetchVideoAndRecommendations = async (videoId) => {
@@ -314,10 +358,14 @@ export default function Watch() {
           </div>
           <div className="md:ml-20 flex-1 p-4 flex flex-col items-center">
             <video
+              ref={videoRef}
               src={video.videoUrl}
               controls
               controlsList="nodownload"
               autoPlay
+              onPlay={handleVideoPlay}
+              onPause={handleVideoPause}
+              onEnded={handleVideoEnded}
               className="w-full max-w-full aspect-video rounded-lg shadow-lg mb-2"
               style={{ border: 'none' }}
             />
@@ -358,6 +406,8 @@ export default function Watch() {
                 shareCount={video.shareCount || 0}
                 handleLike={handleLike}
                 handleDislike={handleDislike}
+                videoId={video._id}
+                videoTitle={video.title}
               />
               {/* Video Description with Read More/Read Less */}
               {video.description && !showComments && (

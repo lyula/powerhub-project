@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const channelController = require('../controllers/channelController');
-const auth = require('../middleware/auth');
+const { auth } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 
 // Create a channel (authenticated)

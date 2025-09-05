@@ -62,6 +62,12 @@ const videoSchema = new Schema({
   },
   analytics: { type: Schema.Types.ObjectId, ref: 'VideoAnalytics' },
   shareCount: { type: Number, default: 0 }, // number of times video is shared
+  // Content moderation fields
+  isHidden: { type: Boolean, default: false },
+  hiddenReason: { type: String },
+  hiddenAt: { type: Date },
+  isRemoved: { type: Boolean, default: false },
+  removedAt: { type: Date },
   createdAt: { type: Date, default: Date.now }
 });
 

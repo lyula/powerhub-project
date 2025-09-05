@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import VideoShareModal from './VideoShareModal';
-import { MdFavorite, MdFavoriteBorder, MdThumbDown, MdThumbDownOffAlt, MdComment, MdShare } from 'react-icons/md';
+import FlagContentModal from './FlagContentModal';
+import { MdFavorite, MdFavoriteBorder, MdThumbDown, MdThumbDownOffAlt, MdComment, MdShare, MdFlag } from 'react-icons/md';
+import { trackButtonClick } from '../utils/analytics';
 
 const VideoInteractions = ({
   liked, setLiked, likeCount,
@@ -9,14 +11,18 @@ const VideoInteractions = ({
   videoUrl,
   shareCount: initialShareCount,
   handleLike,
-  handleDislike
+  handleDislike,
+  videoId,
+  videoTitle
 }) => {
   const [shareOpen, setShareOpen] = useState(false);
+  const [flagOpen, setFlagOpen] = useState(false);
   const [shareCount, setShareCount] = useState(initialShareCount);
   const handleShare = () => setShareCount(count => count + 1);
 
   // Use handlers from props if provided
   const onLike = typeof handleLike === 'function' ? handleLike : () => {
+    trackButtonClick('video-like', 'watch-page');
     if(liked){
       setLiked(false);
     }else{
@@ -28,6 +34,7 @@ const VideoInteractions = ({
   };
 
   const onDislike = typeof handleDislike === 'function' ? handleDislike : () => {
+    trackButtonClick('video-dislike', 'watch-page');
     if(disliked){
       setDisliked(false);
     }else{
@@ -63,7 +70,10 @@ const VideoInteractions = ({
     <button
       className={`flex items-center gap-2 transition bg-transparent border-none p-0 ${showComments ? 'text-blue-600' : 'text-gray-700 dark:text-gray-200 hover:text-blue-500'}`}
       style={{ minHeight: 40 }}
-      onClick={() => setShowComments((prev) => !prev)}
+      onClick={() => {
+        trackButtonClick('video-comments', 'watch-page');
+        setShowComments((prev) => !prev);
+      }}
     >
       <MdComment size={28} color={showComments ? '#2563eb' : 'currentColor'} />
       <span className="text-sm">Comments ({commentCount})</span>
@@ -71,12 +81,33 @@ const VideoInteractions = ({
     <button
       className="flex items-center gap-2 text-gray-700 dark:text-gray-200 hover:text-green-600 transition bg-transparent border-none p-0"
       style={{ minHeight: 40 }}
-      onClick={() => setShareOpen(true)}
+      onClick={() => {
+        trackButtonClick('video-share', 'watch-page');
+        setShareOpen(true);
+      }}
     >
       <MdShare size={28} color="#0bb6bc" />
       <span className="text-sm">Share ({shareCount})</span>
     </button>
+    <button
+      className="flex items-center gap-2 text-gray-700 dark:text-gray-200 hover:text-red-600 transition bg-transparent border-none p-0"
+      style={{ minHeight: 40 }}
+      onClick={() => {
+        trackButtonClick('video-flag', 'watch-page');
+        setFlagOpen(true);
+      }}
+    >
+      <MdFlag size={28} color="#dc2626" />
+      <span className="text-sm">Flag</span>
+    </button>
   <VideoShareModal open={shareOpen} onClose={() => setShareOpen(false)} videoUrl={videoUrl || window.location.href} onShare={handleShare} />
+  <FlagContentModal 
+    isOpen={flagOpen} 
+    onClose={() => setFlagOpen(false)} 
+    contentType="video" 
+    contentId={videoId} 
+    contentTitle={videoTitle} 
+  />
   </div>
   );
 };

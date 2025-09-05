@@ -1,15 +1,19 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
-const auth = require('../middleware/auth');
+const { auth } = require('../middleware/auth');
+const { trackSessionEnd } = require('../middleware/analytics');
 
 router.post('/register', userController.register);
 router.post('/login', userController.login);
+router.post('/logout', auth, trackSessionEnd, (req, res) => {
+  res.json({ message: 'Logged out successfully' });
+});
 
 // Authenticated user info
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
+const JWT_SECRET = process.env.JWT_SECRET || 'plppowerhub';
 
 router.get('/me', async (req, res) => {
 	try {
