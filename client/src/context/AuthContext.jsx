@@ -15,9 +15,15 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const location = useLocation();
   const navigate = useNavigate();
-  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [token, setToken] = useState(() => {
+    const storedToken = localStorage.getItem('token');
+    return storedToken && storedToken !== 'null' ? storedToken : null;
+  });
   const [loading, setLoading] = useState(true);
   const [serverConnected, setServerConnected] = useState(true);
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [maintenanceMessage, setMaintenanceMessage] = useState('');
+  
   useEffect(() => {
     if (!loading && !user) {
       // Only redirect if not already on /login, /register, or landing page
@@ -28,6 +34,13 @@ export const AuthProvider = ({ children }) => {
     }
     // Do not restrict access to login, register, or landing page for unauthenticated users
   }, [loading, user, location, navigate]);
+
+  // Check maintenance mode when user logs in
+  useEffect(() => {
+    if (token && user) {
+      checkMaintenanceMode();
+    }
+  }, [token, user]);
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
   const CHANNEL_API_URL = API_BASE_URL + '/channel/me';
@@ -49,6 +62,28 @@ export const AuthProvider = ({ children }) => {
       setServerConnected(false);
       console.error('Server connectivity check failed - network error:', error);
       return false;
+      }
+    };
+
+  // Helper function to check maintenance mode
+  const checkMaintenanceMode = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/it-dashboard/overview`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.data && data.data.maintenanceMode) {
+          setMaintenanceMode(data.data.maintenanceMode.enabled);
+          setMaintenanceMessage(data.data.maintenanceMode.message);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking maintenance mode:', error);
     }
   };
 
@@ -87,11 +122,34 @@ export const AuthProvider = ({ children }) => {
               setUser(null);
             }
           } else {
+            // Parse response for error handling
+            let data = {};
+            try {
+              const contentType = response.headers.get('content-type');
+              if (contentType && contentType.includes('application/json')) {
+                data = await response.json();
+              }
+            } catch (parseError) {
+              console.error('Error parsing error response:', parseError);
+            }
+            
             if (response.status === 401) {
               // Unauthorized: treat as not logged in
               setUser(null);
               setToken(null);
               localStorage.removeItem('token');
+            } else if (response.status === 503 && data.maintenanceMode) {
+              // Maintenance mode
+              setMaintenanceMode(true);
+              setMaintenanceMessage(data.message);
+              // Don't log out IT users during maintenance
+              if (userData && userData.role === 'IT') {
+                setUser(userData);
+              } else {
+                setUser(null);
+                setToken(null);
+                localStorage.removeItem('token');
+              }
             } else {
               // Other errors
               localStorage.removeItem('token');
@@ -176,7 +234,14 @@ export const AuthProvider = ({ children }) => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Registration failed');
+        if (response.status === 503 && data.maintenanceMode) {
+          // Maintenance mode
+          setMaintenanceMode(true);
+          setMaintenanceMessage(data.message);
+          throw new Error('System is under maintenance. Only IT users can access at this time.');
+        } else {
+          throw new Error(data.message || 'Registration failed');
+        }
       }
 
       // Save token and user data
@@ -192,7 +257,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-        const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -208,7 +273,24 @@ export const AuthProvider = ({ children }) => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
+        // Handle specific error cases
+        if (response.status === 423) {
+          // Account locked
+          throw new Error(data.message || 'Account is locked due to too many failed attempts');
+        } else if (response.status === 403 && data.requiresPasswordChange) {
+          // Password expired
+          throw new Error('Password has expired. Please change your password.');
+        } else if (response.status === 403 && data.suspended) {
+          // Account suspended
+          throw new Error(data.message || 'Your account has been suspended and is under review.');
+        } else if (response.status === 503 && data.maintenanceMode) {
+          // Maintenance mode
+          setMaintenanceMode(true);
+          setMaintenanceMessage(data.message);
+          throw new Error('System is under maintenance. Only IT users can access at this time.');
+        } else {
+          throw new Error(data.message || 'Login failed');
+        }
       }
 
       // Save token and user data
@@ -224,8 +306,8 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      if (token) {
-  await fetch(`${API_BASE_URL}/auth/logout`, {
+      if (token && token !== 'null') {
+        await fetch(`${API_BASE_URL}/auth/logout`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -238,8 +320,11 @@ export const AuthProvider = ({ children }) => {
     } finally {
       // Clear local storage and state
       localStorage.removeItem('token');
+      localStorage.removeItem('user'); // Also remove user data if stored
       setToken(null);
       setUser(null);
+      setChannel(null);
+      navigate('/login');
     }
   };
 
@@ -316,6 +401,9 @@ export const AuthProvider = ({ children }) => {
     channel,
     setChannel,
     serverConnected,
+    maintenanceMode,
+    maintenanceMessage,
+    checkMaintenanceMode,
     isAuthenticated: !!token,
     uploadProfilePicture: async (file) => {
       // Upload image directly to Cloudinary

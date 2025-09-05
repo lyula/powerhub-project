@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const videoController = require('../controllers/videoController');
-const auth = require('../middleware/auth');
+const { auth } = require('../middleware/auth');
 const multer = require('../middleware/upload');
 
 // Get videos by category

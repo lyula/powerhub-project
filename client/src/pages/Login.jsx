@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import GoogleIcon from '../components/GoogleIcon';
 import { colors } from '../theme/colors';
@@ -15,6 +15,38 @@ export default function Login() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [maintenanceMessage, setMaintenanceMessage] = useState('');
+  const [checkingMaintenance, setCheckingMaintenance] = useState(true);
+
+  // Check maintenance mode on component mount
+  useEffect(() => {
+    const checkMaintenanceMode = async () => {
+      try {
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const response = await fetch(`${API_BASE_URL}/it-dashboard/maintenance-status`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.data && data.data.maintenanceMode) {
+            setMaintenanceMode(data.data.maintenanceMode.enabled);
+            setMaintenanceMessage(data.data.maintenanceMode.message);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking maintenance mode:', error);
+      } finally {
+        setCheckingMaintenance(false);
+      }
+    };
+
+    checkMaintenanceMode();
+  }, []);
 
   const handleChange = (e) => {
     setFormData({
@@ -33,7 +65,12 @@ export default function Login() {
       const result = await login(formData.email, formData.password);
       
       if (result.success) {
+        // Redirect based on user role
+        if (result.data.user.role === 'IT') {
+          navigate('/it-dashboard');
+        } else {
         navigate('/home');
+        }
       } else {
         setError(result.error);
       }
@@ -44,12 +81,45 @@ export default function Login() {
     }
   };
 
+  // Show loading while checking maintenance mode
+  if (checkingMaintenance) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4 bg-white dark:bg-[#181818]">
+        <div className="w-full max-w-md p-10 rounded-2xl shadow-2xl bg-gray-100 dark:bg-[#212121] flex flex-col items-center justify-center gap-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: colors.primary }}></div>
+          <p className="text-center text-base" style={{ color: colors.secondary }}>Checking system status...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="min-h-screen flex items-center justify-center px-4 bg-white dark:bg-[#181818]">
         <div className="w-full max-w-md p-10 rounded-2xl shadow-2xl bg-gray-100 dark:bg-[#212121] flex flex-col items-center justify-center gap-8">
           <h1 className="text-4xl font-extrabold mb-2 text-center tracking-tight" style={{ color: colors.primary }}>PowerHub Login</h1>
           <p className="text-center text-base mb-4" style={{ color: colors.secondary }}>Welcome to PLP PowerHub</p>
+          
+          {/* Maintenance Mode Banner */}
+          {maintenanceMode && (
+            <div className="w-full p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="flex items-start">
+                <svg className="w-5 h-5 text-amber-600 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <div>
+                  <h3 className="text-sm font-medium text-amber-900">System Under Maintenance</h3>
+                  <p className="text-sm text-amber-700 mt-1">
+                    {maintenanceMessage || 'The system is currently under maintenance. Only IT and Admin users can access at this time.'}
+                  </p>
+                  <p className="text-xs text-amber-600 mt-2">
+                    If you are an IT or Admin user, you can still log in below.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          
           {error && (
             <div className="w-full p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
               {error}

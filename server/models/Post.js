@@ -33,6 +33,12 @@ const PostSchema = new mongoose.Schema({
   views: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Array of user IDs who viewed
   viewCount: { type: Number, default: 0 }, // Total unique views
   shareCount: { type: Number, default: 0 },
+  // Content moderation fields
+  isHidden: { type: Boolean, default: false },
+  hiddenReason: { type: String },
+  hiddenAt: { type: Date },
+  isRemoved: { type: Boolean, default: false },
+  removedAt: { type: Date },
   createdAt: { type: Date, default: Date.now },
 });
 

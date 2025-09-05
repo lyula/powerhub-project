@@ -1,33 +1,36 @@
 
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { MdHome, MdWhatshot, MdVideoLibrary, MdSubscriptions, MdBookmark, MdFavoriteBorder, MdPlayCircleOutline, MdHistory, MdNotificationsNone, MdPersonOutline, MdLogout } from 'react-icons/md';
+import { MdHome, MdWhatshot, MdVideoLibrary, MdSubscriptions, MdBookmark, MdFavoriteBorder, MdPlayCircleOutline, MdHistory, MdNotificationsNone, MdPersonOutline, MdLogout, MdDashboard } from 'react-icons/md';
 import React, { useRef, useState, useEffect } from 'react';
 import NotificationModal from './NotificationModal';
-
-const items = [
-  { label: 'Home', icon: <MdHome size={24} />, path: '/home' },
-  { label: 'Trending', icon: <MdWhatshot size={24} />, path: '/home' },
-  { label: 'My Channel', icon: <MdVideoLibrary size={24} />, isChannel: true },
-  { label: 'Subscriptions', icon: <MdSubscriptions size={24} />, path: '/subscriptions' },
-  { label: 'Saved Videos', icon: <MdBookmark size={24} />, path: '/saved-videos' },
-  { label: 'Liked Videos', icon: <MdFavoriteBorder size={24} />, path: '/liked-videos' },
-  { label: 'Course Videos', icon: <MdPlayCircleOutline size={24} />, path: '/course-videos' },
-  { label: 'Watch History', icon: <MdHistory size={24} />, path: '/watch-history' },
-  { label: 'Notifications', icon: <MdNotificationsNone size={24} />, path: '/notifications' },
-  { label: 'Profile', icon: <MdPersonOutline size={24} />, path: '/profile' },
-  { label: 'Logout', icon: <MdLogout size={24} color="#c42152" />, logout: true },
-];
 
 export default function Sidebar({ collapsed }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { channel, logout } = useAuth();
+  const { channel, logout, user } = useAuth();
+
+  // Create items array with conditional IT Dashboard
+  const sidebarItems = [
+    { label: 'Home', icon: <MdHome size={24} />, path: '/home' },
+    { label: 'Trending', icon: <MdWhatshot size={24} />, path: '/home' },
+    { label: 'My Channel', icon: <MdVideoLibrary size={24} />, isChannel: true },
+    { label: 'Subscriptions', icon: <MdSubscriptions size={24} />, path: '/subscriptions' },
+    { label: 'Saved Videos', icon: <MdBookmark size={24} />, path: '/saved-videos' },
+    { label: 'Liked Videos', icon: <MdFavoriteBorder size={24} />, path: '/liked-videos' },
+    { label: 'Course Videos', icon: <MdPlayCircleOutline size={24} />, path: '/course-videos' },
+    { label: 'Watch History', icon: <MdHistory size={24} />, path: '/watch-history' },
+    { label: 'Notifications', icon: <MdNotificationsNone size={24} />, path: '/notifications' },
+    { label: 'Profile', icon: <MdPersonOutline size={24} />, path: '/profile' },
+    // Add IT Dashboard for IT users
+    ...(user && user.role === 'IT' ? [{ label: 'IT Dashboard', icon: <MdDashboard size={24} />, path: '/it-dashboard' }] : []),
+    { label: 'Logout', icon: <MdLogout size={24} color="#c42152" />, logout: true },
+  ];
 
   return (
     <aside className={`hidden md:flex flex-col min-h-screen bg-gray-100 dark:bg-[#111111] border-r border-gray-200 dark:border-gray-900 py-6 ${collapsed ? 'w-20 px-2' : 'w-64 px-4'}`}>
   <nav className={`flex flex-col gap-2 ${collapsed ? 'overflow-visible' : 'overflow-y-auto'} max-h-[calc(100vh-48px)]`}>
-        {items.map((item) => {
+        {sidebarItems.map((item) => {
           // Determine if the tab is active
           let isActive = false;
           if (item.path) {
