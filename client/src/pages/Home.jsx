@@ -10,6 +10,7 @@ import Filters from '../components/Filters';
 // import removed: fetchThumbnails
 import HomeThumbnail from '../components/HomeThumbnail';
 import { searchAndSortContent } from '../utils/searchUtility';
+import { filterAndSortContent } from '../utils/filterUtility';
 
 // Format duration as h:mm:ss or m:ss
 function formatDuration(seconds) {
@@ -35,6 +36,8 @@ export default function Home() {
   const [allVideos, setAllVideos] = useState([]); // Store original videos for search
   const [searchTerm, setSearchTerm] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState('');
+  const [filterLoading, setFilterLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -53,6 +56,17 @@ export default function Home() {
   // Handle search functionality with debouncing
   const handleSearchChange = (term) => {
     setSearchTerm(term);
+    // Clear filter when searching
+    if (term !== '') {
+      setSelectedFilter('');
+    }
+  };
+
+  // Handle filter selection
+  const handleFilterChange = (filterName) => {
+    setSelectedFilter(filterName);
+    // Clear search when filtering
+    setSearchTerm('');
   };
 
   // Debounced search effect
@@ -69,6 +83,21 @@ export default function Home() {
 
     return () => clearTimeout(timeoutId);
   }, [searchTerm, allVideos]);
+
+  // Filter effect
+  useEffect(() => {
+    if (selectedFilter !== '') {
+      setFilterLoading(true);
+    }
+    
+    const timeoutId = setTimeout(() => {
+      const filteredVideos = filterAndSortContent(allVideos, selectedFilter);
+      setVideos(filteredVideos);
+      setFilterLoading(false);
+    }, 100); // Shorter delay for filters since no typing
+
+    return () => clearTimeout(timeoutId);
+  }, [selectedFilter, allVideos]);
 
   // Load videos from API or fallback to sample
   useEffect(() => {
@@ -217,9 +246,45 @@ export default function Home() {
                   )}
                 </div>
               )}
+              {selectedFilter && !searchTerm && (
+                <div className="mb-4 px-3 py-2 bg-green-50 dark:bg-gray-800 rounded-lg border border-green-200 dark:border-gray-700 relative">
+                  <p className="text-sm text-green-700 dark:text-green-300 pr-8">
+                    <span className="font-medium">Filtered by:</span> "{selectedFilter}"
+                    {filterLoading ? (
+                      <span className="ml-2 text-gray-600 dark:text-gray-400">
+                        <span className="inline-block animate-spin mr-1">⟳</span>
+                        Filtering videos...
+                      </span>
+                    ) : (
+                      <span className="ml-2 text-gray-600 dark:text-gray-400">
+                        ({videos.length} video{videos.length !== 1 ? 's' : ''} found)
+                      </span>
+                    )}
+                  </p>
+                  <button
+                    onClick={() => handleFilterChange('')}
+                    className="absolute top-2 right-2 p-1 rounded-full hover:bg-green-200 dark:hover:bg-gray-700 transition-colors"
+                    aria-label="Clear filter"
+                    title="Clear filter"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-4 h-4 text-green-600 dark:text-green-400">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                  {!filterLoading && videos.length === 0 && (
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      No videos found for this filter. Try a different category.
+                    </p>
+                  )}
+                </div>
+              )}
               {!searchTerm && (
                 <div className="mt-4 md:mt-6">
-                  <Filters />
+                  <Filters 
+                    selectedFilter={selectedFilter}
+                    onFilterChange={handleFilterChange}
+                    loading={filterLoading}
+                  />
                 </div>
               )}
             </div>

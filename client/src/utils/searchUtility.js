@@ -53,54 +53,87 @@ const calculateRelevanceScore = (item, searchTerm) => {
     return { score: 0, matchType: 'none' };
   }
 
-  const term = searchTerm.toLowerCase().trim();
+  const originalTerm = searchTerm.trim();
+  const term = originalTerm.toLowerCase();
   const searchWords = term.split(/\s+/).filter(word => word.length > 0);
-  const title = (item.title || '').toLowerCase();
-  const description = (item.description || '').toLowerCase();
-  const hashtags = (item.hashtags || []).map(tag => tag.toLowerCase());
-  const channelName = (item.channel?.name || item.author || '').toLowerCase();
-  const specialization = (item.channel?.specialization || '').toLowerCase();
+  const originalSearchWords = originalTerm.split(/\s+/).filter(word => word.length > 0);
+  
+  // Get both original and lowercase versions for case-sensitive matching
+  const originalTitle = (item.title || '');
+  const title = originalTitle.toLowerCase();
+  const originalDescription = (item.description || '');
+  const description = originalDescription.toLowerCase();
+  const originalHashtags = (item.hashtags || []);
+  const hashtags = originalHashtags.map(tag => tag.toLowerCase());
+  const originalChannelName = (item.channel?.name || item.author || '');
+  const channelName = originalChannelName.toLowerCase();
+  const originalSpecialization = (item.channel?.specialization || '');
+  const specialization = originalSpecialization.toLowerCase();
 
   // Title matching (highest priority)
   let titleScore = 0;
   let titleMatchType = 'none';
 
-  // Check for exact phrase match first
-  if (title.includes(term)) {
+  // Check for exact case-sensitive phrase match first (highest priority)
+  if (originalTitle.includes(originalTerm)) {
+    const exactMatch = originalTitle === originalTerm ? 400 : 0;
+    const startsWithMatch = originalTitle.startsWith(originalTerm) ? 200 : 0;
+    const containsMatch = 100;
+    titleScore = 2000 + exactMatch + startsWithMatch + containsMatch;
+    titleMatchType = 'title-phrase-case-sensitive';
+  }
+  // Check for case-insensitive phrase match
+  else if (title.includes(term)) {
     const exactMatch = title === term ? 200 : 0;
     const startsWithMatch = title.startsWith(term) ? 100 : 0;
     const containsMatch = 50;
     titleScore = 1500 + exactMatch + startsWithMatch + containsMatch;
     titleMatchType = 'title-phrase';
   } else {
-    // Check for individual word matches
+    // Check for individual word matches (case-sensitive first, then case-insensitive)
+    const originalTitleWords = originalTitle.split(/\s+/);
     const titleWords = title.split(/\s+/);
-    const matchingWords = searchWords.filter(word => 
+    
+    // Case-sensitive word matching
+    const caseSensitiveMatches = originalSearchWords.filter(word => 
+      originalTitleWords.some(titleWord => titleWord.includes(word))
+    );
+    
+    // Case-insensitive word matching
+    const caseInsensitiveMatches = searchWords.filter(word => 
       titleWords.some(titleWord => titleWord.includes(word))
     );
     
+    const matchingWords = caseSensitiveMatches.length > 0 ? caseSensitiveMatches : caseInsensitiveMatches;
+    const isCaseSensitive = caseSensitiveMatches.length > 0;
+    
     if (matchingWords.length > 0) {
-      const allWordsMatch = matchingWords.length === searchWords.length;
-      const wordMatchRatio = matchingWords.length / searchWords.length;
+      const allWordsMatch = matchingWords.length === (isCaseSensitive ? originalSearchWords.length : searchWords.length);
+      const wordMatchRatio = matchingWords.length / (isCaseSensitive ? originalSearchWords.length : searchWords.length);
       
       // Base score for word matches
-      titleScore = 1000 * wordMatchRatio;
+      titleScore = (isCaseSensitive ? 1200 : 1000) * wordMatchRatio;
       
       // Bonus for all words matching
       if (allWordsMatch) {
-        titleScore += 300;
-        titleMatchType = 'title-all-words';
+        titleScore += isCaseSensitive ? 500 : 300;
+        titleMatchType = isCaseSensitive ? 'title-all-words-case-sensitive' : 'title-all-words';
       } else {
-        titleMatchType = 'title-partial-words';
+        titleMatchType = isCaseSensitive ? 'title-partial-words-case-sensitive' : 'title-partial-words';
       }
       
       // Bonus for exact word matches (not just contains)
-      const exactWordMatches = searchWords.filter(word => titleWords.includes(word));
-      titleScore += exactWordMatches.length * 50;
+      const exactWordMatches = isCaseSensitive 
+        ? originalSearchWords.filter(word => originalTitleWords.includes(word))
+        : searchWords.filter(word => titleWords.includes(word));
+      titleScore += exactWordMatches.length * (isCaseSensitive ? 75 : 50);
       
       // Bonus for word proximity (words close together)
-      if (searchWords.length > 1 && allWordsMatch) {
-        const proximityBonus = calculateWordProximity(titleWords, searchWords);
+      if ((isCaseSensitive ? originalSearchWords.length : searchWords.length) > 1 && allWordsMatch) {
+        const proximityBonus = calculateWordProximity(
+          isCaseSensitive ? originalTitleWords : titleWords, 
+          isCaseSensitive ? originalSearchWords : searchWords
+        );
         titleScore += proximityBonus;
       }
     }
@@ -114,8 +147,16 @@ const calculateRelevanceScore = (item, searchTerm) => {
   let descriptionScore = 0;
   let descriptionMatchType = 'none';
 
-  // Check for exact phrase match in description first
-  if (description.includes(term)) {
+  // Check for case-sensitive phrase match first
+  if (originalDescription.includes(originalTerm)) {
+    const wordCount = originalDescription.split(' ').length;
+    const termFrequency = (originalDescription.match(new RegExp(originalTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
+    const relevanceBoost = Math.min((termFrequency / wordCount) * 100, 50);
+    descriptionScore = 700 + relevanceBoost;
+    descriptionMatchType = 'description-phrase-case-sensitive';
+  }
+  // Check for case-insensitive phrase match
+  else if (description.includes(term)) {
     const wordCount = description.split(' ').length;
     const termFrequency = (description.match(new RegExp(term, 'g')) || []).length;
     const relevanceBoost = Math.min((termFrequency / wordCount) * 100, 50);
@@ -123,21 +164,32 @@ const calculateRelevanceScore = (item, searchTerm) => {
     descriptionMatchType = 'description-phrase';
   } else {
     // Check for individual word matches in description
+    const originalDescriptionWords = originalDescription.split(/\s+/);
     const descriptionWords = description.split(/\s+/);
-    const matchingWords = searchWords.filter(word => 
+    
+    // Case-sensitive word matching
+    const caseSensitiveMatches = originalSearchWords.filter(word => 
+      originalDescriptionWords.some(descWord => descWord.includes(word))
+    );
+    
+    // Case-insensitive word matching
+    const caseInsensitiveMatches = searchWords.filter(word => 
       descriptionWords.some(descWord => descWord.includes(word))
     );
     
+    const matchingWords = caseSensitiveMatches.length > 0 ? caseSensitiveMatches : caseInsensitiveMatches;
+    const isCaseSensitive = caseSensitiveMatches.length > 0;
+    
     if (matchingWords.length > 0) {
-      const wordMatchRatio = matchingWords.length / searchWords.length;
-      descriptionScore = 300 * wordMatchRatio;
+      const wordMatchRatio = matchingWords.length / (isCaseSensitive ? originalSearchWords.length : searchWords.length);
+      descriptionScore = (isCaseSensitive ? 400 : 300) * wordMatchRatio;
       
       // Bonus for all words matching
-      if (matchingWords.length === searchWords.length) {
-        descriptionScore += 100;
-        descriptionMatchType = 'description-all-words';
+      if (matchingWords.length === (isCaseSensitive ? originalSearchWords.length : searchWords.length)) {
+        descriptionScore += isCaseSensitive ? 150 : 100;
+        descriptionMatchType = isCaseSensitive ? 'description-all-words-case-sensitive' : 'description-all-words';
       } else {
-        descriptionMatchType = 'description-partial-words';
+        descriptionMatchType = isCaseSensitive ? 'description-partial-words-case-sensitive' : 'description-partial-words';
       }
     }
   }

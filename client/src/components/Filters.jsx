@@ -1,9 +1,7 @@
-// ...removed duplicate import...
-
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
-export default function Filters() {
+export default function Filters({ selectedFilter, onFilterChange, loading: filterLoading }) {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -45,15 +43,35 @@ export default function Filters() {
         ) : categories.length === 0 ? (
           <span className="text-gray-400">No filters found</span>
         ) : (
-          categories.map((cat) => (
+          <>
+            {/* All/Clear filter button */}
             <button
-              key={cat}
-              className="px-3 py-1 rounded-full text-xs sm:text-sm md:text-base font-medium transition bg-[#0bb6bc] text-white hover:bg-[#c42152] dark:bg-[#222] dark:text-gray-200 dark:hover:bg-[#333]"
+              onClick={() => onFilterChange('')}
+              className={`px-3 py-1 rounded-full text-xs sm:text-sm md:text-base font-medium transition ${
+                selectedFilter === '' 
+                  ? 'bg-[#c42152] text-white' 
+                  : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'
+              }`}
               style={{ minWidth: 'max-content', wordBreak: 'keep-all', fontSize: 'inherit' }}
             >
-              {cat}
+              All
             </button>
-          ))
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => onFilterChange(cat)}
+                className={`px-3 py-1 rounded-full text-xs sm:text-sm md:text-base font-medium transition ${
+                  selectedFilter === cat 
+                    ? 'bg-[#c42152] text-white' 
+                    : 'bg-[#0bb6bc] text-white hover:bg-[#0aa3a8] dark:bg-[#222] dark:text-gray-200 dark:hover:bg-[#333]'
+                }`}
+                style={{ minWidth: 'max-content', wordBreak: 'keep-all', fontSize: 'inherit' }}
+                disabled={filterLoading}
+              >
+                {cat}
+              </button>
+            ))}
+          </>
         )}
       </div>
       <style>{`
