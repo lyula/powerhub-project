@@ -144,6 +144,7 @@ function AppRoutes() {
       <Route path="/course-videos" element={<ProtectedRoute><CourseVideos /></ProtectedRoute>} />
       <Route path="/watch-history" element={<ProtectedRoute><WatchHistory /></ProtectedRoute>} />
       <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+      <Route path="/it-dashboard" element={<ProtectedRoute><ITDashboard /></ProtectedRoute>} />
   <Route path="/post/:postId" element={<ProtectedRoute><PostDetails /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>

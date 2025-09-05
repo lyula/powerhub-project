@@ -196,7 +196,7 @@ const ITDashboard = () => {
       const token = getAuthToken();
       if (!token) {
         console.error('No valid token found');
-        navigate('/login');
+        // Don't navigate here - let the auth context handle it
         return;
       }
 
@@ -215,6 +215,9 @@ const ITDashboard = () => {
         setSystemOverview(data.data.metrics);
         setMaintenanceMode(data.data.maintenanceMode.enabled);
         setMaintenanceMessage(data.data.maintenanceMode.message);
+      } else {
+        const errorText = await response.text();
+        console.error('Overview request failed:', response.status, errorText);
       }
       
       // Load additional data
