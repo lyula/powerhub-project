@@ -1,4 +1,4 @@
-
+import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ProgressBar from './components/ProgressBar';
@@ -23,7 +23,6 @@ import WatchHistory from './pages/WatchHistory';
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading, serverConnected } = useAuth();
-  
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#181818]">
@@ -39,7 +38,6 @@ const ProtectedRoute = ({ children }) => {
       </div>
     );
   }
-  
   return isAuthenticated ? children : <Navigate to="/login" replace />;
 };
 
@@ -70,8 +68,6 @@ const PublicRoute = ({ children }) => {
 };
 
 // Dummy hook to check if user has a channel (replace with real logic)
-
-
 function AppRoutes() {
   const { channel } = useAuth();
   return (
@@ -87,7 +83,7 @@ function AppRoutes() {
       <Route path="/channel/:author" element={<ProtectedRoute><ChannelProfile /></ProtectedRoute>} />
       <Route path="/watch/:id" element={<ProtectedRoute><Watch /></ProtectedRoute>} />
       {/* Sidebar Placeholder Pages */}
-    {/* <Route path="/trending" element={<ProtectedRoute><Trending /></ProtectedRoute>} /> */}
+      {/* <Route path="/trending" element={<ProtectedRoute><Trending /></ProtectedRoute>} /> */}
       <Route path="/specializations" element={<ProtectedRoute><Specializations /></ProtectedRoute>} />
       <Route path="/subscriptions" element={<ProtectedRoute><Subscriptions /></ProtectedRoute>} />
       <Route path="/saved-videos" element={<ProtectedRoute><SavedVideos /></ProtectedRoute>} />
@@ -101,10 +97,11 @@ function AppRoutes() {
 
 function App() {
   const loading = useRouteLoader();
+
   return (
     <AuthProvider>
       <ProgressBar loading={loading} />
-      <AppRoutes />
+        <AppRoutes />
     </AuthProvider>
   );
 }
