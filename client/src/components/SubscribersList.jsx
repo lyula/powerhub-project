@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserCheck, Search, Filter, TrendingUp, Calendar } from 'lucide-react';
+import { UserCheck, Search, Filter, TrendingUp, Calendar, Users } from 'lucide-react';
 import { fetchChannelSubscribers } from '../services/api';
 import LoadingSpinner from './LoadingSpinner';
 import ErrorMessage from './ErrorMessage';
