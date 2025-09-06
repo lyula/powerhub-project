@@ -13,13 +13,15 @@ exports.getChannelByOwner = async (req, res) => {
     const Video = require('../models/Video');
     const videos = await Video.find({ channel: channel._id }).sort({ createdAt: -1 });
     // Prepare contact info
-    const contactInfo = {
-      email: user?.email || '',
-      github: user?.github || '',
-      whatsapp: user?.whatsapp || '',
-      linkedin: user?.linkedin || '',
-      instagram: user?.instagram || ''
-    };
+    const contactInfo = Object.fromEntries(
+      Object.entries({
+        email: user?.email,
+        github: user?.github,
+        whatsapp: user?.whatsapp,
+        linkedin: user?.linkedin,
+        instagram: user?.instagram
+      }).filter(([_, value]) => value) // Filter out empty or null values
+    );
     res.json({ ...channel.toObject(), videos, contactInfo });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -181,8 +183,19 @@ exports.getChannelById = async (req, res) => {
     // Fetch videos for this channel
     const Video = require('../models/Video');
     const videos = await Video.find({ channel: channel._id }).sort({ createdAt: -1 });
-    // Return channel info plus videos
-    res.json({ ...channel.toObject(), videos });
+    // Fetch contact details from User model
+    const User = require('../models/User');
+    const user = await User.findById(channel.owner).lean();
+    const contactInfo = Object.fromEntries(
+      Object.entries({
+        email: user?.email,
+        github: user?.github,
+        whatsapp: user?.whatsapp,
+        linkedin: user?.linkedin,
+        instagram: user?.instagram
+      }).filter(([_, value]) => value) // Filter out empty or null values
+    );
+    res.json({ ...channel.toObject(), videos, contactInfo });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
