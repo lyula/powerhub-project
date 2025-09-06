@@ -35,6 +35,16 @@ const auth = async (req, res, next) => {
       return res.status(404).json({ message: 'User not found.' });
     }
 
+    // Check if user session has been invalidated (for maintenance mode logout)
+    if (user.isSessionInvalidated()) {
+      console.log('User session invalidated due to maintenance mode');
+      return res.status(401).json({ 
+        message: 'Your session has been invalidated due to system maintenance. Please log in again.',
+        sessionInvalidated: true,
+        maintenanceMode: true
+      });
+    }
+
     console.log('User found:', user.username, user.role);
     req.user = user;
     next();

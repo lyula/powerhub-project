@@ -126,33 +126,11 @@ exports.getSystemOverview = async (req, res) => {
       
       console.log(`Watch time calculation: Total=${totalWatchTime}m, Days since first video=${daysSinceFirstVideo}, Days for calc=${daysForCalculation}, Avg per day=${averageWatchTimePerDay}m`);
 
-      // Get average session duration from recent sessions
-      const sessionResult = await UserAnalytics.aggregate([
-        { $match: { startTime: { $gte: last24Hours } } },
-        { $group: { _id: null, avgDuration: { $avg: '$duration' } } }
-      ]);
+      // Calculate session duration from login/logout events in AuditLog
+      const sessionDuration = await calculateAverageSessionDuration(last30Days);
+      averageSessionDuration = sessionDuration;
       
-      console.log('Session duration result:', sessionResult);
-      
-      // Debug: Check if UserAnalytics collection has any data
-      const totalUserAnalytics = await UserAnalytics.countDocuments();
-      console.log(`Total UserAnalytics records: ${totalUserAnalytics}`);
-      
-      // Debug: Check recent UserAnalytics records
-      const recentUserAnalytics = await UserAnalytics.find({ 
-        startTime: { $gte: last24Hours } 
-      }).limit(3);
-      console.log('Recent UserAnalytics records:', recentUserAnalytics.map(record => ({
-        startTime: record.startTime,
-        duration: record.duration,
-        hasDuration: record.duration !== undefined && record.duration !== null
-      })));
-      
-      // Show at least 1 minute if there's any session duration, otherwise show 0
-      const calculatedSessionAvg = sessionResult.length > 0 ? sessionResult[0].avgDuration : 0;
-      averageSessionDuration = calculatedSessionAvg > 0 ? Math.max(1, Math.round(calculatedSessionAvg)) : 0;
-      
-      console.log(`Session duration calculation: Raw avg=${calculatedSessionAvg}, Final=${averageSessionDuration}`);
+      console.log('Session duration from AuditLog:', averageSessionDuration);
 
     } catch (error) {
       console.log('Analytics collection not available yet - using fallback data');
@@ -174,8 +152,9 @@ exports.getSystemOverview = async (req, res) => {
       
       console.log(`Fallback watch time calculation: Total=${totalWatchTime}m, Days since first video=${daysSinceFirstVideo}, Days for calc=${daysForCalculation}, Avg per day=${averageWatchTimePerDay}m`);
       
-      // Use a more realistic fallback session duration
-      averageSessionDuration = 15; // 15 minutes average session
+      // Calculate session duration from login/logout events even in fallback
+      const sessionDuration = await calculateAverageSessionDuration(last30Days);
+      averageSessionDuration = sessionDuration > 0 ? sessionDuration : 15; // 15 minutes fallback if no data
     }
 
     // Get system settings
@@ -227,6 +206,9 @@ exports.toggleMaintenanceMode = async (req, res) => {
       systemSettings = new SystemSettings();
     }
 
+    const wasEnabled = systemSettings.maintenanceMode?.enabled || false;
+    const isEnabling = enabled && !wasEnabled;
+
     systemSettings.maintenanceMode = {
       enabled: enabled || false,
       message: message || 'System is under maintenance. Please try again later.',
@@ -236,13 +218,42 @@ exports.toggleMaintenanceMode = async (req, res) => {
 
     await systemSettings.save();
 
+    // If maintenance mode is being activated, invalidate all user sessions except admin/IT
+    if (isEnabling) {
+      const MaintenanceService = require('../services/maintenanceService');
+      const sessionResult = await MaintenanceService.invalidateAllUserSessions();
+      
+      if (sessionResult.success) {
+        console.log(`🔒 Maintenance mode activated - ${sessionResult.invalidatedCount} users logged out`);
+      } else {
+        console.error('⚠️ Failed to invalidate user sessions:', sessionResult.error);
+      }
+    }
+
     res.json({
       success: true,
       message: `Maintenance mode ${enabled ? 'enabled' : 'disabled'}`,
-      data: systemSettings.maintenanceMode
+      data: systemSettings.maintenanceMode,
+      sessionInvalidated: isEnabling
     });
   } catch (error) {
     console.error('Error toggling maintenance mode:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Get session statistics for maintenance mode
+exports.getSessionStats = async (req, res) => {
+  try {
+    const MaintenanceService = require('../services/maintenanceService');
+    const stats = await MaintenanceService.getSessionStats();
+    
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('Error getting session stats:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -1040,6 +1051,67 @@ exports.getAuditLogs = async (req, res) => {
   }
 };
 
+// Helper function to calculate average session duration
+const calculateAverageSessionDuration = async (startDate) => {
+  try {
+    // Get login events
+    const loginEvents = await AuditLog.find({
+      action: { $in: ['user_login', 'login_success', 'authentication'] },
+      createdAt: { $gte: startDate }
+    }).sort({ createdAt: 1 });
+
+    // Get logout events
+    const logoutEvents = await AuditLog.find({
+      action: { $in: ['user_logout', 'logout', 'session_end'] },
+      createdAt: { $gte: startDate }
+    }).sort({ createdAt: 1 });
+
+    if (loginEvents.length === 0) {
+      return 0; // No login data
+    }
+
+    // Calculate session durations by matching login/logout pairs
+    const sessionDurations = [];
+    const userSessions = new Map(); // Track active sessions by user
+
+    // Process login events
+    loginEvents.forEach(login => {
+      if (login.performedBy) {
+        userSessions.set(login.performedBy.toString(), {
+          loginTime: login.createdAt,
+          sessionId: login.sessionId
+        });
+      }
+    });
+
+    // Process logout events and calculate durations
+    logoutEvents.forEach(logout => {
+      if (logout.performedBy && userSessions.has(logout.performedBy.toString())) {
+        const session = userSessions.get(logout.performedBy.toString());
+        const duration = logout.createdAt - session.loginTime;
+        if (duration > 0 && duration < 24 * 60 * 60 * 1000) { // Less than 24 hours
+          sessionDurations.push(duration);
+        }
+        userSessions.delete(logout.performedBy.toString());
+      }
+    });
+
+    // Calculate average session duration
+    if (sessionDurations.length > 0) {
+      const totalDuration = sessionDurations.reduce((sum, duration) => sum + duration, 0);
+      const averageDurationMs = totalDuration / sessionDurations.length;
+      return Math.round(averageDurationMs / (1000 * 60) * 10) / 10; // Convert to minutes, round to 1 decimal
+    }
+
+    // If no logout events, estimate based on login frequency
+    // Assume average session is 30 minutes if no logout data
+    return 30;
+  } catch (error) {
+    console.error('Error calculating session duration:', error);
+    return 0;
+  }
+};
+
 // Get advanced analytics
 exports.getAdvancedAnalytics = async (req, res) => {
   try {
@@ -1337,6 +1409,10 @@ exports.getAdvancedAnalytics = async (req, res) => {
           { $group: { _id: null, avgWatchTime: { $avg: "$averageWatchTime" } } }
         ]).then(result => Math.round((result[0]?.avgWatchTime || 0) / 60 * 10) / 10), // Convert seconds to minutes, round to 1 decimal
         totalViews: totalViewCount
+      },
+      sessionMetrics: {
+        averageSessionDuration: await calculateAverageSessionDuration(startDate),
+        dailyActiveUsers: Math.floor(recentLogins / (range === '7d' ? 7 : range === '30d' ? 30 : 90))
       },
       dateRange: {
         start: startDate,

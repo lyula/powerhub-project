@@ -42,6 +42,9 @@ exports.register = async (req, res) => {
       success: true
     });
 
+    // Reset session invalidation on successful registration
+    await user.resetSessionInvalidation();
+
     const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '7d' });
     res.status(201).json({ data: { user, token } });
   } catch (err) {
@@ -54,27 +57,6 @@ exports.login = async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password are required.' });
-    }
-
-    // Check maintenance mode first
-    const systemSettings = await SystemSettings.findOne();
-    if (systemSettings && systemSettings.maintenanceMode.enabled) {
-      // Allow only IT and Admin users to log in during maintenance
-      const user = await User.findOne({ email });
-      if (!user) {
-        return res.status(503).json({ 
-          message: systemSettings.maintenanceMode.message || 'System is under maintenance. Please try again later.',
-          maintenanceMode: true
-        });
-      }
-      
-      // Check if user has IT or Admin role
-      if (user.role !== 'IT' && user.role !== 'admin') {
-        return res.status(503).json({ 
-          message: systemSettings.maintenanceMode.message || 'System is under maintenance. Only IT and Admin users can access at this time.',
-          maintenanceMode: true
-        });
-      }
     }
 
     const user = await User.findOne({ email });
@@ -189,6 +171,22 @@ exports.login = async (req, res) => {
     // Reset login attempts on successful login
     await user.resetLoginAttempts();
 
+    // Check maintenance mode after successful authentication
+    const systemSettings = await SystemSettings.findOne();
+    if (systemSettings && systemSettings.maintenanceMode.enabled) {
+      console.log(`Maintenance mode enabled. User role: ${user.role}`);
+      // Only allow IT and Admin users to log in during maintenance
+      if (user.role !== 'IT' && user.role !== 'admin') {
+        console.log(`Blocking user ${user.email} with role ${user.role} during maintenance`);
+        return res.status(503).json({ 
+          message: systemSettings.maintenanceMode.message || 'System is under maintenance. Please try again later.',
+          maintenanceMode: true
+        });
+      } else {
+        console.log(`Allowing user ${user.email} with role ${user.role} to log in during maintenance`);
+      }
+    }
+
     // Log successful login
     await AuditLog.logAction({
       action: 'user_login',
@@ -203,6 +201,9 @@ exports.login = async (req, res) => {
       userAgent: req.get('User-Agent'),
       success: true
     });
+
+    // Reset session invalidation on successful login
+    await user.resetSessionInvalidation();
 
     const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '7d' });
     res.status(200).json({ data: { user, token } });
