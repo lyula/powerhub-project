@@ -32,20 +32,18 @@ const WatchPageSkeleton = ({ sidebarOpen, setSidebarOpen }) => {
         <div className={`flex-1 ${sidebarOpen ? 'md:ml-64' : 'md:ml-20'} p-4 md:p-6 overflow-y-auto`}>
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-col lg:flex-row gap-6">
-              
               {/* Main Video Section */}
               <div className="flex-1">
                 {/* Video Player Skeleton */}
                 <div className="w-full aspect-video bg-gray-300 dark:bg-gray-700 rounded-lg animate-pulse mb-4" />
-                
                 {/* Video Title Skeleton */}
-                <div className="mb-4">
+                <div className="mb-4 text-left">
                   <div className="h-6 bg-gray-300 dark:bg-gray-700 rounded animate-pulse mb-2 w-4/5" />
                   <div className="h-6 bg-gray-300 dark:bg-gray-700 rounded animate-pulse w-3/5" />
                 </div>
 
                 {/* Channel Info and Actions Skeleton */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-start mb-4 gap-4">
                   {/* Channel Info */}
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-gray-300 dark:bg-gray-700 rounded-full animate-pulse" />
@@ -66,14 +64,14 @@ const WatchPageSkeleton = ({ sidebarOpen, setSidebarOpen }) => {
                 </div>
 
                 {/* Description Skeleton */}
-                <div className="mb-6">
+                <div className="mb-6 text-left">
                   <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded animate-pulse mb-2 w-full" />
                   <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded animate-pulse mb-2 w-5/6" />
                   <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded animate-pulse w-4/6" />
                 </div>
 
                 {/* Comments Section Skeleton */}
-                <div className="space-y-4">
+                <div className="space-y-4 text-left">
                   <div className="h-6 bg-gray-300 dark:bg-gray-700 rounded animate-pulse w-32 mb-4" />
                   
                   {/* Comment Items */}
@@ -91,7 +89,7 @@ const WatchPageSkeleton = ({ sidebarOpen, setSidebarOpen }) => {
               </div>
 
               {/* Recommendations Sidebar */}
-              <div className="w-full lg:w-80 xl:w-96">
+              <div className="w-full lg:w-80 xl:w-96 text-left">
                 <div className="space-y-4">
                   {[...Array(6)].map((_, idx) => (
                     <div key={idx} className="flex gap-3">

@@ -293,17 +293,19 @@ export default function Watch() {
               className="w-full max-w-full aspect-video rounded-lg shadow-lg mb-2"
               style={{ border: "none" }}
             />
-            <div className="w-full max-w-3xl mt-2 flex flex-col gap-2">
+            <div className="w-full max-w-3xl mt-2 flex flex-col gap-2" style={{paddingLeft:0, marginLeft:0}}>
               <h1
-                className="text-2xl font-bold text-black dark:text-white leading-tight mb-0 truncate block max-w-full"
+                className="text-2xl font-bold text-black dark:text-white leading-tight mb-0 truncate block max-w-full text-left"
                 title={video.title}
+                style={{paddingLeft:0, marginLeft:0}}
               >
                 {video.title}
               </h1>
-              <div className="flex items-center gap-3 mb-2">
+              <div className="flex items-center gap-3 mb-2" style={{paddingLeft:0, marginLeft:0}}>
                 <Link
                   to={`/channel/${video.channel?._id || video.channel}`}
                   className="flex items-center gap-2 min-w-0"
+                  style={{paddingLeft:0, marginLeft:0}}
                 >
                   <img
                     src={video.channel?.avatar}
@@ -311,42 +313,47 @@ export default function Watch() {
                     className="w-10 h-10 rounded-full border-2 border-gray-300 dark:border-gray-700"
                   />
                   <span
-                    className="font-semibold text-gray-800 dark:text-gray-200 truncate max-w-[120px]"
+                    className="font-semibold text-gray-800 dark:text-gray-200 truncate max-w-[120px] text-left"
                     title={video.channel?.name}
+                    style={{paddingLeft:0, marginLeft:0}}
                   >
                     {video.channel?.name}
                   </span>
                 </Link>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
+                <span className="text-xs text-gray-500 dark:text-gray-400 text-left" style={{paddingLeft:0, marginLeft:0}}>
                   {video.viewCount || 0} views •{" "}
                   {formatPostedAgo(video.createdAt)}
                 </span>
                 {channelDetails && <SubscribeButton channel={channelDetails} />}
               </div>
-              <VideoInteractions
-                liked={liked}
-                setLiked={setLiked}
-                likeCount={likeCount}
-                disliked={disliked}
-                setDisliked={setDisliked}
-                dislikeCount={dislikeCount}
-                showComments={showComments}
-                setShowComments={setShowComments}
-                commentCount={commentCount}
-                videoUrl={`${window.location.origin}/watch/${video._id}`}
-                shareCount={video.shareCount || 0}
-                handleLike={handleLike}
-                handleDislike={handleDislike}
-                videoId={video._id}
-                videoTitle={video.title}
-                isSaved={isSaved}
-                handleSave={handleSave}
-              />
+              <div style={{paddingLeft:0, marginLeft:0}}>
+                <VideoInteractions
+                  liked={liked}
+                  setLiked={setLiked}
+                  likeCount={likeCount}
+                  disliked={disliked}
+                  setDisliked={setDisliked}
+                  dislikeCount={dislikeCount}
+                  showComments={showComments}
+                  setShowComments={setShowComments}
+                  commentCount={commentCount}
+                  videoUrl={`${window.location.origin}/watch/${video._id}`}
+                  shareCount={video.shareCount || 0}
+                  handleLike={handleLike}
+                  handleDislike={handleDislike}
+                  videoId={video._id}
+                  videoTitle={video.title}
+                  isSaved={isSaved}
+                  handleSave={handleSave}
+                />
+              </div>
               {video.description && !showComments && (
-                <DescriptionWithReadMore description={video.description} />
+                <div style={{paddingLeft:0, marginLeft:0}}>
+                  <DescriptionWithReadMore description={video.description} />
+                </div>
               )}
               {showComments && (
-                <div ref={commentsRef}>
+                <div ref={commentsRef} style={{paddingLeft:0, marginLeft:0}}>
                   <VideoComments videoId={video._id} channel={channelDetails} />
                 </div>
               )}
