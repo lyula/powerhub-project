@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Header from '../components/Header';
 import MobileHeader from '../components/MobileHeader';
@@ -12,7 +12,7 @@ import { useAuth } from '../context/AuthContext';
 
 export default function ChannelSetup({ onChannelCreated }) {
   // Get user from context
-  const { user, token, setChannel, uploadProfilePicture } = useAuth();
+  const { user, token, setChannel, uploadProfilePicture, channel } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const handleToggleSidebar = () => setSidebarOpen((open) => !open);
   const navigate = useNavigate();
@@ -29,6 +29,14 @@ export default function ChannelSetup({ onChannelCreated }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const apiUrl = import.meta.env.VITE_API_URL;
+  
+  // Redirect users who have a channel but aren't in edit mode
+  useEffect(() => {
+    if (channel && !editing) {
+      navigate('/home');
+    }
+  }, [channel, editing, navigate]);
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);

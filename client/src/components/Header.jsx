@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { FaVideo, FaRegEdit } from 'react-icons/fa';
+import { FaVideo, FaRegEdit, FaGithub } from 'react-icons/fa';
 import { MdMenu, MdNotificationsNone, MdLogout } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ThemeToggle from './ThemeToggle';
 import NotificationModal from './NotificationModal';
+import CollaborationsModal from './CollaborationsModal';
 
 export default function Header({ onToggleSidebar, searchTerm, onSearchChange }) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showNotifModal, setShowNotifModal] = useState(false);
+  const [showCollabModal, setShowCollabModal] = useState(false);
   const modalRoot = typeof window !== 'undefined' ? document.body : null;
   const navigate = useNavigate();
   const { user, logout, channel } = useAuth();
@@ -55,6 +57,12 @@ export default function Header({ onToggleSidebar, searchTerm, onSearchChange }) 
     }
   };
 
+  const handleCategorySelect = (categoryName) => {
+    console.log(`Selected ${categoryName} for collaboration`);
+    setShowCollabModal(false);
+    navigate(`/collaborations/${categoryName.toLowerCase().replace(/\s+/g, '-')}`);
+  };
+
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (accountRef.current && !accountRef.current.contains(e.target)) {
@@ -83,6 +91,26 @@ export default function Header({ onToggleSidebar, searchTerm, onSearchChange }) 
               <span style={{ color: '#c42152' }}>PLP</span>
               <span className="text-[#0bb6bc] dark:text-[#0bb6bc]"> PowerHub</span>
             </a>
+            
+            {/* GitHub Collaboration Button */}
+            <div className="relative">
+              <button
+                className="hidden md:flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 transition-colors focus:outline-none"
+                onClick={() => setShowCollabModal(true)}
+                aria-label="GitHub Collaborations"
+              >
+                <FaGithub size={20} className="text-gray-600 dark:text-gray-400" />
+                <span className="text-sm font-medium">Collaborate</span>
+              </button>
+              
+              {showCollabModal && modalRoot && createPortal(
+                <CollaborationsModal
+                  onClose={() => setShowCollabModal(false)}
+                  onSelectCategory={handleCategorySelect}
+                />,
+                modalRoot
+              )}
+            </div>
       </div>
   <div className="flex items-center gap-4 w-full justify-center min-w-0">
   <div className="relative w-full max-w-2xl">
