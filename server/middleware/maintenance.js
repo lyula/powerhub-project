@@ -12,12 +12,17 @@ const maintenanceMode = async (req, res, next) => {
       return next();
     }
 
+    // Skip maintenance check for auth routes (login/register)
+    if (req.path.startsWith('/api/auth')) {
+      return next();
+    }
+
     const systemSettings = await SystemSettings.findOne();
     
     if (systemSettings && systemSettings.maintenanceMode.enabled) {
-      // Check if user is authenticated and has IT role
-      if (req.user && req.user.role === 'IT') {
-        return next(); // Allow IT users to access during maintenance
+      // Check if user is authenticated and has IT or Admin role
+      if (req.user && (req.user.role === 'IT' || req.user.role === 'admin')) {
+        return next(); // Allow IT and Admin users to access during maintenance
       }
       
       // Return maintenance response for all other users
