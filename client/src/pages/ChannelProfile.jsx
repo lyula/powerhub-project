@@ -230,41 +230,51 @@ export default function ChannelProfile() {
               About this channel
             </button>
             <div className="flex flex-row md:flex-row flex-wrap md:flex-nowrap justify-end items-center gap-3 w-full md:w-auto order-2 md:order-none">
-              <a href="#"
-                className="icon-link"
-                title="GitHub"
-                style={{ fontSize: '1.5em', color: 'var(--icon-color, #888)' }}
-                onMouseEnter={e => e.currentTarget.style.color = colors.primary}
-                onMouseLeave={e => e.currentTarget.style.color = 'var(--icon-color, #888)'}
-              ><FaGithub /></a>
-              <a href="#" 
-                className="icon-link"
-                title="Email"
-                style={{ fontSize: '1.5em', color: 'var(--icon-color, #888)' }}
-                onMouseEnter={e => e.currentTarget.style.color = colors.secondary}
-                onMouseLeave={e => e.currentTarget.style.color = 'var(--icon-color, #888)'}
-              ><FaEnvelope /></a>
-              <a href="#" 
-                className="icon-link"
-                title="WhatsApp"
-                style={{ fontSize: '1.5em', color: 'var(--icon-color, #888)' }}
-                onMouseEnter={e => e.currentTarget.style.color = colors.primary}
-                onMouseLeave={e => e.currentTarget.style.color = 'var(--icon-color, #888)'}
-              ><FaWhatsapp /></a>
-              <a href="#" 
-                className="icon-link"
-                title="Instagram"
-                style={{ fontSize: '1.5em', color: 'var(--icon-color, #888)' }}
-                onMouseEnter={e => e.currentTarget.style.color = colors.secondary}
-                onMouseLeave={e => e.currentTarget.style.color = 'var(--icon-color, #888)'}
-              ><FaInstagram /></a>
-              <a href="#" 
-                className="icon-link"
-                title="LinkedIn"
-                style={{ fontSize: '1.5em', color: 'var(--icon-color, #888)' }}
-                onMouseEnter={e => e.currentTarget.style.color = colors.primary}
-                onMouseLeave={e => e.currentTarget.style.color = 'var(--icon-color, #888)'}
-              ><FaLinkedin /></a>
+              {channel.contactInfo?.github && (
+                <a href={channel.contactInfo.github}
+                  className="icon-link"
+                  title="GitHub"
+                  style={{ fontSize: '1.5em', color: 'var(--icon-color, #888)' }}
+                  onMouseEnter={e => e.currentTarget.style.color = colors.primary}
+                  onMouseLeave={e => e.currentTarget.style.color = 'var(--icon-color, #888)'}
+                ><FaGithub /></a>
+              )}
+              {channel.contactInfo?.email && (
+                <a href={`mailto:${channel.contactInfo.email}`}
+                  className="icon-link"
+                  title="Email"
+                  style={{ fontSize: '1.5em', color: 'var(--icon-color, #888)' }}
+                  onMouseEnter={e => e.currentTarget.style.color = colors.secondary}
+                  onMouseLeave={e => e.currentTarget.style.color = 'var(--icon-color, #888)'}
+                ><FaEnvelope /></a>
+              )}
+              {channel.contactInfo?.whatsapp && (
+                <a href={`https://wa.me/${channel.contactInfo.whatsapp}`}
+                  className="icon-link"
+                  title="WhatsApp"
+                  style={{ fontSize: '1.5em', color: 'var(--icon-color, #888)' }}
+                  onMouseEnter={e => e.currentTarget.style.color = colors.primary}
+                  onMouseLeave={e => e.currentTarget.style.color = 'var(--icon-color, #888)'}
+                ><FaWhatsapp /></a>
+              )}
+              {channel.contactInfo?.instagram && (
+                <a href={`https://instagram.com/${channel.contactInfo.instagram}`}
+                  className="icon-link"
+                  title="Instagram"
+                  style={{ fontSize: '1.5em', color: 'var(--icon-color, #888)' }}
+                  onMouseEnter={e => e.currentTarget.style.color = colors.secondary}
+                  onMouseLeave={e => e.currentTarget.style.color = 'var(--icon-color, #888)'}
+                ><FaInstagram /></a>
+              )}
+              {channel.contactInfo?.linkedin && (
+                <a href={channel.contactInfo.linkedin}
+                  className="icon-link"
+                  title="LinkedIn"
+                  style={{ fontSize: '1.5em', color: 'var(--icon-color, #888)' }}
+                  onMouseEnter={e => e.currentTarget.style.color = colors.primary}
+                  onMouseLeave={e => e.currentTarget.style.color = 'var(--icon-color, #888)'}
+                ><FaLinkedin /></a>
+              )}
             </div>
           </div>
           <AboutChannelModal
