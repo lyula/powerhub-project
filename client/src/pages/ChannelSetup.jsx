@@ -1,8 +1,9 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import Header from '../components/Header';
 import MobileHeader from '../components/MobileHeader';
 import { AcademicCapIcon } from '../components/icons';
+import { EditMediaIcon, EditAvatarIcon } from '../components/ModernEditIcons';
 import Sidebar from '../components/Sidebar';
 import StudentUtility from '../components/StudentUtility';
 import BottomTabs from '../components/BottomTabs';
@@ -11,38 +12,99 @@ import { useAuth } from '../context/AuthContext';
 
 export default function ChannelSetup({ onChannelCreated }) {
   // Get user from context
-  const { user, token, setChannel } = useAuth();
+  const { user, token, setChannel, uploadProfilePicture, channel } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const handleToggleSidebar = () => setSidebarOpen((open) => !open);
-  const [channelName, setChannelName] = useState("");
-  const [description, setDescription] = useState("");
-  const [avatar, setAvatar] = useState("");
-  const [banner, setBanner] = useState("");
+  const navigate = useNavigate();
+  // Get channel data from navigation state if editing
+  const location = useLocation();
+  const navState = location.state || {};
+  const editing = location.search.includes('edit=true') && navState && navState.channel;
+  const [channelName, setChannelName] = useState(editing ? navState.channel.name || "" : "");
+  const [description, setDescription] = useState(editing ? navState.channel.description || "" : "");
+  const [avatar, setAvatar] = useState(editing ? navState.channel.avatar || "" : "");
+  const [banner, setBanner] = useState(editing ? navState.channel.banner || "" : "");
   const [avatarFile, setAvatarFile] = useState(null);
   const [bannerFile, setBannerFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  const navigate = useNavigate();
+  const apiUrl = import.meta.env.VITE_API_URL;
+  
+  // Redirect users who have a channel but aren't in edit mode
+  useEffect(() => {
+    if (channel && !editing) {
+      navigate('/home');
+    }
+  }, [channel, editing, navigate]);
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
     try {
-  const formData = new FormData();
-  formData.append("name", channelName); // match backend field
-  formData.append("description", description);
-  formData.append("username", user?.username || "");
-  if (avatarFile) formData.append("avatar", avatarFile);
-  if (bannerFile) formData.append("banner", bannerFile);
-
-      const apiUrl = import.meta.env.VITE_API_URL;
+      if (editing) {
+        // EDIT: Use PUT and FormData for file uploads
+        const formData = new FormData();
+        formData.append("name", channelName);
+        formData.append("description", description);
+        if (avatarFile) formData.append("avatar", avatarFile);
+        else if (avatar) formData.append("avatar", avatar);
+        if (bannerFile) formData.append("banner", bannerFile);
+        else if (banner) formData.append("banner", banner);
+        const response = await fetch(`${apiUrl}/channel/${navState.channel._id}`, {
+          method: "PUT",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          },
+          body: formData
+        });
+        let data = null;
+        try {
+          data = await response.json();
+        } catch (jsonErr) {
+          console.error('Failed to parse JSON:', jsonErr);
+        }
+        if (!response.ok) {
+          setLoading(false);
+          setError(data?.error || data?.message || `Failed to update channel: ${response.statusText}`);
+          return;
+        }
+        setLoading(false);
+        if (onChannelCreated) onChannelCreated(data);
+        if (setChannel) setChannel(data);
+        navigate(`/channel/${user._id}`);
+        return;
+      }
+      // CREATE: Channel creation logic (POST)
+      let avatarUrl = "";
+      let bannerUrl = "";
+      // Upload avatar to Cloudinary if selected
+      if (avatarFile) {
+        const avatarRes = await uploadProfilePicture(avatarFile);
+        if (avatarRes?.url) avatarUrl = avatarRes.url;
+        else throw new Error(avatarRes?.error || "Avatar upload failed");
+      }
+      // Upload banner to Cloudinary if selected
+      if (bannerFile) {
+        const bannerRes = await uploadProfilePicture(bannerFile);
+        if (bannerRes?.url) bannerUrl = bannerRes.url;
+        else throw new Error(bannerRes?.error || "Banner upload failed");
+      }
+      // Send only URLs to backend
+      const payload = {
+        name: channelName,
+        description,
+        username: user?.username || "",
+        avatar: avatarUrl,
+        banner: bannerUrl
+      };
       const response = await fetch(`${apiUrl}/channel`, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${token}`
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
         },
-        body: formData,
+        body: JSON.stringify(payload),
       });
       let data = null;
       try {
@@ -61,9 +123,9 @@ export default function ChannelSetup({ onChannelCreated }) {
         return;
       }
       setLoading(false);
-  if (onChannelCreated) onChannelCreated(data);
-  if (setChannel) setChannel(data); // update channel in context
-  navigate("/upload");
+      if (onChannelCreated) onChannelCreated(data);
+      if (setChannel) setChannel(data); // update channel in context
+      navigate("/upload");
     } catch (err) {
       setLoading(false);
       setError("Failed to create channel. Try again.");
@@ -127,11 +189,8 @@ export default function ChannelSetup({ onChannelCreated }) {
                   aria-label="Edit Banner"
                   style={{ zIndex: 2 }}
                 >
-                  {/* Material Design pencil icon, theme responsive */}
-                  <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 20h9" />
-                    <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
-                  </svg>
+                  {/* Modern edit icon for banner */}
+                  <EditMediaIcon />
                 </button>
                 <input
                   type="file"
@@ -157,11 +216,8 @@ export default function ChannelSetup({ onChannelCreated }) {
                       aria-label="Edit Avatar"
                       style={{ zIndex: 2 }}
                     >
-                      {/* Material Design pencil icon, theme responsive */}
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'inherit' }}>
-                        <path d="M12 20h9" />
-                        <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
-                      </svg>
+                      {/* Modern edit icon for avatar */}
+                      <EditAvatarIcon />
                     </button>
                     <input
                       type="file"
@@ -210,7 +266,7 @@ export default function ChannelSetup({ onChannelCreated }) {
                 {loading && (
                   <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></span>
                 )}
-                {loading ? "Creating..." : "Create Channel"}
+                {loading ? (editing ? "Saving..." : "Creating...") : (editing ? "Make Channel Changes" : "Create Channel")}
               </button>
               {error && <span className="text-red-500 text-sm mt-2">{error}</span>}
             </form>

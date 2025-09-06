@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import GoogleIcon from '../components/GoogleIcon';
 import { colors } from '../theme/colors';
@@ -18,6 +18,38 @@ export default function Register() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [maintenanceMessage, setMaintenanceMessage] = useState('');
+  const [checkingMaintenance, setCheckingMaintenance] = useState(true);
+
+  // Check maintenance mode on component mount
+  useEffect(() => {
+    const checkMaintenanceMode = async () => {
+      try {
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const response = await fetch(`${API_BASE_URL}/it-dashboard/maintenance-status`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.data && data.data.maintenanceMode) {
+            setMaintenanceMode(data.data.maintenanceMode.enabled);
+            setMaintenanceMessage(data.data.maintenanceMode.message);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking maintenance mode:', error);
+      } finally {
+        setCheckingMaintenance(false);
+      }
+    };
+
+    checkMaintenanceMode();
+  }, []);
 
   const handleChange = (e) => {
     setFormData({
@@ -36,7 +68,12 @@ export default function Register() {
       const result = await register(formData);
       
       if (result.success) {
-        navigate('/home');
+        // Redirect based on user role
+        if (result.data.user.role === 'IT') {
+          navigate('/it-dashboard');
+        } else {
+          navigate('/home');
+        }
       } else {
         setError(result.error);
       }
@@ -46,6 +83,49 @@ export default function Register() {
       setLoading(false);
     }
   };
+
+  // Show loading while checking maintenance mode
+  if (checkingMaintenance) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4 bg-white dark:bg-[#181818]">
+        <div className="w-full max-w-md p-10 rounded-2xl shadow-2xl bg-gray-100 dark:bg-[#212121] flex flex-col items-center justify-center gap-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: colors.primary }}></div>
+          <p className="text-center text-base" style={{ color: colors.secondary }}>Checking system status...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show maintenance mode message if enabled
+  if (maintenanceMode) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4 bg-white dark:bg-[#181818]">
+        <div className="w-full max-w-md p-10 rounded-2xl shadow-2xl bg-gray-100 dark:bg-[#212121] flex flex-col items-center justify-center gap-8">
+          <div className="w-full p-6 bg-amber-50 border border-amber-200 rounded-lg text-center">
+            <svg className="w-16 h-16 text-amber-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+            <h2 className="text-xl font-bold text-amber-900 mb-3">Registration Temporarily Disabled</h2>
+            <p className="text-amber-700 mb-4">
+              {maintenanceMessage || 'The system is currently under maintenance. Registration is temporarily disabled.'}
+            </p>
+            <p className="text-sm text-amber-600 mb-6">
+              Please try again later or contact support if you need immediate access.
+            </p>
+            <Link 
+              to="/login" 
+              className="inline-flex items-center px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+              </svg>
+              Back to Login
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-white dark:bg-[#181818]">

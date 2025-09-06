@@ -1,17 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { FaVideo, FaRegEdit } from 'react-icons/fa';
+import { FaVideo, FaRegEdit, FaGithub } from 'react-icons/fa';
+import { MdMenu, MdNotificationsNone, MdLogout } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ThemeToggle from './ThemeToggle';
-import { LogoutIcon, NotificationBellIcon } from './icons';
+import NotificationModal from './NotificationModal';
+import CollaborationsModal from './CollaborationsModal';
 
-export default function Header({ onToggleSidebar }) {
+export default function Header({ onToggleSidebar, searchTerm, onSearchChange }) {
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showNotifModal, setShowNotifModal] = useState(false);
+  const [showCollabModal, setShowCollabModal] = useState(false);
   const modalRoot = typeof window !== 'undefined' ? document.body : null;
   const navigate = useNavigate();
   const { user, logout, channel } = useAuth();
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
+  const [showAccountMenu, setShowAccountMenu] = useState(false);
+  const accountRef = useRef(null);
+  
+  const handleSearchChange = (e) => {
+    if (onSearchChange) {
+      onSearchChange(e.target.value);
+    }
+  };
+
+  const handleClearSearch = () => {
+    if (onSearchChange) {
+      onSearchChange('');
+    }
+  };
   
   const handleThemeToggle = () => {
     if (document.documentElement.classList.contains('dark')) {
@@ -27,12 +45,36 @@ export default function Header({ onToggleSidebar }) {
   };
 
   const handleLogout = async () => {
-    await logout();
-    navigate('/login');
+    try {
+      console.log('Starting logout process...');
+      await logout();
+      console.log('Logout successful, navigating to login');
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Still navigate to login even if logout fails
+      navigate('/login');
+    }
   };
 
+  const handleCategorySelect = (categoryName) => {
+    console.log(`Selected ${categoryName} for collaboration`);
+    setShowCollabModal(false);
+    navigate(`/collaborations/${categoryName.toLowerCase().replace(/\s+/g, '-')}`);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (accountRef.current && !accountRef.current.contains(e.target)) {
+        setShowAccountMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
-    <header className="w-full bg-gray-100 dark:bg-[#111111] border-b border-gray-200 dark:border-gray-900 px-4 py-3 flex items-center justify-between" style={{ minHeight: '56px', height: '56px', overflow: 'hidden', scrollbarWidth: 'none' }}>
+    <header className="w-full bg-gray-100 dark:bg-[#111111] border-b border-gray-200 dark:border-gray-900 px-4 py-3 flex items-center justify-between" style={{ minHeight: '56px', height: '56px', scrollbarWidth: 'none' }}>
       <style>{`
         header::-webkit-scrollbar { display: none !important; }
         header { scrollbar-width: none !important; }
@@ -43,33 +85,81 @@ export default function Header({ onToggleSidebar }) {
           aria-label="Toggle sidebar"
           onClick={onToggleSidebar}
         >
-          <svg width="24" height="24" fill="none" stroke="#0bb6bc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="18" x2="21" y2="18" />
-          </svg>
+          <MdMenu size={28} color="#0bb6bc" />
         </button>
-            <span className="hidden md:inline text-lg font-bold">
+            <a href="/" className="hidden md:inline text-lg font-bold" style={{ textDecoration: 'none' }}>
               <span style={{ color: '#c42152' }}>PLP</span>
               <span className="text-[#0bb6bc] dark:text-[#0bb6bc]"> PowerHub</span>
-            </span>
+            </a>
+            
+            {/* GitHub Collaboration Button */}
+            <div className="relative">
+              <button
+                className="hidden md:flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 transition-colors focus:outline-none"
+                onClick={() => setShowCollabModal(true)}
+                aria-label="GitHub Collaborations"
+              >
+                <FaGithub size={20} className="text-gray-600 dark:text-gray-400" />
+                <span className="text-sm font-medium">Collaborate</span>
+              </button>
+              
+              {showCollabModal && modalRoot && createPortal(
+                <CollaborationsModal
+                  onClose={() => setShowCollabModal(false)}
+                  onSelectCategory={handleCategorySelect}
+                />,
+                modalRoot
+              )}
+            </div>
       </div>
   <div className="flex items-center gap-4 w-full justify-center min-w-0">
-        <input type="text" placeholder="Search videos..." className="px-3 py-2 rounded-lg bg-gray-200 dark:bg-gray-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0bb6bc] placeholder-gray-400 w-full max-w-md text-center text-base" style={{ height: '36px' }} />
+  <div className="relative w-full max-w-2xl">
+          <input
+            type="text"
+            placeholder="Search"
+            value={searchTerm || ''}
+            onChange={handleSearchChange}
+            className="pl-4 pr-12 py-2 rounded-full bg-gray-200 dark:bg-gray-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0bb6bc] placeholder-gray-400 w-full text-base border border-gray-300 dark:border-gray-700"
+            style={{ height: '40px' }}
+          />
+          {searchTerm ? (
+            <button
+              type="button"
+              onClick={handleClearSearch}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-gray-300 dark:hover:bg-gray-700 transition"
+              aria-label="Clear search"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-5 h-5 text-gray-600 dark:text-gray-300">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-gray-300 dark:hover:bg-gray-700 transition"
+              aria-label="Search"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-5 h-5 text-gray-600 dark:text-gray-300">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+  <div className="flex items-center gap-6 ml-4">
             <div className="relative" style={{ position: 'relative', zIndex: 100 }}>
               <button
-                className="hidden md:inline flex flex-row items-center gap-3 px-4 py-2 rounded-lg bg-[#c42152] text-white font-semibold hover:bg-[#0bb6bc] transition text-base"
-                style={{ height: '36px', paddingTop: 0, paddingBottom: 0, width: 'auto', minWidth: 0 }}
+                className="relative hidden md:flex items-center justify-center px-2 py-2 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 shadow hover:shadow-lg transition hover:bg-gray-200 dark:hover:bg-[#222] focus:outline-none"
+                aria-label="Notifications"
+                style={{ minWidth: 40, height: 40, position: 'relative' }}
                 onClick={() => {
-                  if (!channel) {
-                    navigate('/channel-setup');
-                  } else {
-                    setShowCreateModal(true);
-                  }
+                  setShowNotifModal((prev) => !prev);
                 }}
+                type="button"
               >
-                <span className="text-lg font-bold">+</span>
-                <span className="">Create</span>
+                <MdNotificationsNone size={26} color="#0bb6bc" />
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5" style={{ minWidth: 18, minHeight: 18, lineHeight: '18px' }}>3</span>
               </button>
               {showCreateModal && modalRoot && createPortal(
                 <>
@@ -101,17 +191,39 @@ export default function Header({ onToggleSidebar }) {
               )}
             </div>
 
-        {/* Notification Bell with Dummy Badge */}
-        <div className="relative hidden md:flex items-center justify-center">
-          <button
-            className="flex items-center justify-center px-2 py-2 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 shadow hover:shadow-lg transition hover:bg-gray-200 dark:hover:bg-[#222] focus:outline-none"
-            aria-label="Notifications"
-            style={{ minWidth: 40, height: 40 }}
-          >
-            <NotificationBellIcon />
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5" style={{ minWidth: 18, minHeight: 18, lineHeight: '18px' }}>3</span>
-          </button>
-        </div>
+          {/* Notification Bell with Modal */}
+          <div className="relative hidden md:inline-flex items-center gap-2 rounded-full bg-white dark:bg-[#222] shadow hover:bg-gray-100 dark:hover:bg-[#333] transition focus:outline-none px-4" style={{ height: '40px', minWidth: '120px', boxShadow: '0 2px 8px rgba(0,0,0,0.10)' }}>
+            <button
+              aria-label="Create"
+              className="flex items-center gap-2 w-full justify-center"
+              onClick={() => {
+                if (!channel) {
+                  navigate('/channel-setup');
+                } else {
+                  setShowCreateModal(true);
+                }
+              }}
+            >
+              <FaVideo className="text-[#c42152] dark:text-[#c42152]" size={22} />
+              <span className="text-base font-semibold text-[#c42152] dark:text-[#c42152]">Create</span>
+            </button>
+            {showNotifModal && modalRoot && createPortal(
+              <div style={{ position: 'absolute', top: '48px', right: 0, zIndex: 9999 }}>
+                <NotificationModal
+                  notifications={[
+                    { id: 1, title: 'New comment on your video', body: 'Someone commented: "Great video!"' },
+                    { id: 2, title: 'New subscriber', body: 'You have a new subscriber!' },
+                    { id: 3, title: 'Video approved', body: 'Your video "React Basics" is now live.' },
+                    { id: 4, title: 'Mentioned in a post', body: 'You were mentioned in a post.' },
+                    { id: 5, title: 'Channel milestone', body: 'Congrats! 1000 subscribers.' },
+                    { id: 6, title: 'Update available', body: 'A new feature is available.' },
+                  ]}
+                  onClose={() => setShowNotifModal(false)}
+                />
+              </div>,
+              modalRoot
+            )}
+          </div>
 
         <button
           className="hidden md:flex items-center justify-center px-2 py-2 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 shadow hover:shadow-lg transition hover:bg-[#c42152] dark:hover:bg-[#222] focus:outline-none"
@@ -122,23 +234,98 @@ export default function Header({ onToggleSidebar }) {
           <ThemeToggle isDark={isDark} />
         </button>
         
-        {/* User Info */}
+        {/* User Info - Moved to be the last element */}
         {user && (
-          <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-lg bg-gray-200 dark:bg-gray-800">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          <div ref={accountRef} className="hidden md:flex items-center gap-3 relative" style={{ zIndex: 1000 }}>
+            {/* User Profile Picture or Initial Circle */}
+            <div className="flex items-center justify-center w-8 h-8 bg-white rounded-full shadow-sm overflow-hidden">
+              {user.profilePicture ? (
+                <img 
+                  src={user.profilePicture} 
+                  alt={`${user.username}'s profile`}
+                  className="w-full h-full object-cover rounded-full"
+                  onError={(e) => {
+                    // Fallback to initial if image fails to load
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              <span 
+                className="text-blue-600 font-bold text-sm flex items-center justify-center w-full h-full"
+                style={{ display: user.profilePicture ? 'none' : 'flex' }}
+              >
+                {user.username ? user.username[0].toUpperCase() : '?'}
+              </span>
+            </div>
+            
+            {/* User Name */}
+            <span className="text-gray-800 dark:text-gray-200 font-semibold text-base">
               {user.username}
             </span>
+            
+            {/* Dropdown Arrow */}
+            <button
+              className="flex items-center justify-center text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+              onClick={() => setShowAccountMenu((s) => !s)}
+              aria-haspopup="true"
+              aria-expanded={showAccountMenu}
+            >
+              <svg 
+                width="16" 
+                height="16" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path 
+                  d="M6 9L12 15L18 9" 
+                  stroke="currentColor" 
+                  strokeWidth="2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+            
+            {/* Dropdown Menu */}
+            {showAccountMenu && (
+              <div 
+                className="absolute right-0 w-36 bg-white dark:bg-[#222] rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
+                style={{ 
+                  top: '100%', 
+                  marginTop: '8px', 
+                  zIndex: 9999,
+                  position: 'absolute'
+                }}
+              >
+                <div className="px-3 py-2 font-bold text-gray-800 dark:text-gray-200 text-sm border-b border-gray-100 dark:border-gray-700">
+                  My Account
+                </div>
+                <button
+                  className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-[#333] text-gray-800 dark:text-gray-200 text-sm transition-colors"
+                  onClick={() => { 
+                    console.log('Profile button clicked');
+                    setShowAccountMenu(false); 
+                    navigate('/profile'); 
+                  }}
+                >
+                  Profile
+                </button>
+                <button
+                  className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-[#333] text-gray-800 dark:text-gray-200 text-sm transition-colors"
+                  onClick={async () => { 
+                    console.log('Logout button clicked');
+                    setShowAccountMenu(false); 
+                    await handleLogout(); 
+                  }}
+                >
+                  Logout
+                </button>
+              </div>
+            )}
           </div>
         )}
-        
-        <button 
-          className="hidden md:flex items-center justify-center px-2 py-2 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 shadow hover:shadow-lg transition hover:bg-red-500 dark:hover:bg-red-600 focus:outline-none" 
-          aria-label="Logout" 
-          style={{ minWidth: 40, height: 40 }}
-          onClick={handleLogout}
-        >
-          <LogoutIcon />
-        </button>
       </div>
     </header>
   );

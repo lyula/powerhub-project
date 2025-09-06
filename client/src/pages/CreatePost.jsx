@@ -9,35 +9,82 @@ import BottomTabs from '../components/BottomTabs';
 const CreatePost = () => {
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768);
   const handleToggleSidebar = () => setSidebarOpen((open) => !open);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  // Removed title state
+  const [content, setContent] = useState('');
   const [images, setImages] = useState([]);
   const [link, setLink] = useState('');
   const [privacy, setPrivacy] = useState('public');
   const [specialization, setSpecialization] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState(''); // 'success' or 'error'
   const navigate = useNavigate();
 
   const handleImageChange = (e) => {
     setImages(Array.from(e.target.files));
   };
 
+  // Helper to upload image to Cloudinary (matches profile picture logic)
+  const uploadToCloudinary = async (file) => {
+    const CLOUDINARY_NAME = import.meta.env.VITE_CLOUDINARY_NAME;
+    const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_PRESET;
+    const CLOUDINARY_IMAGE_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_NAME}/image/upload`;
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', UPLOAD_PRESET);
+    const cloudRes = await fetch(CLOUDINARY_IMAGE_URL, {
+      method: 'POST',
+      body: formData
+    });
+    const cloudData = await cloudRes.json();
+    if (!cloudRes.ok || !cloudData.secure_url) throw new Error(cloudData.error?.message || 'Cloudinary upload failed');
+    return cloudData.secure_url;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setMessage('');
-    // Simulate upload
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      // Upload images to Cloudinary
+      let imageUrls = [];
+      if (images.length > 0) {
+        imageUrls = await Promise.all(images.map(uploadToCloudinary));
+      }
+      // Get JWT token from localStorage
+      const token = localStorage.getItem('token');
+      // Create post (send only URLs to backend, with Authorization header)
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/posts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          content,
+          images: imageUrls,
+          link,
+          privacy,
+          specialization,
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to create post');
       setMessage('Post created successfully!');
-      setTitle('');
-      setDescription('');
+      setMessageType('success');
+      setContent('');
       setImages([]);
       setLink('');
       setPrivacy('public');
       setSpecialization('');
-    }, 1500);
+    } catch (err) {
+      setMessage('Error: ' + err.message);
+      setMessageType('error');
+    }
+    setTimeout(() => {
+      setMessage('');
+      setMessageType('');
+    }, 3000);
+    setLoading(false);
   };
 
   return (
@@ -67,16 +114,7 @@ const CreatePost = () => {
             <h2 className="hidden md:block text-2xl md:text-3xl font-bold mb-8 text-[#c42152] dark:text-[#c42152] text-left pl-8">Create Post</h2>
             {message && <div className="mb-4 text-green-600 dark:text-green-400 w-full max-w-2xl">{message}</div>}
             <form onSubmit={handleSubmit} className="bg-white dark:bg-[#1a1a1a] rounded-xl shadow-lg p-6 md:p-10 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-              <div className="flex flex-col">
-                <label className="block text-base font-semibold text-gray-700 dark:text-gray-300 mb-2">Title</label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#c42152] bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white text-lg"
-                  required
-                />
-              </div>
+              {/* Title field removed. Only description, images, and link remain. */}
               <div className="flex flex-col">
                 <label className="block text-base font-semibold text-gray-700 dark:text-gray-300 mb-2">Link (optional)</label>
                 <input
@@ -100,13 +138,14 @@ const CreatePost = () => {
                 </select>
               </div>
               <div className="flex flex-col md:col-span-2">
-                <label className="block text-base font-semibold text-gray-700 dark:text-gray-300 mb-2">Description</label>
+                <label className="block text-base font-semibold text-gray-700 dark:text-gray-300 mb-2">Content</label>
                 <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#c42152] bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white text-lg"
                   rows={4}
                   required
+                  placeholder="Whats on your mind?"
                 />
               </div>
               <div className="flex flex-col md:col-span-2">
@@ -121,6 +160,27 @@ const CreatePost = () => {
               </div>
               <div className="flex flex-col md:col-span-2">
                 <label className="block text-base font-semibold text-gray-700 dark:text-gray-300 mb-2">Images</label>
+                {/* Preview selected images */}
+                {images.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {images.map((img, idx) => {
+                      const url = typeof img === 'string' ? img : URL.createObjectURL(img);
+                      return (
+                        <div key={idx} className="flex flex-col items-center">
+                          <img
+                            src={url}
+                            alt={img.name || `Selected ${idx+1}`}
+                            className="w-24 h-24 object-cover rounded-lg border border-gray-300 dark:border-gray-700 mb-1"
+                            style={{ minWidth: '6rem', minHeight: '6rem' }}
+                          />
+                          <span className="px-3 py-1 rounded-full bg-[#c42152] text-white text-xs font-medium">
+                            {img.name || `Image ${idx+1}`}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
                 <input
                   type="file"
                   accept="image/*"
@@ -129,16 +189,20 @@ const CreatePost = () => {
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white text-lg"
                   required
                 />
-                {images.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {images.map((img, idx) => (
-                      <span key={idx} className="px-3 py-1 rounded-full bg-[#c42152] text-white text-xs font-medium">
-                        {img.name}
-                      </span>
-                    ))}
-                  </div>
-                )}
               </div>
+              {/* Message above the button */}
+              {message && (
+                <div
+                  className={`md:col-span-2 mb-4 w-full text-center px-4 py-2 rounded-lg font-semibold ${
+                    messageType === 'success'
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400 border border-green-200 dark:border-green-800'
+                      : 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400 border border-red-200 dark:border-red-800'
+                  }`}
+                  style={{ marginBottom: '1rem' }}
+                >
+                  {message}
+                </div>
+              )}
               <div className="md:col-span-2 flex flex-col">
                 <button
                   type="submit"

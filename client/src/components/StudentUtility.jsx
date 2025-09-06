@@ -13,7 +13,13 @@ export default function StudentUtility() {
       bg-gray-100 dark:bg-[#111111] border border-gray-200 dark:border-gray-900 rounded-none
       dark:text-gray-200 text-gray-900
       ">
-  <h4 className="text-base font-bold mb-3 pt-12 text-[#0bb6bc] dark:text-[#0bb6bc]">Upcoming Events</h4>
+      {/* PLP Logo */}
+      <img 
+        src="/PLP-logo.jpg" 
+        alt="PLP Logo" 
+        className="w-24 h-auto mb-4 rounded-lg shadow-sm"
+      />
+  <h4 className="text-base font-bold mb-3 text-[#0bb6bc] dark:text-[#0bb6bc]">Upcoming Events</h4>
       <ul className="space-y-3 w-full">
         {events.map((event, idx) => (
           <li key={idx} className="bg-gradient-to-r from-[#0bb6bc] to-[#c42152] text-white px-2 py-2 rounded-lg shadow-sm text-xs font-semibold flex flex-col items-start w-full dark:bg-[#222] dark:text-gray-200 dark:from-none dark:to-none">

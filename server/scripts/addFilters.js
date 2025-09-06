@@ -5,16 +5,9 @@ const Filter = require('../models/Filter');
 require('dotenv').config(); // Add this line!
 
 const categories = [
-  'AI',
-  'Mobile apps',
-  'MERN',
-  'Python',
-  'Javascript',
-  'HTML & CSS',
-  'Entreprenuership',
-  'Success Stories',
-  'PLP Graduation',
-  'Hackathons',
+  'General',
+  'Git and Github',
+  'Django',
 ];
 
 async function addFilters() {

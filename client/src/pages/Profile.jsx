@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Header from '../components/Header';
 import MobileHeader from '../components/MobileHeader';
@@ -8,18 +9,45 @@ import StudentUtility from '../components/StudentUtility';
 import BottomTabs from '../components/BottomTabs';
 
 const Profile = () => {
-  const { user, updateProfile, changePassword } = useAuth();
+  const { user, updateProfile, changePassword, uploadProfilePicture, channel } = useAuth();
+  const navigate = useNavigate();
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const [avatarMessage, setAvatarMessage] = useState('');
+  // Handle avatar click to upload profile picture
+  const handleAvatarClick = () => {
+    document.getElementById('profile-picture-input').click();
+  };
+
+  const handleProfilePictureChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    setUploadError('');
+    const result = await uploadProfilePicture(file);
+    if (result.success) {
+      setAvatarMessage('Profile picture updated successfully!');
+      setTimeout(() => setAvatarMessage(''), 3000);
+    } else {
+      setUploadError(result.error || 'Failed to upload profile picture');
+    }
+    setUploading(false);
+  };
   const [isEditing, setIsEditing] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const securityRef = useRef(null);
 
   const [profileForm, setProfileForm] = useState({
     firstName: '',
     lastName: '',
     username: '',
-    email: ''
+    github: '',
+    whatsapp: '',
+    linkedin: '',
+    instagram: ''
   });
 
   const [passwordForm, setPasswordForm] = useState({
@@ -34,7 +62,10 @@ const Profile = () => {
         firstName: user.firstName || '',
         lastName: user.lastName || '',
         username: user.username || '',
-        email: user.email || ''
+        github: user.github || '',
+        whatsapp: user.whatsapp || '',
+        linkedin: user.linkedin || '',
+        instagram: user.instagram || ''
       });
     }
   }, [user]);
@@ -122,7 +153,10 @@ const Profile = () => {
       firstName: user.firstName || '',
       lastName: user.lastName || '',
       username: user.username || '',
-      email: user.email || ''
+      github: user.github || '',
+      whatsapp: user.whatsapp || '',
+      linkedin: user.linkedin || '',
+      instagram: user.instagram || ''
     });
     setMessage({ type: '', text: '' });
   };
@@ -135,6 +169,16 @@ const Profile = () => {
       confirmPassword: ''
     });
     setMessage({ type: '', text: '' });
+  };
+
+  const openSecuritySection = () => {
+    setIsChangingPassword(true);
+    // Scroll to the security section smoothly
+    setTimeout(() => {
+      if (securityRef.current) {
+        securityRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 0);
   };
 
   if (!user) {
@@ -154,7 +198,7 @@ const Profile = () => {
       <MobileHeader icon={<UserIcon />} label="Profile" />
       {/* Desktop header remains unchanged */}
       <div className="hidden md:block">
-        <HeaderFixed onToggleSidebar={handleToggleSidebar} />
+      <HeaderFixed onToggleSidebar={handleToggleSidebar} />
       </div>
       <div className="flex flex-row w-full" style={{ height: 'calc(100vh - 56px)', maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
         <SidebarFixed sidebarOpen={sidebarOpen} />
@@ -180,17 +224,81 @@ const Profile = () => {
             <div className="max-w-4xl mx-auto">
               <div className="bg-white dark:bg-[#1a1a1a] rounded-xl shadow-lg p-6 mb-8 border border-gray-200 dark:border-gray-700 pt-6 md:pt-6 mt-10 md:mt-0">
                 <div className="flex items-center space-x-6">
-                  <div className="w-24 h-24 bg-gradient-to-br from-[#0bb6bc] to-[#0a9ba0] rounded-full flex items-center justify-center shadow-lg">
-                    <span className="text-3xl font-bold text-white">
-                      {user.firstName?.charAt(0) || user.username?.charAt(0) || 'U'}
-                    </span>
+                  <div className="relative w-24 h-24 flex flex-col items-center">
+                    <input
+                      id="profile-picture-input"
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={handleProfilePictureChange}
+                      disabled={uploading}
+                    />
+                    <div
+                      className="w-24 h-24 bg-gradient-to-br from-[#0bb6bc] to-[#0a9ba0] rounded-full flex items-center justify-center shadow-lg cursor-pointer overflow-hidden border-4 border-white dark:border-gray-800"
+                      onClick={handleAvatarClick}
+                      title="Click to change profile picture"
+                      style={{ position: 'relative' }}
+                    >
+                      {user.profilePicture ? (
+                        <img
+                          src={user.profilePicture}
+                          alt="Profile"
+                          className="w-full h-full object-cover rounded-full"
+                        />
+                      ) : (
+                        <span className="text-3xl font-bold text-white">
+                          {user.firstName?.charAt(0) || user.username?.charAt(0) || 'U'}
+                        </span>
+                      )}
+                      {/* Edit icon overlay at bottom center */}
+                      <span
+                        className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center"
+                        style={{ zIndex: 3 }}
+                      >
+                        {/* Modern camera icon, strawberry red, centered in avatar */}
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#FC5A8D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8">
+                          <circle cx="12" cy="13" r="3" />
+                          <path d="M5 7h2l2-3h6l2 3h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z" />
+                        </svg>
+                      </span>
+                      {uploading && (
+                        <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center rounded-full">
+                          <span className="text-white text-lg">Uploading...</span>
+                        </div>
+                      )}
+                    </div>
+                    {/* Success message below avatar, outside avatar container */}
+                    {avatarMessage && (
+                      <div className="mt-3 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 px-3 py-1 rounded shadow text-sm whitespace-nowrap z-10">
+                        {avatarMessage}
+                      </div>
+                    )}
                   </div>
                   <div>
                     <h3 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">
                       {user.firstName} {user.lastName}
                     </h3>
-                    <p className="text-gray-600 dark:text-gray-400 mb-2">{user.email}</p>
-                    {/* Removed role display */}
+                    <div className="text-gray-600 dark:text-gray-400 text-sm mb-2">
+                      @{user.username}
+                      <span className="mx-1">·</span>
+                      <button
+                        type="button"
+                        className="text-[#0bb6bc] hover:underline"
+                        onClick={() => {
+                          if (channel && channel._id) {
+                            navigate(`/channel/${channel._id}`);
+                          } else {
+                            navigate('/channel-setup');
+                          }
+                        }}
+                      >
+                        View channel
+                      </button>
+                    </div>
+                    <p className="text-gray-600 dark:text-gray-400 mb-1">{user.email}</p>
+                    {uploadError && (
+                      <div className="text-red-500 text-sm mt-2">{uploadError}</div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -198,14 +306,6 @@ const Profile = () => {
               <div className="bg-white dark:bg-[#1a1a1a] rounded-xl shadow-lg p-6 mb-8 border border-gray-200 dark:border-gray-700">
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Profile Details</h3>
-                  {!isEditing && (
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      className="px-6 py-2 bg-[#0bb6bc] text-white rounded-lg hover:bg-[#0a9ba0] transition-colors shadow-md font-medium"
-                    >
-                      Edit Profile
-                    </button>
-                  )}
                 </div>
 
                 {isEditing ? (
@@ -258,10 +358,61 @@ const Profile = () => {
                       <input
                         type="email"
                         name="email"
-                        value={profileForm.email}
+                        value={user.email || ''}
+                        disabled
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
+                      />
+                    </div>
+                                         <div>
+                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                         Github
+                       </label>
+                       <input
+                         type="text"
+                         name="github"
+                         value={profileForm.github}
+                         onChange={handleProfileChange}
+                         placeholder="username or github.com/username"
+                         className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0bb6bc] focus:border-transparent bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
+                       />
+                     </div>
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                         Whatsapp
+                       </label>
+                       <input
+                         type="tel"
+                         name="whatsapp"
+                         value={profileForm.whatsapp}
+                         onChange={handleProfileChange}
+                         placeholder="+1234567890"
+                         className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0bb6bc] focus:border-transparent bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
+                       />
+                     </div>
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                         LinkedIn
+                       </label>
+                       <input
+                         type="text"
+                         name="linkedin"
+                         value={profileForm.linkedin}
+                         onChange={handleProfileChange}
+                         placeholder="username or linkedin.com/in/username"
+                         className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0bb6bc] focus:border-transparent bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
+                       />
+                     </div>
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                         Instagram
+                       </label>
+                       <input
+                         type="text"
+                         name="instagram"
+                         value={profileForm.instagram}
                         onChange={handleProfileChange}
+                         placeholder="username or instagram.com/username"
                         className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0bb6bc] focus:border-transparent bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
-                        required
                       />
                     </div>
                     <div className="flex space-x-4">
@@ -329,22 +480,94 @@ const Profile = () => {
                         className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
                       />
                     </div>
-                    {/* Removed role field */}
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                         Github
+                       </label>
+                       <input
+                         type="text"
+                         value={user.github || ''}
+                         disabled
+                         className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
+                       />
+                     </div>
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                         Whatsapp
+                       </label>
+                       <input
+                         type="tel"
+                         value={user.whatsapp || ''}
+                         disabled
+                         className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
+                       />
+                     </div>
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                         LinkedIn
+                       </label>
+                       <input
+                         type="text"
+                         value={user.linkedin || ''}
+                         disabled
+                         className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
+                       />
+                     </div>
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                         Instagram
+                       </label>
+                       <input
+                         type="text"
+                         value={user.instagram || ''}
+                        disabled
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Role
+                      </label>
+                      <input
+                        type="text"
+                        value={user.role || 'User'}
+                        disabled
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
+                      />
+                    </div>
                   </form>
+                )}
+
+                {!isEditing && (
+                  <div className="flex items-center justify-between mt-8">
+                    <button
+                      type="button"
+                      onClick={openSecuritySection}
+                      className="px-5 py-2 rounded-full border border-rose-500 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors flex items-center gap-2"
+                    >
+                      <span className="inline-block w-4 h-4">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                      </span>
+                      Change Password
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditing(true)}
+                      className="px-6 py-2 rounded-full bg-rose-600 text-white hover:bg-rose-700 transition-colors flex items-center gap-2"
+                    >
+                      <span className="inline-block w-4 h-4">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+                      </span>
+                      Edit
+                    </button>
+                  </div>
                 )}
               </div>
 
-              <div className="bg-white dark:bg-[#1a1a1a] rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+              {isChangingPassword && (
+              <div ref={securityRef} className="bg-white dark:bg-[#1a1a1a] rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Security</h3>
-                  {!isChangingPassword && (
-                    <button
-                      onClick={() => setIsChangingPassword(true)}
-                      className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors shadow-md font-medium"
-                    >
-                      Change Password
-                    </button>
-                  )}
                 </div>
 
                 {isChangingPassword && (
@@ -409,6 +632,7 @@ const Profile = () => {
                   </form>
                 )}
               </div>
+              )}
             </div>
           </div>
         </div>

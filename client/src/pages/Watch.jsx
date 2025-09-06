@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { Link, useParams } from 'react-router-dom';
-import Comments from '../components/Comments';
+import VideoComments from '../components/VideoComments';
+import VideoInteractions from '../components/VideoInteractions';
 import DescriptionWithReadMore from './DescriptionWithReadMore';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
@@ -9,9 +11,27 @@ import { VideoCameraIcon } from '../components/icons';
 import SubscribeButton from '../components/SubscribeButton';
 import ProgressBar from '../components/ProgressBar';
 import SimilarContentThumbnail from '../components/SimilarContentThumbnail';
+import { trackVideoWatch } from '../utils/analytics';
+
+// Helper to count all comments and replies
+function getTotalCommentCount(comments) {
+  if (!comments || !Array.isArray(comments)) return 0;
+  
+  let total = comments.length; // Count the main comments
+  
+  // Add count of all replies
+  comments.forEach(comment => {
+    if (comment.replies && Array.isArray(comment.replies)) {
+      total += comment.replies.length;
+    }
+  });
+  
+  return total;
+}
 
 export default function Watch() {
   const { id } = useParams();
+  const { user } = useAuth();
   const [video, setVideo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [recommendations, setRecommendations] = useState([]);
@@ -26,6 +46,50 @@ export default function Watch() {
   const [channelDetails, setChannelDetails] = useState(null);
   const [hoveredRecId, setHoveredRecId] = useState(null);
   const [progressLoading, setProgressLoading] = useState(false);
+  const commentsRef = React.useRef(null);
+  
+  // Video analytics tracking
+  const videoRef = useRef(null);
+  const watchStartTime = useRef(null);
+  const totalWatchTime = useRef(0);
+
+  // Track video watch time
+  const handleVideoPlay = () => {
+    watchStartTime.current = Date.now();
+  };
+
+  const handleVideoPause = () => {
+    if (watchStartTime.current) {
+      const sessionTime = (Date.now() - watchStartTime.current) / 1000 / 60; // Convert to minutes
+      totalWatchTime.current += sessionTime;
+      console.log('=== VIDEO PAUSED ===');
+      console.log('Session time:', sessionTime, 'minutes');
+      console.log('Total watch time:', totalWatchTime.current, 'minutes');
+      watchStartTime.current = null;
+    }
+  };
+
+  const handleVideoEnded = () => {
+    handleVideoPause(); // Record the final session
+    console.log('=== VIDEO ENDED ===');
+    console.log('Total watch time:', totalWatchTime.current);
+    console.log('Video ID:', video?._id);
+    if (totalWatchTime.current > 0 && video?._id) {
+      console.log('Calling trackVideoWatch...');
+      trackVideoWatch(video._id, Math.round(totalWatchTime.current));
+    } else {
+      console.log('Not calling trackVideoWatch - no watch time or video ID');
+    }
+  };
+
+  // Send watch time when component unmounts or video changes
+  useEffect(() => {
+    return () => {
+      if (totalWatchTime.current > 0 && video?._id) {
+        trackVideoWatch(video._id, Math.round(totalWatchTime.current));
+      }
+    };
+  }, [video?._id]);
 
   // Helper to fetch video and recommendations
   const fetchVideoAndRecommendations = async (videoId) => {
@@ -33,12 +97,25 @@ export default function Watch() {
     setLoading(true);
     try {
       const apiUrl = import.meta.env.VITE_API_URL;
+      // Fetch video and channel details first
       const res = await fetch(`${apiUrl}/videos/${videoId}`);
+      let data = null;
       if (res.ok) {
-        const data = await res.json();
-        setVideo(data);
-        setLikeCount(data.likes?.length || 0);
-        setDislikeCount(data.dislikes?.length || 0);
+        data = await res.json();
+  setVideo(data);
+  setLikeCount(data.likes?.length || 0);
+  setDislikeCount(data.dislikes?.length || 0);
+        // Set liked/disliked state based on user._id in likes/dislikes arrays (new format)
+        if (user && data.likes) {
+          setLiked(data.likes.some(like => like.user?.toString() === user._id));
+        } else {
+          setLiked(false);
+        }
+        if (user && data.dislikes) {
+          setDisliked(data.dislikes.some(id => id.toString() === user._id));
+        } else {
+          setDisliked(false);
+        }
         // Fetch channel details for subscribe button
         if (data.channel?._id) {
           const channelRes = await fetch(`${apiUrl}/channel/${data.channel._id}`);
@@ -51,38 +128,41 @@ export default function Watch() {
         } else {
           setChannelDetails(data.channel);
         }
-        // Fetch all videos for recommendations
-        const allVideosRes = await fetch(`${apiUrl}/videos`);
-        if (allVideosRes.ok) {
-          const allVideos = await allVideosRes.json();
-          // Filter by same category and exclude current video
-          const sameCategory = allVideos.filter(v => v.category === data.category && v._id !== videoId);
-          // If any have likes or views, sort and show those first
-          const withLikesOrViews = sameCategory.filter(v => (v.likes?.length || 0) > 0 || (v.viewCount || 0) > 0);
-          if (withLikesOrViews.length > 0) {
-            withLikesOrViews.sort((a, b) => {
-              const likesA = a.likes?.length || 0;
-              const likesB = b.likes?.length || 0;
-              const viewsA = a.viewCount || 0;
-              const viewsB = b.viewCount || 0;
-              if (likesB !== likesA) return likesB - likesA;
-              return viewsB - viewsA;
-            });
-            setRecommendations(withLikesOrViews);
-          } else {
-            setRecommendations(sameCategory);
+        setLoading(false); // Render video as soon as possible
+        // Fetch recommendations in parallel
+        fetch(`${apiUrl}/videos`).then(async (allVideosRes) => {
+          if (allVideosRes.ok) {
+            const allVideos = await allVideosRes.json();
+            const sameCategory = allVideos.filter(v => v.category === data.category && v._id !== videoId);
+            const withLikesOrViews = sameCategory.filter(v => (v.likes?.length || 0) > 0 || (v.viewCount || 0) > 0);
+            if (withLikesOrViews.length > 0) {
+              withLikesOrViews.sort((a, b) => {
+                const likesA = a.likes?.length || 0;
+                const likesB = b.likes?.length || 0;
+                const viewsA = a.viewCount || 0;
+                const viewsB = b.viewCount || 0;
+                if (likesB !== likesA) return likesB - likesA;
+                return viewsB - viewsA;
+              });
+              setRecommendations(withLikesOrViews);
+            } else {
+              setRecommendations(sameCategory);
+            }
           }
-        }
+          setProgressLoading(false);
+        });
       } else {
         setVideo(null);
         setChannelDetails(null);
+        setLoading(false);
+        setProgressLoading(false);
       }
     } catch (err) {
       setVideo(null);
       setChannelDetails(null);
+      setLoading(false);
+      setProgressLoading(false);
     }
-  setLoading(false);
-  setProgressLoading(false); // Remove delay to avoid spinner
   };
 
   useEffect(() => {
@@ -104,6 +184,13 @@ export default function Watch() {
     };
     sendView();
   }, [id]);
+
+  // Fetch comment count immediately when video is loaded
+  useEffect(() => {
+    if (video && Array.isArray(video.comments)) {
+      setCommentCount(getTotalCommentCount(video.comments));
+    }
+  }, [video]);
 
   const handleCommentCountChange = (count) => setCommentCount(count);
 
@@ -172,6 +259,85 @@ export default function Watch() {
     return <div className="w-full min-h-screen flex items-center justify-center bg-gray-100 dark:bg-[#181818]">Video not found.</div>;
   }
 
+  // Like/dislike handlers
+  const apiUrl = import.meta.env.VITE_API_URL;
+  const handleLike = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!liked) {
+        // Like the video
+        const res = await fetch(`${apiUrl}/videos/${id}/like`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          }
+        });
+        if (res.ok) {
+          const updatedVideo = await res.json();
+          setLiked(true);
+          setDisliked(false);
+          setLikeCount(updatedVideo.likes?.length || 0);
+          if (disliked) {
+            setDislikeCount(updatedVideo.dislikes?.length || 0);
+          }
+        }
+      } else {
+        // Unlike the video
+        const res = await fetch(`${apiUrl}/videos/${id}/unlike`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          }
+        });
+        if (res.ok) {
+          const updatedVideo = await res.json();
+          setLiked(false);
+          setLikeCount(updatedVideo.likes?.length || 0);
+        }
+      }
+    } catch (err) {}
+  };
+  const handleDislike = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!disliked) {
+        // Dislike the video
+        const res = await fetch(`${apiUrl}/videos/${id}/dislike`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          }
+        });
+        if (res.ok) {
+          setDisliked(true);
+          setLiked(false); // Ensure user cannot be in both arrays
+          setDislikeCount(count => count + 1);
+          if (liked) setLikeCount(count => Math.max(0, count - 1));
+        }
+      } else {
+        // Undislike the video
+        const res = await fetch(`${apiUrl}/videos/${id}/undislike`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          }
+        });
+        if (res.ok) {
+          setDisliked(false);
+          setDislikeCount(count => Math.max(0, count - 1));
+        }
+      }
+    } catch (err) {}
+  };
+
   return (
     <>
       <div className="w-full min-h-screen bg-gray-100 dark:bg-[#181818]">
@@ -186,9 +352,14 @@ export default function Watch() {
           </div>
           <div className="md:ml-20 flex-1 p-4 flex flex-col items-center">
             <video
+              ref={videoRef}
               src={video.videoUrl}
               controls
               controlsList="nodownload"
+              autoPlay
+              onPlay={handleVideoPlay}
+              onPause={handleVideoPause}
+              onEnded={handleVideoEnded}
               className="w-full max-w-full aspect-video rounded-lg shadow-lg mb-2"
               style={{ border: 'none' }}
             />
@@ -200,66 +371,6 @@ export default function Watch() {
               >
                 {video.title}
               </h1>
-              <div className="flex flex-wrap gap-4 w-full justify-start items-center mt-2">
-                {/* Outlined Heart Like Icon, fill when liked */}
-                <button
-                  className={`flex items-center gap-2 transition bg-transparent border-none p-0 ${liked ? 'text-pink-500' : 'text-gray-700 dark:text-gray-200 hover:text-pink-500'}`}
-                  style={{ minHeight: 40 }}
-                  onClick={() => {
-                    setLiked(l => !l);
-                    setLikeCount(count => liked ? count - 1 : count + 1);
-                  }}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32" fill={liked ? '#c42152' : 'none'} stroke={liked ? '#c42152' : 'currentColor'} strokeWidth="2">
-                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41 1.01 4.5 2.09C13.09 4.01 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                  </svg>
-                  <span className="text-sm">Like ({likeCount})</span>
-                </button>
-                {/* YouTube-style Thumbs Down Dislike Icon */}
-                <button
-                  className={`flex items-center gap-2 text-gray-700 dark:text-gray-200 transition bg-transparent border-none p-0 ${disliked ? 'text-gray-400' : 'hover:text-gray-400'}`}
-                  style={{ minHeight: 40 }}
-                  onClick={() => {
-                    setDisliked(d => !d);
-                    setDislikeCount(count => disliked ? count - 1 : count + 1);
-                  }}
-                >
-                  <span style={{display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: disliked ? '#e5e7eb' : '#f3f4f6', borderRadius: '6px'}}>
-                    <svg xmlns="http://www.w3.org/2000/svg" height="36px" viewBox="0 -960 960 960" width="36px" fill={disliked ? '#888' : '#a3a3a3'} style={{transition: 'fill 0.2s'}}><path d="M240-840h440v520L400-40l-50-50q-7-7-11.5-19t-4.5-23v-14l44-174H120q-32 0-56-24t-24-56v-80q0-7 2-15t4-15l120-282q9-20 30-34t44-14Zm360 80H240L120-480v80h360l-54 220 174-174v-406Zm0 406v-406 406Zm80 34v-80h120v-360H680v-80h200v520H680Z"/></svg>
-                  </span>
-                  <span className="text-sm">Dislike ({Math.max(0, dislikeCount)})</span>
-                </button>
-                {/* Instagram-style Comments (Speech Bubble) */}
-                <button
-                  className="flex items-center gap-2 text-gray-700 dark:text-gray-200 hover:text-blue-500 transition bg-transparent border-none p-0"
-                  style={{ minHeight: 40 }}
-                  onClick={() => setShowComments((prev) => !prev)}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="32" height="32">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2" fill="none" />
-                  </svg>
-                  <span className="text-sm">Comments ({commentCount})</span>
-                </button>
-                {/* Share Icon Button (moved after comments) */}
-                <button
-                  className="flex items-center gap-2 text-gray-700 dark:text-gray-200 hover:text-green-600 transition bg-transparent border-none p-0"
-                  style={{ minHeight: 40 }}
-                  onClick={() => {
-                    if (navigator.clipboard) {
-                      navigator.clipboard.writeText(window.location.href);
-                      alert('Link copied to clipboard!');
-                    }
-                  }}
-                >
-                  {/* New Share Icon: Arrow Out of a Box */}
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="12" width="18" height="8" rx="2" />
-                    <path d="M12 16V4" />
-                    <path d="M8 8l4-4 4 4" />
-                  </svg>
-                  <span className="text-sm">Share</span>
-                </button>
-              </div>
               <div className="flex items-center gap-3 mb-2">
                 <Link to={`/channel/${video.channel?._id || video.channel}`} className="flex items-center gap-2 min-w-0">
                   <img src={video.channel?.avatar} alt={video.channel?.name} className="w-10 h-10 rounded-full border-2 border-gray-300 dark:border-gray-700 cursor-pointer" />
@@ -268,11 +379,44 @@ export default function Watch() {
                 <span className="text-xs text-gray-500 dark:text-gray-400">{video.viewCount || 0} views • {video.postedAgo || ''}</span>
                 {channelDetails && <SubscribeButton channel={channelDetails} />}
               </div>
+              <VideoInteractions
+                liked={liked}
+                setLiked={setLiked}
+                likeCount={likeCount}
+                disliked={disliked}
+                setDisliked={setDisliked}
+                dislikeCount={dislikeCount}
+                showComments={showComments}
+                setShowComments={(val) => {
+                  setShowComments(val);
+                  if (val && commentsRef.current) {
+                    setTimeout(() => {
+                      commentsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 100);
+                  }
+                }}
+                commentCount={commentCount}
+                videoUrl={`${window.location.origin}/watch/${video._id}`}
+                shareCount={video.shareCount || 0}
+                handleLike={handleLike}
+                handleDislike={handleDislike}
+                videoId={video._id}
+                videoTitle={video.title}
+              />
               {/* Video Description with Read More/Read Less */}
-              {video.description && (
+              {video.description && !showComments && (
                 <DescriptionWithReadMore description={video.description} />
               )}
-              {showComments && <Comments onCountChange={handleCommentCountChange} />}
+              {showComments && (
+                <div ref={commentsRef}>
+                  <VideoComments
+                    videoId={video._id}
+                    user={null}
+                    channel={channelDetails}
+                    onCountChange={handleCommentCountChange}
+                  />
+                </div>
+              )}
             </div>
           </div>
           {/* Recommendations Section */}

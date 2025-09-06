@@ -1,15 +1,8 @@
 const multer = require('multer');
 const path = require('path');
 
-// Use disk storage for temp files before uploading to Cloudinary
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/'); // temp folder, should be .gitignored
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + '-' + file.originalname);
-  }
-});
+// Use memory storage for direct upload to Cloudinary
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,

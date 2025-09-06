@@ -6,7 +6,6 @@ PowerHub is a full-stack video sharing and channel management platform for PLP S
 
 - `client/` — React frontend (Vite, Tailwind CSS)
 - `server/` — Node.js/Express backend (MongoDB, Cloudinary)
-- `uploads/` — Local storage for uploaded files (dev only)
 
 ## Features
 - User registration, login, and authentication

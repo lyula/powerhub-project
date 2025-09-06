@@ -1,3 +1,30 @@
+// Get channel by owner user ID
+exports.getChannelByOwner = async (req, res) => {
+  try {
+    const ownerId = req.params.ownerId;
+    const channel = await Channel.findOne({ owner: ownerId });
+    if (!channel) {
+      return res.status(404).json({ error: 'Channel not found.' });
+    }
+    // Fetch contact details from User model
+    const User = require('../models/User');
+    const user = await User.findById(ownerId).lean();
+    // Optionally fetch videos for this channel
+    const Video = require('../models/Video');
+    const videos = await Video.find({ channel: channel._id }).sort({ createdAt: -1 });
+    // Prepare contact info
+    const contactInfo = {
+      email: user?.email || '',
+      github: user?.github || '',
+      whatsapp: user?.whatsapp || '',
+      linkedin: user?.linkedin || '',
+      instagram: user?.instagram || ''
+    };
+    res.json({ ...channel.toObject(), videos, contactInfo });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 // Subscribe to a channel
 exports.subscribeChannel = async (req, res) => {
   try {
@@ -63,40 +90,45 @@ exports.createChannel = async (req, res) => {
 
     const fs = require('fs');
     // Handle avatar upload
-    if (req.files && req.files.avatar) {
-      try {
-        const avatarPath = req.files.avatar[0].path;
-        console.log('Uploading avatar:', avatarPath);
-        const avatarUpload = await cloudinary.uploader.upload(avatarPath, {
-          folder: 'powerhub/channels/avatars',
-          resource_type: 'image',
-        });
-        avatarUrl = avatarUpload.secure_url;
-        console.log('Avatar uploaded:', avatarUrl);
-        // Delete temp file
-        fs.unlink(avatarPath, (err) => {
-          if (err) console.error('Failed to delete temp avatar:', err);
-        });
-      } catch (avatarErr) {
-        console.error('Avatar upload error:', avatarErr);
-        return res.status(500).json({ error: 'Avatar upload failed', details: avatarErr });
+      // If avatar URL is provided in body, use it directly
+      if (req.body.avatar) {
+        avatarUrl = req.body.avatar;
+      } else if (req.files && req.files.avatar) {
+        try {
+          const avatarPath = req.files.avatar[0].path;
+          console.log('Uploading avatar:', avatarPath);
+          const avatarUpload = await cloudinary.uploader.upload(avatarPath, {
+            folder: 'powerhub/channels/avatars',
+            resource_type: 'image',
+          });
+          avatarUrl = avatarUpload.secure_url;
+          console.log('Avatar uploaded:', avatarUrl);
+          // Delete temp file
+          fs.unlink(avatarPath, (err) => {
+            if (err) console.error('Failed to delete temp avatar:', err);
+          });
+        } catch (avatarErr) {
+          console.error('Avatar upload error:', avatarErr);
+          return res.status(500).json({ error: 'Avatar upload failed', details: avatarErr });
+        }
       }
-    }
 
     // Handle banner upload
-    if (req.files && req.files.banner) {
-      try {
-        const bannerPath = req.files.banner[0].path;
-        console.log('Uploading banner:', bannerPath);
-        const bannerUpload = await cloudinary.uploader.upload(bannerPath, {
-          folder: 'powerhub/channels/banners',
-          resource_type: 'image',
-        });
-        bannerUrl = bannerUpload.secure_url;
-        console.log('Banner uploaded:', bannerUrl);
-        // Delete temp file
-        fs.unlink(bannerPath, (err) => {
-          if (err) console.error('Failed to delete temp banner:', err);
+      if (req.body.banner) {
+        bannerUrl = req.body.banner;
+      } else if (req.files && req.files.banner) {
+        try {
+          const bannerPath = req.files.banner[0].path;
+          console.log('Uploading banner:', bannerPath);
+          const bannerUpload = await cloudinary.uploader.upload(bannerPath, {
+            folder: 'powerhub/channels/banners',
+            resource_type: 'image',
+          });
+          bannerUrl = bannerUpload.secure_url;
+          console.log('Banner uploaded:', bannerUrl);
+          // Delete temp file
+          fs.unlink(bannerPath, (err) => {
+            if (err) console.error('Failed to delete temp banner:', err);
         });
       } catch (bannerErr) {
         console.error('Banner upload error:', bannerErr);
@@ -151,6 +183,75 @@ exports.getChannelById = async (req, res) => {
     const videos = await Video.find({ channel: channel._id }).sort({ createdAt: -1 });
     // Return channel info plus videos
     res.json({ ...channel.toObject(), videos });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Update channel profile
+exports.updateChannel = async (req, res) => {
+  try {
+    const channelId = req.params.id;
+    const userId = req.user._id;
+    const channel = await Channel.findById(channelId);
+    if (!channel) {
+      return res.status(404).json({ error: 'Channel not found.' });
+    }
+    if (channel.owner.toString() !== userId.toString()) {
+      return res.status(403).json({ error: 'Unauthorized.' });
+    }
+    const { name, description } = req.body;
+    if (name) channel.name = name;
+    if (description) channel.description = description;
+    // Handle avatar upload
+    if (req.body.avatar) {
+      channel.avatar = req.body.avatar;
+    } else if (req.files && req.files.avatar) {
+      const avatarPath = req.files.avatar[0].path;
+      const avatarUpload = await cloudinary.uploader.upload(avatarPath, {
+        folder: 'powerhub/channels/avatars',
+        resource_type: 'image',
+      });
+      channel.avatar = avatarUpload.secure_url;
+      require('fs').unlink(avatarPath, () => {});
+    }
+    // Handle banner upload
+    if (req.body.banner) {
+      channel.banner = req.body.banner;
+    } else if (req.files && req.files.banner) {
+      const bannerPath = req.files.banner[0].path;
+      const bannerUpload = await cloudinary.uploader.upload(bannerPath, {
+        folder: 'powerhub/channels/banners',
+        resource_type: 'image',
+      });
+      channel.banner = bannerUpload.secure_url;
+      require('fs').unlink(bannerPath, () => {});
+    }
+    await channel.save();
+    res.json(channel);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Delete channel and all content
+exports.deleteChannel = async (req, res) => {
+  try {
+    const channelId = req.params.id;
+    const userId = req.user._id;
+    const channel = await Channel.findById(channelId);
+    if (!channel) {
+      return res.status(404).json({ error: 'Channel not found.' });
+    }
+    if (channel.owner.toString() !== userId.toString()) {
+      return res.status(403).json({ error: 'Unauthorized.' });
+    }
+    // Delete all videos for this channel
+    const Video = require('../models/Video');
+    await Video.deleteMany({ channel: channel._id });
+    // TODO: Delete other related content if needed (posts, notifications, etc)
+    await channel.deleteOne();
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
