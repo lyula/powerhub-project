@@ -42,8 +42,113 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token, user]);
 
+  // Real-time maintenance mode monitoring
+  useEffect(() => {
+    let intervalId;
+    let maintenanceCheckInterval;
+    
+    if (token && user && user.role !== 'IT' && user.role !== 'admin') {
+      // First, check if maintenance mode is already enabled
+      const checkMaintenanceAndSession = async () => {
+        try {
+          // Check maintenance status first (no auth required)
+          const maintenanceResponse = await fetch(`${API_BASE_URL}/it-dashboard/maintenance-status`);
+          if (maintenanceResponse.ok) {
+            const maintenanceData = await maintenanceResponse.json();
+            if (maintenanceData.data?.maintenanceMode?.enabled) {
+              // Maintenance mode is enabled, check if user session is still valid
+              const authResponse = await fetch(`${API_BASE_URL}/auth/me`, {
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                }
+              });
+              
+              if (authResponse.status === 401) {
+                const authData = await authResponse.json();
+                if (authData.sessionInvalidated && authData.maintenanceMode) {
+                  // User session was invalidated due to maintenance mode
+                  handleMaintenanceLogout();
+                  return true; // Indicate logout occurred
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error checking maintenance and session status:', error);
+        }
+        return false; // No logout occurred
+      };
+      
+      // Initial check
+      checkMaintenanceAndSession();
+      
+      // Poll every 2 seconds for maintenance mode changes
+      intervalId = setInterval(async () => {
+        const loggedOut = await checkMaintenanceAndSession();
+        if (loggedOut) {
+          clearInterval(intervalId);
+          if (maintenanceCheckInterval) {
+            clearInterval(maintenanceCheckInterval);
+          }
+        }
+      }, 2000);
+      
+      // Also poll maintenance status every 1 second when maintenance mode is detected
+      maintenanceCheckInterval = setInterval(async () => {
+        try {
+          const response = await fetch(`${API_BASE_URL}/it-dashboard/maintenance-status`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.data?.maintenanceMode?.enabled) {
+              // Maintenance mode is active, check session immediately
+              const authResponse = await fetch(`${API_BASE_URL}/auth/me`, {
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                }
+              });
+              
+              if (authResponse.status === 401) {
+                const authData = await authResponse.json();
+                if (authData.sessionInvalidated && authData.maintenanceMode) {
+                  handleMaintenanceLogout();
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error checking maintenance status:', error);
+        }
+      }, 1000);
+    }
+    
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+      if (maintenanceCheckInterval) {
+        clearInterval(maintenanceCheckInterval);
+      }
+    };
+  }, [token, user, navigate]);
+
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
   const CHANNEL_API_URL = API_BASE_URL + '/channel/me';
+
+  // Helper function to handle maintenance mode logout
+  const handleMaintenanceLogout = () => {
+    console.log('Handling maintenance mode logout');
+    setUser(null);
+    setToken(null);
+    localStorage.removeItem('token');
+    navigate('/login', { 
+      state: { 
+        message: 'You have been logged out due to system maintenance.',
+        maintenanceMode: true 
+      } 
+    });
+  };
 
   // Helper function to check server connectivity
   const checkServerConnection = async () => {
@@ -143,12 +248,10 @@ export const AuthProvider = ({ children }) => {
               setMaintenanceMode(true);
               setMaintenanceMessage(data.message);
               // Don't log out IT users during maintenance
-              if (userData && userData.role === 'IT') {
+              if (userData && (userData.role === 'IT' || userData.role === 'admin')) {
                 setUser(userData);
               } else {
-                setUser(null);
-                setToken(null);
-                localStorage.removeItem('token');
+                handleMaintenanceLogout();
               }
             } else {
               // Other errors
@@ -238,7 +341,7 @@ export const AuthProvider = ({ children }) => {
           // Maintenance mode
           setMaintenanceMode(true);
           setMaintenanceMessage(data.message);
-          throw new Error('System is under maintenance. Only IT users can access at this time.');
+          throw new Error('System is under maintenance. Please try again later.');
         } else {
           throw new Error(data.message || 'Registration failed');
         }
@@ -287,7 +390,7 @@ export const AuthProvider = ({ children }) => {
           // Maintenance mode
           setMaintenanceMode(true);
           setMaintenanceMessage(data.message);
-          throw new Error('System is under maintenance. Only IT users can access at this time.');
+          throw new Error('System is under maintenance. Please try again later.');
         } else {
           throw new Error(data.message || 'Login failed');
         }

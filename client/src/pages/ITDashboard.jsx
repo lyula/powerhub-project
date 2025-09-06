@@ -60,6 +60,7 @@ const ITDashboard = () => {
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshTime, setLastRefreshTime] = useState(new Date());
@@ -176,11 +177,30 @@ const ITDashboard = () => {
     return () => clearInterval(interval);
   }, [autoRefreshEnabled, activeTab, currentPage, auditCurrentPage]);
 
-  // Filter users based on search term
+  // Search users with debounced API calls
   useEffect(() => {
+    const searchUsers = async () => {
     if (!userSearchTerm.trim()) {
       setFilteredUsers(users);
+        setIsSearching(false);
+        return;
+      }
+
+      setIsSearching(true);
+      try {
+        const response = await fetch(`${API_BASE_URL}/it-dashboard/users?search=${encodeURIComponent(userSearchTerm)}&limit=100`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setFilteredUsers(data.data.users);
     } else {
+          console.error('Search failed:', response.status);
+          // Fallback to local filtering if API fails
       const filtered = users.filter(user => 
         user.firstName?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
         user.lastName?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
@@ -189,7 +209,25 @@ const ITDashboard = () => {
       );
       setFilteredUsers(filtered);
     }
-  }, [users, userSearchTerm]);
+      } catch (error) {
+        console.error('Error searching users:', error);
+        // Fallback to local filtering if API fails
+        const filtered = users.filter(user => 
+          user.firstName?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+          user.lastName?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+          user.username?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+          user.email?.toLowerCase().includes(userSearchTerm.toLowerCase())
+        );
+        setFilteredUsers(filtered);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    // Debounce search to avoid too many API calls
+    const timeoutId = setTimeout(searchUsers, 300);
+    return () => clearTimeout(timeoutId);
+  }, [userSearchTerm, users]);
 
   const loadOverview = async (showLoading = true) => {
     try {
@@ -343,7 +381,7 @@ const ITDashboard = () => {
           await loadAnalytics();
           break;
         case 'advanced-analytics':
-          await loadAdvancedAnalytics();
+          await loadAdvancedAnalytics(analyticsDateRange);
           break;
         case 'security':
           await loadSecurityOverview();
@@ -365,7 +403,7 @@ const ITDashboard = () => {
           await loadAuditLogs(auditCurrentPage, showLoading);
           break;
         case 'maintenance':
-          await checkMaintenanceMode();
+          await refreshMaintenanceStatus();
           break;
         default:
           await loadOverview(showLoading);
@@ -632,6 +670,7 @@ const ITDashboard = () => {
       const token = getAuthToken();
       if (!token) {
         console.error('No valid token found for advanced analytics');
+        setAnalyticsLoading(false);
         return;
       }
 
@@ -1923,7 +1962,12 @@ const ITDashboard = () => {
               <div className="bg-white shadow rounded-lg p-6">
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
                   <div>
+                    <div className="flex items-center space-x-2">
                     <h3 className="text-lg font-semibold text-gray-900">Advanced Analytics</h3>
+                      {analyticsLoading && (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                      )}
+                    </div>
                     <p className="text-sm text-gray-600 mt-1">Comprehensive insights and performance metrics</p>
                   </div>
                   <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
@@ -1962,14 +2006,7 @@ const ITDashboard = () => {
                 </div>
               </div>
 
-              {analyticsLoading ? (
-                <div className="bg-white shadow rounded-lg p-12">
-                  <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                    <span className="ml-3 text-gray-600">Loading advanced analytics...</span>
-                  </div>
-                </div>
-              ) : advancedAnalytics ? (
+              {advancedAnalytics ? (
                 <>
                   {/* Key Performance Indicators */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -2336,11 +2373,23 @@ const ITDashboard = () => {
               ) : (
                 <div className="bg-white shadow rounded-lg p-12">
                   <div className="text-center">
+                    {analyticsLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                        <h3 className="mt-4 text-sm font-medium text-gray-900">Loading Analytics...</h3>
+                        <p className="mt-1 text-sm text-gray-500">
+                          Fetching comprehensive insights and performance metrics
+                        </p>
+                      </>
+                    ) : (
+                      <>
                     <MdAnalytics className="mx-auto h-12 w-12 text-gray-400" />
                     <h3 className="mt-2 text-sm font-medium text-gray-900">No Analytics Data</h3>
                     <p className="mt-1 text-sm text-gray-500">
                       Advanced analytics data is not available yet. Click refresh to load data.
                     </p>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
@@ -3078,7 +3127,14 @@ const ITDashboard = () => {
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-200">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                    <div>
                     <h4 className="text-lg font-semibold text-gray-900">All Users</h4>
+                      {userSearchTerm && (
+                        <p className="text-sm text-gray-500 mt-1">
+                          {isSearching ? 'Searching...' : `Found ${filteredUsers.length} user${filteredUsers.length !== 1 ? 's' : ''} matching "${userSearchTerm}"`}
+                        </p>
+                      )}
+                    </div>
                     <div className="mt-4 sm:mt-0 flex items-center gap-3">
                       <div className="relative">
                         <input
@@ -3088,9 +3144,15 @@ const ITDashboard = () => {
                           onChange={(e) => setUserSearchTerm(e.target.value)}
                           className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                         />
+                        {isSearching ? (
+                          <div className="absolute left-3 top-2.5 h-4 w-4">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                          </div>
+                        ) : (
                         <svg className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
+                        )}
                       </div>
                     </div>
                   </div>

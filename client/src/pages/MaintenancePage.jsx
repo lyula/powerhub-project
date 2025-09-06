@@ -42,9 +42,6 @@ const MaintenancePage = ({ message, estimatedResumeTime }) => {
           </button>
         </div>
 
-        <div className="mt-4 text-xs text-gray-400">
-          <p>Only IT administrators can access the system during maintenance.</p>
-        </div>
       </div>
     </div>
   );

@@ -37,7 +37,9 @@ const userSchema = new mongoose.Schema({
   bannedAt: { type: Date },
   bannedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   banExpiresAt: { type: Date },
-  banNotes: { type: String }
+  banNotes: { type: String },
+  // Session invalidation for maintenance mode
+  sessionInvalidated: { type: Boolean, default: false }
 }, { timestamps: true });
 
 userSchema.pre('save', async function(next) {
@@ -123,6 +125,16 @@ userSchema.methods.getBanInfo = function() {
 // Check if password needs to be changed
 userSchema.methods.needsPasswordChange = function() {
   return this.isPasswordExpired || (this.passwordExpiresAt && this.passwordExpiresAt < Date.now());
+};
+
+// Check if user session has been invalidated (for maintenance mode)
+userSchema.methods.isSessionInvalidated = function() {
+  return this.sessionInvalidated;
+};
+
+// Reset session invalidation
+userSchema.methods.resetSessionInvalidation = function() {
+  return this.updateOne({ sessionInvalidated: false });
 };
 
 module.exports = mongoose.models.User || mongoose.model('User', userSchema);

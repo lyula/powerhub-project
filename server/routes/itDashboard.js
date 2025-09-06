@@ -15,6 +15,7 @@ router.get('/overview', itDashboardController.getSystemOverview);
 
 // Maintenance mode
 router.post('/maintenance/toggle', itDashboardController.toggleMaintenanceMode);
+router.get('/maintenance/session-stats', itDashboardController.getSessionStats);
 
 // Flagged content management
 router.get('/flagged-content', itDashboardController.getFlaggedContent);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import GoogleIcon from '../components/GoogleIcon';
 import { colors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
@@ -7,6 +7,7 @@ import PWABanner from '../components/PWABanner';
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
   
   const [formData, setFormData] = useState({
@@ -18,6 +19,15 @@ export default function Login() {
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState('');
   const [checkingMaintenance, setCheckingMaintenance] = useState(true);
+  const [maintenanceLogoutMessage, setMaintenanceLogoutMessage] = useState('');
+
+  // Check for maintenance logout message from location state
+  useEffect(() => {
+    if (location.state?.maintenanceMode && location.state?.message) {
+      setMaintenanceLogoutMessage(location.state.message);
+      setMaintenanceMode(true);
+    }
+  }, [location.state]);
 
   // Check maintenance mode on component mount
   useEffect(() => {
@@ -72,10 +82,17 @@ export default function Login() {
         navigate('/home');
         }
       } else {
-        setError(result.error);
+        // Don't show error message if maintenance mode is active
+        if (!maintenanceMode) {
+          setError(result.error);
+        }
       }
     } catch (err) {
-      setError('An unexpected error occurred. Please try again.');
+      console.error('Login error:', err);
+      // Don't show error message if maintenance mode is active
+      if (!maintenanceMode) {
+        setError(err.message || 'An unexpected error occurred. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -110,17 +127,14 @@ export default function Login() {
                 <div>
                   <h3 className="text-sm font-medium text-amber-900">System Under Maintenance</h3>
                   <p className="text-sm text-amber-700 mt-1">
-                    {maintenanceMessage || 'The system is currently under maintenance. Only IT and Admin users can access at this time.'}
-                  </p>
-                  <p className="text-xs text-amber-600 mt-2">
-                    If you are an IT or Admin user, you can still log in below.
+                    {maintenanceLogoutMessage || maintenanceMessage || 'System is under maintenance. Please try again later.'}
                   </p>
                 </div>
               </div>
             </div>
           )}
           
-          {error && (
+          {error && !maintenanceMode && (
             <div className="w-full p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
               {error}
             </div>
