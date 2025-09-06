@@ -11,6 +11,7 @@ import { VideoCameraIcon } from "../components/icons";
 import SubscribeButton from "../components/SubscribeButton";
 import ProgressBar from "../components/ProgressBar";
 import SimilarContentThumbnail from "../components/SimilarContentThumbnail";
+import WatchPageSkeleton from "../components/WatchPageSkeleton";
 import { trackVideoWatch } from "../utils/analytics";
 
 // Helper functions (no changes needed here)
@@ -43,6 +44,7 @@ export default function Watch() {
   const navigate = useNavigate(); // 3. Initialize useNavigate
   const [video, setVideo] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [recommendations, setRecommendations] = useState([]);
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
@@ -242,9 +244,10 @@ export default function Watch() {
 
   if (loading) {
     return (
-      <div className="w-full min-h-screen bg-gray-100 dark:bg-[#181818]">
-        <ProgressBar loading={true} />
-      </div>
+      <WatchPageSkeleton 
+        sidebarOpen={sidebarOpen} 
+        setSidebarOpen={setSidebarOpen}
+      />
     );
   }
 
@@ -260,13 +263,13 @@ export default function Watch() {
     <>
       <div className="w-full min-h-screen bg-gray-100 dark:bg-[#181818]">
         <div className="hidden md:block w-full fixed top-0 left-0 z-40">
-          <Header />
+          <Header onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
         </div>
         <div className="flex flex-col md:flex-row pt-0 md:pt-14">
-          <div className="hidden md:block fixed top-14 left-0 z-30 h-[calc(100vh-56px)]">
-            <Sidebar collapsed={true} />
+          <div className={`hidden md:block fixed top-14 left-0 z-30 h-[calc(100vh-56px)] ${sidebarOpen ? 'w-64' : 'w-20'}`}>
+            <Sidebar collapsed={!sidebarOpen} />
           </div>
-          <div className="md:ml-20 flex-1 p-4 flex flex-col items-center">
+          <div className={`${sidebarOpen ? 'md:ml-64' : 'md:ml-20'} flex-1 p-4 flex flex-col items-center`}>
             <video
               ref={videoRef}
               src={video.videoUrl}
