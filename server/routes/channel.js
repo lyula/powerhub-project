@@ -21,6 +21,9 @@ router.post('/:id/subscribe', auth, channelController.subscribeChannel);
 // Unsubscribe from a channel
 router.post('/:id/unsubscribe', auth, channelController.unsubscribeChannel);
 
+// Search for channels by name similarity (must be before /:id route)
+router.get('/search', channelController.searchChannels);
+
 // Get channel by id
 router.get('/:id', channelController.getChannelById);
 
