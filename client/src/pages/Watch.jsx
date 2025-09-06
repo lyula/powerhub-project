@@ -14,6 +14,17 @@ import SimilarContentThumbnail from "../components/SimilarContentThumbnail";
 import WatchPageSkeleton from "../components/WatchPageSkeleton";
 import { trackVideoWatch } from "../utils/analytics";
 
+// Add hide-scrollbar styles to the Watch page
+<style jsx>{`
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+`}</style>
+
 // Helper functions (no changes needed here)
 function getTotalCommentCount(comments) {
   if (!comments || !Array.isArray(comments)) return 0;
@@ -261,7 +272,7 @@ export default function Watch() {
 
   return (
     <>
-      <div className="w-full min-h-screen bg-gray-100 dark:bg-[#181818]">
+      <div className="w-full min-h-screen bg-gray-100 dark:bg-[#181818] hide-scrollbar">
         <div className="hidden md:block w-full fixed top-0 left-0 z-40">
           <Header onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
         </div>
@@ -341,7 +352,7 @@ export default function Watch() {
               )}
             </div>
           </div>
-          <aside className="w-full md:w-96 p-4 bg-transparent flex flex-col gap-4">
+          <aside className="w-full md:w-96 p-4 bg-transparent flex flex-col gap-4 hide-scrollbar">
             <h2 className="text-lg font-bold text-black dark:text-white mb-2">
               Similar Content
             </h2>
