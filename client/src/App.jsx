@@ -1,3 +1,5 @@
+import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useEffect } from 'react';
@@ -27,9 +29,12 @@ import ITDashboard from './pages/ITDashboard'; // Added ITDashboard import
 import MaintenancePage from './pages/MaintenancePage';
 
 // Protected Route Component
+const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated, loading, serverConnected } = useAuth();
 const ProtectedRoute = ({ children, requireRegularUser = false }) => {
   const { isAuthenticated, loading, serverConnected, user, maintenanceMode, maintenanceMessage } = useAuth();
   
+main
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#181818]">
@@ -45,6 +50,9 @@ const ProtectedRoute = ({ children, requireRegularUser = false }) => {
       </div>
     );
   }
+
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
+
   
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -61,6 +69,7 @@ const ProtectedRoute = ({ children, requireRegularUser = false }) => {
   }
   
   return children;
+
 };
 
 // Public Route Component (redirects to home if already authenticated)
@@ -101,6 +110,7 @@ const PublicRoute = ({ children }) => {
 };
 
 // Dummy hook to check if user has a channel (replace with real logic)
+
 
 
 // Component to track page visits
@@ -144,7 +154,7 @@ function AppRoutes() {
       <Route path="/watch-history" element={<ProtectedRoute><WatchHistory /></ProtectedRoute>} />
       <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
       <Route path="/it-dashboard" element={<ProtectedRoute><ITDashboard /></ProtectedRoute>} />
-  <Route path="/post/:postId" element={<ProtectedRoute><PostDetails /></ProtectedRoute>} />
+      <Route path="/post/:postId" element={<ProtectedRoute><PostDetails /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </>
@@ -153,10 +163,11 @@ function AppRoutes() {
 
 function App() {
   const loading = useRouteLoader();
+
   return (
     <AuthProvider>
       <ProgressBar loading={loading} />
-      <AppRoutes />
+        <AppRoutes />
     </AuthProvider>
   );
 }
