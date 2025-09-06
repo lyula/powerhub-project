@@ -17,9 +17,18 @@ function formatViews(views) {
 }
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
+import SubscribeButton from '../components/SubscribeButton';
 
 import { useAuth } from '../context/AuthContext';
 import { timeAgo } from '../utils/timeAgo';
+
+// Utility function to truncate text by word count
+function truncateWords(text, maxWords = 6) {
+  if (!text) return '';
+  const words = text.split(' ');
+  if (words.length <= maxWords) return text;
+  return words.slice(0, maxWords).join(' ') + '...';
+}
 
 export default function LikedVideos() {
   const [previewPaused, setPreviewPaused] = useState(false);
@@ -75,22 +84,33 @@ export default function LikedVideos() {
   const showMore = videos.length > paginatedVideos.length;
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-[#111111] w-full" style={{ overflowX: 'hidden', scrollbarWidth: 'none', maxWidth: '100vw' }}>
+    <div className="min-h-screen bg-gray-100 dark:bg-[#111111] w-full" style={{ overflowX: 'hidden', maxWidth: '100vw' }}>
+      {/* Hide scrollbar styles */}
+      <style jsx>{`
+        .hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
       <div className="fixed top-0 left-0 w-full z-40" style={{ height: '56px' }}>
         <Header onToggleSidebar={handleToggleSidebar} />
       </div>
-  <div className="flex flex-row w-full pt-14" style={{ maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
+  <div className="flex flex-row w-full pt-14 h-screen" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>
         <div className={`fixed top-14 left-0 h-[calc(100vh-56px)] ${sidebarOpen ? 'w-64' : 'w-20'} z-30 bg-transparent md:block`}>
           <Sidebar collapsed={!sidebarOpen} />
         </div>
-        <div className={`flex-1 flex flex-col ${sidebarOpen ? 'ml-64' : 'ml-20'} w-full`} style={{ maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
-          <div className="p-2 md:p-4">
-            <h2 className="text-lg md:text-xl font-bold mb-2 text-[#0bb6bc] dark:text-[#0bb6bc]">
+        <div className={`flex-1 flex flex-col ${sidebarOpen ? 'ml-64' : 'ml-20'} w-full h-full`} style={{ maxWidth: '100vw', overflowX: 'hidden' }}>
+          <div className="p-2 md:p-4 h-full flex flex-col">
+            <h2 className="text-lg md:text-xl font-bold mb-2 text-[#0bb6bc] dark:text-[#0bb6bc] flex-shrink-0">
               Liked Videos{videos.length > 0 ? ` (${videos.length})` : ''}
             </h2>
-            <div className="flex flex-col lg:flex-row gap-6">
+            <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
               {/* Video list (vertical) */}
-              <div className="flex-1">
+              <div className="flex-1 flex flex-col min-h-0">
+                <div className="overflow-y-auto hide-scrollbar flex-1" style={{ maxHeight: 'calc(100vh - 100px)', padding: '10px' }}>
                 {loading ? (
                   <div className="flex flex-col gap-2" aria-label="Loading skeleton">
                     {[...Array(6)].map((_, idx) => (
@@ -124,7 +144,7 @@ export default function LikedVideos() {
                       return (
                         <div
                           key={video._id}
-                          className={`group flex items-center gap-4 bg-white dark:bg-[#222] rounded-lg shadow-md overflow-hidden transition hover:bg-gray-100 dark:hover:bg-[#333] cursor-pointer ${isLargeScreen && selectedIdx === idx ? 'ring-2 ring-[#0bb6bc]' : ''}`}
+                          className={`group flex items-center gap-4 bg-white dark:bg-[#222] rounded-lg shadow-md overflow-hidden transition hover:bg-gray-100 dark:hover:bg-[#333] cursor-pointer ${isLargeScreen && selectedIdx === idx ? 'ring-2 ring-[#00cccc]' : ''}`}
                           onClick={() => {
                             if (isLargeScreen) {
                               setSelectedIdx(idx);
@@ -161,8 +181,22 @@ export default function LikedVideos() {
                               </span>
                             )}
                           </div>
-                          <div className="flex-1 min-w-0 py-2">
-                            <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1 truncate" title={video.title}>{video.title || 'Untitled Video'}</h3>
+                          <div className="flex-1 min-w-0 py-3">
+                            <h3 
+                              className="text-base font-semibold text-gray-900 dark:text-white mb-1 overflow-hidden" 
+                              title={video.title || 'Untitled Video'}
+                              style={{ 
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                lineHeight: '1.3em',
+                                maxHeight: '2.6em',
+                                paddingTop: '2px',
+                                paddingBottom: '2px'
+                              }}
+                            >
+                              {truncateWords(video.title || 'Untitled Video', 6)}
+                            </h3>
                             <p className="text-sm text-gray-600 dark:text-gray-400 mb-1 truncate" title={video.channel?.name}>{video.channel?.name || 'Unknown Channel'}</p>
                             <div className="flex items-center gap-2 text-xs text-gray-400">
                               <span>{formatViews(video.viewCount || 0)} views</span>
@@ -183,11 +217,12 @@ export default function LikedVideos() {
                     )}
                   </div>
                 )}
+                </div>
               </div>
               {/* Highlighted video player (large screens only) */}
               {isLargeScreen && paginatedVideos[selectedIdx] && (
-                <div className="w-full lg:w-[600px] xl:w-[700px] flex flex-col items-start justify-start text-left">
-                  <div className="w-full aspect-video bg-black rounded-lg shadow-lg overflow-hidden mb-4 relative">
+                <div className="w-full lg:w-[500px] xl:w-[600px] flex flex-col items-start justify-start text-left flex-shrink-0">
+                  <div className="w-full aspect-video bg-black rounded-lg shadow-lg overflow-hidden mb-4 relative sticky top-0">
                     {previewPaused ? (
                       <div className="w-full h-full relative">
                         <img
@@ -258,7 +293,21 @@ export default function LikedVideos() {
                       />
                     )}
                   </div>
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1 truncate text-left" title={paginatedVideos[selectedIdx].title}>{paginatedVideos[selectedIdx].title}</h3>
+                  <h3 
+                    className="text-lg font-bold text-gray-900 dark:text-white mb-1 text-left overflow-hidden" 
+                    title={paginatedVideos[selectedIdx].title}
+                    style={{ 
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      lineHeight: '1.4em',
+                      maxHeight: '2.8em',
+                      paddingTop: '4px',
+                      paddingBottom: '4px'
+                    }}
+                  >
+                    {truncateWords(paginatedVideos[selectedIdx].title, 6)}
+                  </h3>
                   <div className="flex items-center gap-3 mb-2 justify-start text-left">
                     {paginatedVideos[selectedIdx].channel?.avatar && (
                       <img
@@ -269,11 +318,31 @@ export default function LikedVideos() {
                     )}
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate" title={paginatedVideos[selectedIdx].channel?.name}>{paginatedVideos[selectedIdx].channel?.name || 'Unknown Channel'}</span>
                     <span className="text-xs text-gray-400">{formatViews(paginatedVideos[selectedIdx].viewCount || 0)} views</span>
-                    <span className="text-xs text-gray-400">• {paginatedVideos[selectedIdx].createdAt ? timeAgo(paginatedVideos[selectedIdx].createdAt) : ''}</span>
+                    <SubscribeButton channelId={paginatedVideos[selectedIdx].channel?._id} />
                   </div>
-                  {paginatedVideos[selectedIdx].description && (
-                    <p className="text-xs text-gray-700 dark:text-gray-300 mt-2 max-h-32 overflow-y-auto">{paginatedVideos[selectedIdx].description}</p>
-                  )}
+                  {/* Limit description to two lines, add a 'Read more' link, and make the whole description clickable */}
+{paginatedVideos[selectedIdx].description && (
+  <div
+    className="text-xs text-gray-700 dark:text-gray-300 mt-2 max-h-[2.8em] overflow-hidden cursor-pointer flex items-center"
+    style={{
+      display: '-webkit-box',
+      WebkitLineClamp: 2,
+      WebkitBoxOrient: 'vertical',
+      lineHeight: '1.4em',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'normal',
+    }}
+    onClick={() => navigate(`/watch/${paginatedVideos[selectedIdx]._id}`)}
+    title="Click to view full description"
+  >
+    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      {paginatedVideos[selectedIdx].description}
+    </span>
+    <span className="ml-2 text-[#e53e3e] underline font-bold" style={{ flexShrink: 0 }}>
+      Read more
+    </span>
+  </div>
+)}
                 </div>
               )}
             </div>
