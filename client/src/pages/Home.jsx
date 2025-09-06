@@ -11,6 +11,7 @@ import Filters from '../components/Filters';
 import HomeThumbnail from '../components/HomeThumbnail';
 import { searchAndSortContent } from '../utils/searchUtility';
 import { filterAndSortContent } from '../utils/filterUtility';
+import ChannelSearchResult from '../components/ChannelSearchResult';
 
 // Format duration as h:mm:ss or m:ss
 function formatDuration(seconds) {
@@ -28,8 +29,6 @@ function formatViews(views) {
   return views;
 }
 
-// ...existing code...
-
 export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [videos, setVideos] = useState([]);
@@ -44,6 +43,8 @@ export default function Home() {
   const [videoDurations, setVideoDurations] = useState([]);
   const [hoveredIdx, setHoveredIdx] = useState(-1);
   const [previewedId, setPreviewedId] = useState(null);
+  const [channels, setChannels] = useState([]);
+  const [channelLoading, setChannelLoading] = useState(false);
   const navigate = useNavigate();
   // Impression refs for each video
   const location = useLocation();
@@ -189,6 +190,27 @@ export default function Home() {
   // Only show database videos, never demo videos
   let displayVideos = videos;
 
+  // Fetch channels matching the search term
+  useEffect(() => {
+    if (searchTerm !== '') {
+      setChannelLoading(true);
+      fetch(`${import.meta.env.VITE_API_URL}/channel/search?query=${searchTerm}`)
+        .then((res) => res.json())
+        .then((data) => {
+          console.log('Search term:', searchTerm);
+          console.log('Matching channels:', data);
+          setChannels(data);
+          setChannelLoading(false);
+        })
+        .catch((err) => {
+          console.error('Error fetching channels:', err);
+          setChannelLoading(false);
+        });
+    } else {
+      setChannels([]);
+    }
+  }, [searchTerm]);
+
   return (
     <React.Fragment>
       {showSuccess && (
@@ -290,6 +312,20 @@ export default function Home() {
               )}
             </div>
             <main className="flex-1 p-1 sm:p-2 pb-0 overflow-y-auto w-full scrollbar-hide" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>
+              {/* Channel Search Results */}
+              {searchTerm && channels.length > 0 && (
+                <div className="mb-4 px-2 pt-2">
+                  <h3 className="text-base font-semibold text-gray-800 dark:text-white mb-1">
+                    Channels
+                  </h3>
+                  <div className="flex overflow-x-auto space-x-4 scrollbar-hide">
+                    {channels.map((channel) => (
+                      <ChannelSearchResult key={channel._id} channel={channel} />
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               <div
                 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-0 sm:gap-6 w-full"
                 style={{ margin: 0, maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}

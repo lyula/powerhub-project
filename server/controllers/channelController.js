@@ -256,3 +256,37 @@ exports.deleteChannel = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+// Search for channels by name similarity
+const stringSimilarity = require('string-similarity');
+
+exports.searchChannels = async (req, res) => {
+  try {
+    const { query } = req.query;
+    if (!query) {
+      return res.status(400).json({ error: 'Search query is required.' });
+    }
+    const channels = await Channel.find(
+      { name: { $regex: query, $options: 'i' } }, // Match name field with case-insensitive regex
+      'name subscribers avatar author'
+    );
+    // console.log('Channels fetched:', channels);
+    const matchingChannels = channels
+      .map(channel => {
+        const similarity = stringSimilarity.compareTwoStrings(query.toLowerCase(), channel.name.toLowerCase());
+        return { 
+          ...channel.toObject(), 
+          similarity,
+          subscriberCount: Array.isArray(channel.subscribers) ? channel.subscribers.length : channel.subscribers || 0
+        };
+      })
+      .filter(channel => channel.similarity >= 0.30) // 30% similarity threshold
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, 3); // Limit to top 3 results
+
+    res.json(matchingChannels);
+  } catch (err) {
+    console.error('Error in searchChannels:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
