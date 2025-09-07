@@ -533,12 +533,12 @@ const Comments = ({ videoId, channel }) => {
               <form onSubmit={(e) => handleEditCommentSubmit(e, comment._id)} className="flex gap-2 mb-2">
                 <input
                   type="text"
-                  className="flex-1 border rounded px-2 py-1 text-black dark:text-white bg-gray-100 dark:bg-gray-800"
+                  className="flex-1 border rounded-full px-4 py-2 text-black dark:text-white bg-gray-100 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={editCommentText}
                   onChange={(e) => setEditCommentText(e.target.value)}
                   autoFocus
                 />
-                <button type="submit" className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition">Save</button>
+                <button type="submit" className="bg-blue-500 text-white px-6 py-2 rounded-full hover:bg-blue-600 transition focus:outline-none focus:ring-2 focus:ring-blue-500">Save</button>
                 <button type="button" className="bg-gray-300 text-black px-3 py-1 rounded hover:bg-gray-400 transition" onClick={() => setEditCommentId(null)}>Cancel</button>
               </form>
             ) : (
@@ -584,12 +584,12 @@ const Comments = ({ videoId, channel }) => {
               <form onSubmit={handleAddReply} className="flex gap-2 mb-2">
                 <input
                   type="text"
-                  className="flex-1 border rounded px-2 py-1 text-black dark:text-white bg-gray-100 dark:bg-gray-800"
+                  className="flex-1 border rounded-full px-4 py-2 text-black dark:text-white bg-gray-100 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Write a reply..."
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
                 />
-                <button type="submit" className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition">Reply</button>
+                <button type="submit" className="bg-blue-500 text-white px-6 py-2 rounded-full hover:bg-blue-600 transition focus:outline-none focus:ring-2 focus:ring-blue-500">Reply</button>
               </form>
             )}
             {totalReplies > 0 && (
@@ -625,12 +625,12 @@ const Comments = ({ videoId, channel }) => {
                               <form onSubmit={(e) => handleEditReplySubmit(e, comment._id, reply._id)} className="flex gap-2 mb-2">
                                 <input
                                   type="text"
-                                  className="flex-1 border rounded px-2 py-1 text-black dark:text-white bg-gray-100 dark:bg-gray-800"
+                                  className="flex-1 border rounded-full px-4 py-2 text-black dark:text-white bg-gray-100 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                   value={editReplyText}
                                   onChange={(e) => setEditReplyText(e.target.value)}
                                   autoFocus
                                 />
-                                <button type="submit" className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition">Save</button>
+                                <button type="submit" className="bg-blue-500 text-white px-6 py-2 rounded-full hover:bg-blue-600 transition focus:outline-none focus:ring-2 focus:ring-blue-500">Save</button>
                                 <button type="button" className="bg-gray-300 text-black px-3 py-1 rounded hover:bg-gray-400 transition" onClick={() => setEditReplyId(null)}>Cancel</button>
                               </form>
                             ) : (
@@ -675,12 +675,12 @@ const Comments = ({ videoId, channel }) => {
                               <form onSubmit={handleAddReply} className="flex gap-2 mb-2 mt-1">
                                 <input
                                   type="text"
-                                  className="flex-1 border rounded px-2 py-1 text-black dark:text-white bg-gray-100 dark:bg-gray-800"
+                                  className="flex-1 border rounded-full px-4 py-2 text-black dark:text-white bg-gray-100 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                   placeholder={`Reply to @${getDisplayName(reply.author)}`}
                                   value={replyText}
                                   onChange={(e) => setReplyText(e.target.value)}
                                 />
-                                <button type="submit" className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition">Reply</button>
+                                <button type="submit" className="bg-blue-500 text-white px-6 py-2 rounded-full hover:bg-blue-600 transition focus:outline-none focus:ring-2 focus:ring-blue-500">Reply</button>
                               </form>
                             )}
                           </div>
@@ -809,20 +809,20 @@ const Comments = ({ videoId, channel }) => {
           </div>
         </div>
       )}
-      <div className="w-full max-w-3xl bg-white dark:bg-[#222] rounded-lg shadow p-4 mt-4">
-        <h3 className="text-lg font-bold mb-3 text-black dark:text-white flex items-center gap-2">
+      <div className="w-full bg-inherit dark:bg-inherit rounded-lg shadow p-4 mt-4">
+        <h3 className="text-lg font-bold mb-3 text-black dark:text-white flex gap-2">
           Comments
           <span className="text-base font-normal text-gray-500 dark:text-gray-400">({getTotalCommentCount(comments)})</span>
         </h3>
         <form onSubmit={handleAddComment} className="flex gap-2 mb-4">
           <input
             type="text"
-            className="flex-1 border rounded px-3 py-2 text-black dark:text-white bg-gray-100 dark:bg-gray-800"
+            className="flex-1 border rounded-full px-4 py-2 text-black dark:text-white bg-gray-100 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Add a comment..."
             value={commentText}
             onChange={(e) => setCommentText(e.target.value)}
           />
-          <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition">Post</button>
+          <button type="submit" className="bg-blue-500 text-white px-6 py-2 rounded-full hover:bg-blue-600 transition focus:outline-none focus:ring-2 focus:ring-blue-500">Post</button>
         </form>
         <div className="flex flex-col gap-4">
           {comments.length === 0 ? (
