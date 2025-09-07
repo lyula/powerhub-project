@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import ResponsiveVideoModal from "./ResponsiveVideoModal";
+import FlagContentModal from "./FlagContentModal";
 import {
   MdFavorite,
   MdFavoriteBorder,
@@ -137,7 +138,7 @@ const VideoInteractions = ({
       </button>
       <button
         className={`flex items-center justify-center ${iconColor} bg-transparent border-none p-0`}
-        style={{ minHeight: 40, position: "relative", zIndex: 51, width: 40, height: 40 }}
+        style={{ minHeight: 40, position: "relative", zIndex: 10, width: 40, height: 40 }}
         onClick={() => setActionsOpen(true)}
         id="video-actions-trigger"
         aria-label="More actions"
@@ -187,6 +188,14 @@ const VideoInteractions = ({
           },
         ]}
         backdropClassName="bg-black bg-opacity-30"
+      />
+      
+      <FlagContentModal
+        isOpen={flagOpen}
+        onClose={() => setFlagOpen(false)}
+        contentType="video"
+        contentId={videoId}
+        contentTitle={videoTitle}
       />
     </div>
   );
