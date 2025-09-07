@@ -7,11 +7,13 @@ import { useAuth } from '../context/AuthContext';
 import ThemeToggle from './ThemeToggle';
 import NotificationModal from './NotificationModal';
 import CollaborationsModal from './CollaborationsModal';
+import MobileSidebar from './MobileSidebar';
 
 export default function Header({ onToggleSidebar, searchTerm, onSearchChange }) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showNotifModal, setShowNotifModal] = useState(false);
   const [showCollabModal, setShowCollabModal] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const modalRoot = typeof window !== 'undefined' ? document.body : null;
   const navigate = useNavigate();
   const { user, logout, channel } = useAuth();
@@ -63,6 +65,10 @@ export default function Header({ onToggleSidebar, searchTerm, onSearchChange }) 
     navigate(`/collaborations/${categoryName.toLowerCase().replace(/\s+/g, '-')}`);
   };
 
+  const toggleSidebar = () => {
+    setIsSidebarOpen((prev) => !prev);
+  };
+
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (accountRef.current && !accountRef.current.contains(e.target)) {
@@ -83,7 +89,7 @@ export default function Header({ onToggleSidebar, searchTerm, onSearchChange }) 
         <button
           className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-900 focus:outline-none"
           aria-label="Toggle sidebar"
-          onClick={onToggleSidebar}
+          onClick={toggleSidebar}
         >
           <MdMenu size={28} color="#0bb6bc" />
         </button>
@@ -327,6 +333,7 @@ export default function Header({ onToggleSidebar, searchTerm, onSearchChange }) 
           </div>
         )}
       </div>
+      <MobileSidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
     </header>
   );
 }

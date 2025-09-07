@@ -4,9 +4,17 @@ import ProfilePictureZoomModal from './ProfilePictureZoomModal';
 import ThreeDotsMenu from './ThreeDotsMenu';
 import EditPortal from './EditPortal';
 
-const Comments = ({ videoId, channel }) => {
+const Comments = ({ videoId, channel, initialComments = [], onCountChange }) => {
   const { user, token } = useAuth();
-  const [comments, setComments] = useState([]);
+  const [comments, setComments] = useState(() => {
+    if (Array.isArray(initialComments)) {
+      return initialComments.map(comment => ({
+        ...comment,
+        replies: [...(comment.replies || [])].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      }));
+    }
+    return [];
+  });
   const [commentText, setCommentText] = useState('');
   const [replyText, setReplyText] = useState('');
   const [replyingTo, setReplyingTo] = useState(null); // { commentId, replyId }
@@ -53,6 +61,49 @@ const Comments = ({ videoId, channel }) => {
       return total + 1 + repliesCount;
     }, 0);
   };
+
+  // Notify parent when comment count changes
+  useEffect(() => {
+    if (typeof onCountChange === 'function') {
+      onCountChange(getTotalCommentCount(comments));
+    }
+  }, [comments, onCountChange]);
+
+  // Sync with new initialComments when video changes
+  useEffect(() => {
+    if (Array.isArray(initialComments)) {
+      setComments(initialComments.map(comment => ({
+        ...comment,
+        replies: [...(comment.replies || [])].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      })));
+    }
+  }, [initialComments, videoId]);
+
+  // Fallback fetch if no initialComments were provided
+  useEffect(() => {
+    if (initialComments && Array.isArray(initialComments) && initialComments.length > 0) return;
+    let cancelled = false;
+    const fetchComments = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/videos/${videoId}`);
+        if (res.ok) {
+          const data = await res.json();
+          const commentsWithSortedReplies = (data.comments || []).map(comment => ({
+            ...comment,
+            replies: [...(comment.replies || [])].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          }));
+          if (!cancelled) {
+            setComments(prev => {
+              const posting = prev.filter(c => c._posting);
+              return [...posting, ...commentsWithSortedReplies];
+            });
+          }
+        }
+      } catch (err) {}
+    };
+    fetchComments();
+    return () => { cancelled = true; };
+  }, [videoId, API_BASE_URL, initialComments]);
 
   // Helper to render text with styled @usernames
   const renderTextWithStyledMentions = (text) => {
@@ -715,30 +766,6 @@ const Comments = ({ videoId, channel }) => {
     });
   };
 
-  // Fetch comments on mount
-  useEffect(() => {
-    const fetchComments = async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/videos/${videoId}`);
-        if (res.ok) {
-          const data = await res.json();
-          // Sort replies within each comment so newest appear at the top
-          const commentsWithSortedReplies = (data.comments || []).map(comment => ({
-            ...comment,
-            replies: [...(comment.replies || [])].sort((a, b) => 
-              new Date(b.createdAt) - new Date(a.createdAt)
-            )
-          }));
-          setComments(prev => {
-            const posting = prev.filter(c => c._posting);
-            return [...posting, ...commentsWithSortedReplies];
-          });
-        }
-      } catch (err) {}
-    };
-    fetchComments();
-  }, [videoId, API_BASE_URL]);
-
   return (
     <>
       <ProfilePictureZoomModal
@@ -809,24 +836,55 @@ const Comments = ({ videoId, channel }) => {
           </div>
         </div>
       )}
-      <div className="w-full bg-inherit dark:bg-inherit rounded-lg shadow p-4 mt-4">
-        <h3 className="text-lg font-bold mb-3 text-black dark:text-white flex gap-2">
-          Comments
-          <span className="text-base font-normal text-gray-500 dark:text-gray-400">({getTotalCommentCount(comments)})</span>
+      <div className="w-full">
+        <h3 className="text-xl font-semibold text-black dark:text-white mb-4">
+          {getTotalCommentCount(comments)} Comments
         </h3>
-        <form onSubmit={handleAddComment} className="flex gap-2 mb-4">
-          <input
-            type="text"
-            className="flex-1 border rounded-full px-4 py-2 text-black dark:text-white bg-gray-100 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Add a comment..."
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-          />
-          <button type="submit" className="bg-blue-500 text-white px-6 py-2 rounded-full hover:bg-blue-600 transition focus:outline-none focus:ring-2 focus:ring-blue-500">Post</button>
-        </form>
-        <div className="flex flex-col gap-4">
+        
+        {/* Comment Input */}
+        {user && (
+          <form onSubmit={handleAddComment} className="flex gap-3 mb-8 w-full">
+            <img
+              src={user.profilePicture || user.avatar || 'https://randomuser.me/api/portraits/lego/1.jpg'}
+              alt={user.username || user.firstName || 'User'}
+              className="w-10 h-10 rounded-full flex-shrink-0"
+            />
+            <div className="flex-1 w-full">
+              <input
+                type="text"
+                className="w-full border-0 border-b-2 border-gray-300 dark:border-gray-600 bg-transparent text-black dark:text-white placeholder-gray-500 dark:placeholder-gray-400 px-0 py-2 focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 transition-colors"
+                placeholder="Add a comment..."
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+              />
+              {commentText.trim() && (
+                <div className="flex justify-end gap-2 mt-3">
+                  <button
+                    type="button"
+                    onClick={() => setCommentText('')}
+                    className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 text-sm bg-blue-500 text-white rounded-full hover:bg-blue-600 transition disabled:opacity-50"
+                    disabled={!commentText.trim()}
+                  >
+                    Comment
+                  </button>
+                </div>
+              )}
+            </div>
+          </form>
+        )}
+        
+        {/* Comments List */}
+        <div className="w-full space-y-4">
           {comments.length === 0 ? (
-            <span className="text-gray-500">No comments yet.</span>
+            <div className="text-center py-8">
+              <span className="text-gray-500 dark:text-gray-400">No comments yet. Be the first to comment!</span>
+            </div>
           ) : (
             renderComments(comments)
           )}

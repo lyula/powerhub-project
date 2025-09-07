@@ -282,17 +282,14 @@ export default function Notifications() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#181818] text-black dark:text-white">
-      <MobileHeader 
+      <MobileHeader
         icon={
-          <div className="relative cursor-pointer" onClick={() => navigate('/home')}>
-            <Bell className="w-6 h-6" />
-            {unreadCount > 0 && (
-              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </span>
-            )}
-          </div>
-        } 
+          <button onClick={() => navigate('/home')} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-6 h-6 text-gray-800 dark:text-gray-200">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+        }
         label="Notifications"
         rightAction={
           <button

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bell, Heart, MessageCircle, UserPlus } from 'lucide-react';
+import { MdArrowBack } from 'react-icons/md';
 
 const getIcon = (type) => {
   switch (type) {
@@ -28,6 +29,15 @@ const getIconBgColor = (type) => {
   }
 };
 
+const NotificationHeader = () => (
+  <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+    <Link to="/" className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+      <MdArrowBack size={24} className="text-gray-800 dark:text-gray-200" />
+    </Link>
+    <h1 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Notifications</h1>
+  </div>
+);
+
 const NotificationModal = ({ notifications, onClose, anchorRef }) => {
   const [localNotifications, setLocalNotifications] = useState(notifications);
 
@@ -40,6 +50,8 @@ const NotificationModal = ({ notifications, onClose, anchorRef }) => {
       className="absolute z-50 mt-2 right-4 w-96 max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200/50 dark:border-gray-800/50 overflow-hidden transform transition-all duration-300 ease-in-out"
       style={{ top: 'calc(100% + 0.5rem)', marginLeft: '1rem', marginRight: '1rem' }}
     >
+      <NotificationHeader />
+      
       <div className="p-4 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50">
         <div className="flex items-center gap-2">
           <Bell className="w-5 h-5 text-gray-900 dark:text-white" />
