@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { trackButtonClick } from '../utils/analytics';
+import { FormattedNumber } from '../utils/numberFormatter.jsx';
 import ReviewContentModal from '../components/ReviewContentModal';
 import { colors } from '../theme/colors';
 import {
@@ -1368,7 +1369,10 @@ const ITDashboard = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-blue-600 mb-1">Total Users</p>
-                        <p className="text-3xl font-bold text-blue-900">{systemOverview.totalUsers}</p>
+                        <FormattedNumber 
+                          value={systemOverview.totalUsers || 0} 
+                          className="text-3xl font-bold text-blue-900"
+                        />
                       </div>
                       <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                         <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1391,7 +1395,10 @@ const ITDashboard = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-red-600 mb-1">Total Videos</p>
-                        <p className="text-3xl font-bold text-red-900">{systemOverview.totalVideos}</p>
+                        <FormattedNumber 
+                          value={systemOverview.totalVideos || 0} 
+                          className="text-3xl font-bold text-red-900"
+                        />
                       </div>
                       <div className="w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                         <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1414,7 +1421,10 @@ const ITDashboard = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-green-600 mb-1">Total Posts</p>
-                        <p className="text-3xl font-bold text-green-900">{systemOverview.totalPosts}</p>
+                        <FormattedNumber 
+                          value={systemOverview.totalPosts || 0} 
+                          className="text-3xl font-bold text-green-900"
+                        />
                       </div>
                       <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                         <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1437,7 +1447,10 @@ const ITDashboard = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-yellow-600 mb-1">Active Users (24h)</p>
-                        <p className="text-3xl font-bold text-yellow-900">{systemOverview.activeUsers24h}</p>
+                        <FormattedNumber 
+                          value={systemOverview.activeUsers24h || 0} 
+                          className="text-3xl font-bold text-yellow-900"
+                        />
                       </div>
                       <div className="w-12 h-12 bg-yellow-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                         <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1463,7 +1476,10 @@ const ITDashboard = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-purple-600 mb-1">Total Clicks</p>
-                        <p className="text-3xl font-bold text-purple-900">{systemOverview.totalClicks?.toLocaleString() || '0'}</p>
+                        <FormattedNumber 
+                          value={systemOverview.totalClicks || 0} 
+                          className="text-3xl font-bold text-purple-900"
+                        />
                       </div>
                       <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                         <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1658,7 +1674,10 @@ const ITDashboard = () => {
                     <div className="mt-4 grid grid-cols-2 gap-4 text-center">
                       <div>
                         <div className="text-2xl font-bold text-blue-600">
-                          {systemOverview.totalClicks?.toLocaleString() || '0'}
+                          <FormattedNumber 
+                            value={systemOverview.totalClicks || 0} 
+                            className=""
+                          />
                         </div>
                         <div className="text-sm text-gray-500">Total Clicks</div>
                       </div>
@@ -1935,7 +1954,10 @@ const ITDashboard = () => {
                     <div className="mt-4 grid grid-cols-2 gap-4 text-center">
                       <div>
                         <div className="text-2xl font-bold text-green-600">
-                          {systemOverview.activeUsers24h || 0}
+                          <FormattedNumber 
+                            value={systemOverview.activeUsers24h || 0} 
+                            className=""
+                          />
                         </div>
                         <div className="text-sm text-gray-500">Active Users (24h)</div>
                       </div>
@@ -2801,7 +2823,10 @@ const ITDashboard = () => {
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Total Reports</p>
-                    <p className="text-2xl font-bold text-gray-900">{flaggedContent.length}</p>
+                    <FormattedNumber 
+                      value={flaggedContent.length} 
+                      className="text-2xl font-bold text-gray-900"
+                    />
                   </div>
                 </div>
               </div>
@@ -2815,7 +2840,10 @@ const ITDashboard = () => {
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Pending Review</p>
-                    <p className="text-2xl font-bold text-gray-900">{flaggedContent.filter(c => c.status === 'pending').length}</p>
+                    <FormattedNumber 
+                      value={flaggedContent.filter(c => c.status === 'pending').length} 
+                      className="text-2xl font-bold text-gray-900"
+                    />
                   </div>
                 </div>
               </div>
@@ -2829,7 +2857,10 @@ const ITDashboard = () => {
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Reviewed</p>
-                    <p className="text-2xl font-bold text-gray-900">{flaggedContent.filter(c => c.status === 'reviewed').length}</p>
+                    <FormattedNumber 
+                      value={flaggedContent.filter(c => c.status === 'reviewed').length} 
+                      className="text-2xl font-bold text-gray-900"
+                    />
                   </div>
                 </div>
               </div>
@@ -2843,7 +2874,10 @@ const ITDashboard = () => {
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Resolved</p>
-                    <p className="text-2xl font-bold text-gray-900">{flaggedContent.filter(c => c.status === 'resolved').length}</p>
+                    <FormattedNumber 
+                      value={flaggedContent.filter(c => c.status === 'resolved').length} 
+                      className="text-2xl font-bold text-gray-900"
+                    />
                   </div>
                 </div>
               </div>

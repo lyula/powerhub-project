@@ -152,9 +152,9 @@ exports.getSystemOverview = async (req, res) => {
       
       console.log(`Fallback watch time calculation: Total=${totalWatchTime}m, Days since first video=${daysSinceFirstVideo}, Days for calc=${daysForCalculation}, Avg per day=${averageWatchTimePerDay}m`);
       
-      // Calculate session duration from login/logout events even in fallback
+      // Calculate session duration from UserAnalytics data even in fallback
       const sessionDuration = await calculateAverageSessionDuration(last30Days);
-      averageSessionDuration = sessionDuration > 0 ? sessionDuration : 15; // 15 minutes fallback if no data
+      averageSessionDuration = sessionDuration > 0 ? sessionDuration : 0; // Show 0 if no real data
     }
 
     // Get system settings
@@ -1054,63 +1054,87 @@ exports.getAuditLogs = async (req, res) => {
 // Helper function to calculate average session duration
 const calculateAverageSessionDuration = async (startDate) => {
   try {
-    // Get login events
-    const loginEvents = await AuditLog.find({
-      action: { $in: ['user_login', 'login_success', 'authentication'] },
-      createdAt: { $gte: startDate }
-    }).sort({ createdAt: 1 });
-
-    // Get logout events
-    const logoutEvents = await AuditLog.find({
-      action: { $in: ['user_logout', 'logout', 'session_end'] },
-      createdAt: { $gte: startDate }
-    }).sort({ createdAt: 1 });
-
-    if (loginEvents.length === 0) {
-      return 0; // No login data
-    }
-
-    // Calculate session durations by matching login/logout pairs
-    const sessionDurations = [];
-    const userSessions = new Map(); // Track active sessions by user
-
-    // Process login events
-    loginEvents.forEach(login => {
-      if (login.performedBy) {
-        userSessions.set(login.performedBy.toString(), {
-          loginTime: login.createdAt,
-          sessionId: login.sessionId
-        });
-      }
+    // Get session data from UserAnalytics collection (where actual session tracking happens)
+    const UserAnalytics = require('../models/UserAnalytics');
+    
+    // First, try to get completed sessions with duration
+    const completedSessions = await UserAnalytics.find({
+      startTime: { $gte: startDate },
+      duration: { $exists: true, $gt: 0 } // Only sessions with recorded duration
     });
 
-    // Process logout events and calculate durations
-    logoutEvents.forEach(logout => {
-      if (logout.performedBy && userSessions.has(logout.performedBy.toString())) {
-        const session = userSessions.get(logout.performedBy.toString());
-        const duration = logout.createdAt - session.loginTime;
-        if (duration > 0 && duration < 24 * 60 * 60 * 1000) { // Less than 24 hours
-          sessionDurations.push(duration);
+    if (completedSessions.length > 0) {
+      // Filter out unrealistic session durations (more than 8 hours = 480 minutes)
+      const realisticSessions = completedSessions.filter(session => session.duration <= 480);
+      
+      if (realisticSessions.length > 0) {
+        // Calculate average from realistic sessions only
+        const totalDuration = realisticSessions.reduce((sum, session) => sum + (session.duration || 0), 0);
+        const averageDuration = totalDuration / realisticSessions.length;
+        
+        console.log(`Session duration from realistic sessions: ${realisticSessions.length}/${completedSessions.length} sessions, average: ${averageDuration} minutes`);
+        console.log(`Filtered out ${completedSessions.length - realisticSessions.length} unrealistic sessions (>8 hours)`);
+        return Math.round(averageDuration * 10) / 10;
+      } else {
+        console.log('All sessions were unrealistic (>8 hours), using fallback calculation');
+      }
+    }
+
+    // If no completed sessions, try to estimate from active sessions
+    const activeSessions = await UserAnalytics.find({
+      startTime: { $gte: startDate },
+      endTime: { $exists: false } // Sessions that haven't ended yet
+    });
+
+    if (activeSessions.length > 0) {
+      // Calculate estimated duration for active sessions
+      const now = new Date();
+      const estimatedDurations = activeSessions.map(session => {
+        const durationMs = now - session.startTime;
+        return Math.max(1, Math.floor(durationMs / (1000 * 60))); // Convert to minutes, minimum 1 minute
+      });
+      
+      const totalEstimatedDuration = estimatedDurations.reduce((sum, duration) => sum + duration, 0);
+      const averageEstimatedDuration = totalEstimatedDuration / activeSessions.length;
+      
+      console.log(`Session duration from active sessions: ${activeSessions.length} sessions, estimated average: ${averageEstimatedDuration} minutes`);
+      return Math.round(averageEstimatedDuration * 10) / 10;
+    }
+
+    // If no session data at all, try to estimate from user activity patterns
+    const allUserActivity = await UserAnalytics.find({
+      startTime: { $gte: startDate }
+    });
+
+    if (allUserActivity.length > 0) {
+      // Estimate based on time between first and last activity
+      const activityDurations = allUserActivity.map(activity => {
+        if (activity.endTime && activity.startTime) {
+          return Math.floor((activity.endTime - activity.startTime) / (1000 * 60));
+        } else if (activity.lastActivity && activity.startTime) {
+          return Math.floor((activity.lastActivity - activity.startTime) / (1000 * 60));
         }
-        userSessions.delete(logout.performedBy.toString());
-      }
-    });
+        return 0;
+      }).filter(duration => duration > 0);
 
-    // Calculate average session duration
-    if (sessionDurations.length > 0) {
-      const totalDuration = sessionDurations.reduce((sum, duration) => sum + duration, 0);
-      const averageDurationMs = totalDuration / sessionDurations.length;
-      return Math.round(averageDurationMs / (1000 * 60) * 10) / 10; // Convert to minutes, round to 1 decimal
+      if (activityDurations.length > 0) {
+        const totalActivityDuration = activityDurations.reduce((sum, duration) => sum + duration, 0);
+        const averageActivityDuration = totalActivityDuration / activityDurations.length;
+        
+        console.log(`Session duration from activity patterns: ${activityDurations.length} activities, average: ${averageActivityDuration} minutes`);
+        return Math.round(averageActivityDuration * 10) / 10;
+      }
     }
 
-    // If no logout events, estimate based on login frequency
-    // Assume average session is 30 minutes if no logout data
-    return 30;
+    console.log('No session data available - returning 0');
+    return 0;
+
   } catch (error) {
     console.error('Error calculating session duration:', error);
     return 0;
   }
 };
+
 
 // Get advanced analytics
 exports.getAdvancedAnalytics = async (req, res) => {
