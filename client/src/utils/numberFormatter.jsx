@@ -13,7 +13,15 @@ export const formatNumber = (num) => {
     return (number / 1000000).toFixed(number % 1000000 === 0 ? 0 : 1) + 'M';
   }
   if (number >= 1000) {
-    return (number / 1000).toFixed(number % 1000 === 0 ? 0 : 1) + 'K';
+    const thousands = number / 1000;
+    // Use floor instead of round to be more conservative
+    if (thousands % 1 === 0) {
+      return thousands + 'K';
+    } else {
+      // Use floor to be more conservative (2.656 becomes 2.6K instead of 2.7K)
+      const floored = Math.floor(thousands * 10) / 10;
+      return floored + 'K';
+    }
   }
   return number.toString();
 };

@@ -379,7 +379,7 @@ const ITDashboard = () => {
           await loadOverview(showLoading);
           break;
         case 'analytics':
-          await loadAnalytics();
+          await loadAdvancedAnalytics(analyticsDateRange);
           break;
         case 'advanced-analytics':
           await loadAdvancedAnalytics(analyticsDateRange);
