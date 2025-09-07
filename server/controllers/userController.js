@@ -205,6 +205,25 @@ exports.login = async (req, res) => {
     // Reset session invalidation on successful login
     await user.resetSessionInvalidation();
 
+    // Start session tracking
+    const UserAnalytics = require('../models/UserAnalytics');
+    const sessionId = req.sessionID || `session_${Date.now()}_${user._id}`;
+    
+    try {
+      await UserAnalytics.create({
+        userId: user._id,
+        sessionId: sessionId,
+        startTime: new Date(),
+        clicks: 0,
+        pagesVisited: [],
+        lastActivity: new Date()
+      });
+      console.log(`Session started for user ${user.username}, sessionId: ${sessionId}`);
+    } catch (sessionError) {
+      console.error('Error creating session tracking:', sessionError);
+      // Don't fail login if session tracking fails
+    }
+
     const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '7d' });
     res.status(200).json({ data: { user, token } });
   } catch (err) {

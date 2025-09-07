@@ -86,13 +86,17 @@ const trackSessionEnd = async (req, res, next) => {
   try {
     if (req.user && req.user.id) {
       const userId = req.user.id;
-      const sessionId = req.sessionID || `session_${Date.now()}`;
+      const sessionId = req.sessionID || `session_${Date.now()}_${userId}`;
       
       console.log('=== SESSION END TRACKING ===');
       console.log('User:', req.user.username);
       console.log('Session ID:', sessionId);
       
-      const analytics = await UserAnalytics.findOne({ userId, sessionId });
+      // Find the most recent session for this user that hasn't ended yet
+      const analytics = await UserAnalytics.findOne({ 
+        userId, 
+        endTime: { $exists: false } 
+      }).sort({ startTime: -1 });
       if (analytics) {
         const duration = Math.floor((new Date() - analytics.startTime) / (1000 * 60)); // Convert to minutes
         console.log('Session duration calculated:', duration, 'minutes');
