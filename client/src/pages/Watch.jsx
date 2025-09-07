@@ -293,7 +293,7 @@ export default function Watch() {
               className="w-full max-w-full aspect-video rounded-lg shadow-lg mb-2"
               style={{ border: "none" }}
             />
-            <div className="w-full max-w-3xl mt-2 flex flex-col gap-2" style={{paddingLeft:0, marginLeft:0}}>
+            <div className="w-full max-w-3xl mt-2 flex flex-col gap-2 items-start" style={{paddingLeft:0, marginLeft:0}}>
               <h1
                 className="text-2xl font-bold text-black dark:text-white leading-tight mb-0 truncate block max-w-full text-left"
                 title={video.title}
