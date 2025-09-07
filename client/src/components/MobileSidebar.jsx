@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MdClose } from 'react-icons/md';
-import { MdPerson, MdGroup, MdNotifications, MdSettings, MdDashboard } from 'react-icons/md';
+import { MdPerson, MdNotifications, MdSettings, MdDashboard } from 'react-icons/md';
+import { FaGithub } from 'react-icons/fa';
 
 const MobileSidebar = ({ isOpen, toggleSidebar }) => {
   const sidebarLinks = [
     { name: 'My Channel', path: '/my-channel', icon: <MdPerson size={20} /> },
-    { name: 'Collaborations', path: '/mobile-collaboration-options', icon: <MdGroup size={20} /> },
+    { name: 'Collaborations', path: '/mobile-collaboration-options', icon: <FaGithub size={20} /> },
     { name: 'Notifications', path: '/notifications', icon: <MdNotifications size={20} /> },
     { name: 'IT Dashboard', path: '/it-dashboard', icon: <MdDashboard size={20} /> },
     { name: 'Settings', path: '/settings', icon: <MdSettings size={20} /> },
