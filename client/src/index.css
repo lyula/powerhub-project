@@ -11,3 +11,25 @@
 .scrollbar-hide::-webkit-scrollbar {
 	display: none; /* Chrome, Safari, Opera */
 }
+
+/* Visible styled scrollbar */
+.styled-scrollbar { overflow-y: auto; }
+.styled-scrollbar::-webkit-scrollbar {
+	width: 10px;
+}
+.styled-scrollbar::-webkit-scrollbar-track {
+	background: rgba(0,0,0,0.06);
+	border-radius: 8px;
+}
+.styled-scrollbar::-webkit-scrollbar-thumb {
+	background: linear-gradient(180deg, #0bb6bc 0%, #0a8d92 100%);
+	border-radius: 8px;
+}
+.styled-scrollbar::-webkit-scrollbar-thumb:hover {
+	background: linear-gradient(180deg, #0ccbd2 0%, #0aa2a8 100%);
+}
+
+/* Firefox */
+@-moz-document url-prefix() {
+  .styled-scrollbar { scrollbar-color: #0bb6bc rgba(0,0,0,0.06); scrollbar-width: thin; }
+}

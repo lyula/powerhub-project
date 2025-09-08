@@ -13,6 +13,7 @@ import ProgressBar from "../components/ProgressBar";
 import SimilarContentThumbnail from "../components/SimilarContentThumbnail";
 import WatchPageSkeleton from "../components/WatchPageSkeleton";
 import { trackVideoWatch } from "../utils/analytics";
+import useWatchHistory from "../hooks/useWatchHistory";
 
 // Add hide-scrollbar styles to the Watch page
 <style jsx>{`
@@ -72,6 +73,8 @@ export default function Watch() {
   const [isSaved, setIsSaved] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
 
+  const { upsert, start, stop, sendOnce, resumeFromHistory } = useWatchHistory({ videoId: id, token });
+
   useEffect(() => {
     const checkSavedStatus = async () => {
       if (!user || !token || !video) return;
@@ -120,19 +123,26 @@ export default function Watch() {
     }
   };
 
-  const handleVideoPlay = () => (watchStartTime.current = Date.now());
+  const handleVideoPlay = () => {
+    watchStartTime.current = Date.now();
+    upsert();
+    start(videoRef);
+  };
   const handleVideoPause = () => {
     if (watchStartTime.current) {
       totalWatchTime.current +=
         (Date.now() - watchStartTime.current) / 1000 / 60;
       watchStartTime.current = null;
     }
+    stop();
   };
   const handleVideoEnded = () => {
     handleVideoPause();
     if (totalWatchTime.current > 0 && video?._id) {
       trackVideoWatch(video._id, Math.round(totalWatchTime.current));
     }
+    sendOnce(videoRef);
+    window.dispatchEvent(new CustomEvent('watch-history:updated'));
   };
 
   useEffect(() => {
@@ -140,6 +150,7 @@ export default function Watch() {
       if (totalWatchTime.current > 0 && video?._id) {
         trackVideoWatch(video._id, Math.round(totalWatchTime.current));
       }
+      stop();
     };
   }, [video?._id]);
 
@@ -199,6 +210,10 @@ export default function Watch() {
       }
     };
     sendView();
+    // Ensure a history row exists and try resuming position
+    upsert();
+    resumeFromHistory(videoRef);
+    window.dispatchEvent(new CustomEvent('watch-history:updated'));
   }, [id, fetchVideoAndRecommendations]); // 7. Added fetchVideoAndRecommendations to dependency array
 
   useEffect(() => {
@@ -287,6 +302,10 @@ export default function Watch() {
               controls
               controlsList="nodownload"
               autoPlay
+              onLoadedMetadata={() => {
+                sendOnce(videoRef);
+                window.dispatchEvent(new CustomEvent('watch-history:updated'));
+              }}
               onPlay={handleVideoPlay}
               onPause={handleVideoPause}
               onEnded={handleVideoEnded}

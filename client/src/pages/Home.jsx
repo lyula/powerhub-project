@@ -51,6 +51,28 @@ export default function Home() {
   // Fix: Declare videoRefs for video element refs
   const videoRefs = useRef([]);
 
+  // History helpers
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+  function getSessionId() {
+    const existing = localStorage.getItem('sessionId');
+    if (existing) return existing;
+    const id = `dev-${Math.random().toString(36).slice(2)}`;
+    localStorage.setItem('sessionId', id);
+    return id;
+  }
+  async function upsertHistory(videoId) {
+    try {
+      const sessionId = getSessionId();
+      await fetch(`${API_BASE_URL}/history/upsert`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoId, sessionId })
+      });
+      // Let the history page update immediately if open
+      window.dispatchEvent(new CustomEvent('watch-history:updated'));
+    } catch (_) {}
+  }
+
   const handleToggleSidebar = () => setSidebarOpen((open) => !open);
   const [initialPreview, setInitialPreview] = useState(true);
 
@@ -371,8 +393,12 @@ export default function Home() {
                           key={video._id || i}
                           className={`relative group cursor-pointer bg-gray-100 dark:bg-[#111111] flex flex-col min-w-0 w-full rounded-lg${isLast ? ' mb-16 sm:mb-0' : ''}`}
                           style={{ minHeight: '180px', paddingBottom: '0.5rem' }}
-                          onClick={(e) => {
+                          onClick={async (e) => {
                             if (e.target.closest('.channel-link')) return;
+                            // Record history immediately on enter to watch
+                            if (video._id) {
+                              try { await upsertHistory(video._id); } catch (_) {}
+                            }
                             navigate(`/watch/${video._id || i + 1}`);
                           }}
                         >
@@ -461,8 +487,11 @@ export default function Home() {
                           key={video._id || i + 6}
                           className={`relative group cursor-pointer bg-gray-100 dark:bg-[#111111] flex flex-col min-w-0 w-full rounded-lg${isLast ? ' mb-16 sm:mb-0' : ''}`}
                           style={{ minHeight: '180px', paddingBottom: '0.5rem' }}
-                          onClick={(e) => {
+                          onClick={async (e) => {
                             if (e.target.closest('.channel-link')) return;
+                            if (video._id) {
+                              try { await upsertHistory(video._id); } catch (_) {}
+                            }
                             navigate(`/watch/${video._id || i + 7}`);
                           }}
                         >

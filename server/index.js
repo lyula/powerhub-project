@@ -96,6 +96,7 @@ app.use('/api/profile', require('./routes/profile'));
 app.use('/api/it-dashboard', require('./routes/itDashboard'));
 app.use('/api/flagged-content', require('./routes/flaggedContent'));
 app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/history', require('./routes/history'));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

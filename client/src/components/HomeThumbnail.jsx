@@ -7,6 +7,25 @@ export default function HomeThumbnail({ video, source, userId, sessionId, previe
   const [hoveringIcon, setHoveringIcon] = useState(false);
   const videoRef = useRef(null);
   const timerRef = useRef(null);
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+  function getSessionId() {
+    const existing = localStorage.getItem('sessionId');
+    if (existing) return existing;
+    const id = `dev-${Math.random().toString(36).slice(2)}`;
+    localStorage.setItem('sessionId', id);
+    return id;
+  }
+  async function upsertHistory(videoId) {
+    try {
+      const sid = getSessionId();
+      await fetch(`${API_BASE_URL}/history/upsert`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoId, sessionId: sid })
+      });
+      window.dispatchEvent(new CustomEvent('watch-history:updated'));
+    } catch (_) {}
+  }
   function formatDuration(seconds) {
     if (!seconds || isNaN(seconds)) return '';
     const m = Math.floor(seconds / 60);
@@ -23,11 +42,16 @@ export default function HomeThumbnail({ video, source, userId, sessionId, previe
 
   const handleMouseEnter = () => {
     setShowPreview(true);
+    if (video?._id) {
+      clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => upsertHistory(video._id), 8000); // count preview as a watch after 8s
+    }
   };
   const handleMouseLeave = () => {
     setTimeout(() => {
       if (!hoveringIcon) setShowPreview(false);
     }, 0);
+    clearTimeout(timerRef.current);
   };
 
   return (

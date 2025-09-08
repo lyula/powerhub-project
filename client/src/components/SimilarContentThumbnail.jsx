@@ -62,11 +62,19 @@ export default function SimilarContentThumbnail({ video, source, userId, session
 
   return (
     <div
+<<<<<<< Updated upstream
       style={{ position: 'relative', width: '8rem', height: '5rem', minHeight: '5rem', overflow: 'hidden', borderRadius: '0.75rem 0 0 0' }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onTouchStart={handleMouseEnter}
       onTouchEnd={handleMouseLeave}
+=======
+      style={{ position: 'relative', width: '8rem', height: '5rem', minHeight: '5rem' }}
+      onMouseEnter={() => { if (typeof setPreviewedId === 'function') setPreviewedId(id); }}
+      onMouseLeave={() => { if (typeof setPreviewedId === 'function') setPreviewedId(null); }}
+      onTouchStart={() => { if (typeof setPreviewedId === 'function') setPreviewedId(id); }}
+      onTouchEnd={() => { if (typeof setPreviewedId === 'function') setPreviewedId(null); }}
+>>>>>>> Stashed changes
     >
       {!showPreview || !(video.previewUrl || video.videoUrl) ? (
         <img
