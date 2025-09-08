@@ -1,20 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from '../context/AuthContext';
 import ProfilePictureZoomModal from './ProfilePictureZoomModal';
-import ThreeDotsMenu from './ThreeDotsMenu';
 import EditPortal from './EditPortal';
 
 const Comments = ({ videoId, channel, initialComments = [], onCountChange }) => {
   const { user, token } = useAuth();
-  const [comments, setComments] = useState(() => {
-    if (Array.isArray(initialComments)) {
-      return initialComments.map(comment => ({
-        ...comment,
-        replies: [...(comment.replies || [])].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-      }));
-    }
-    return [];
-  });
+  const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState('');
   const [replyText, setReplyText] = useState('');
   const [replyingTo, setReplyingTo] = useState(null); // { commentId, replyId }
@@ -69,41 +60,47 @@ const Comments = ({ videoId, channel, initialComments = [], onCountChange }) => 
     }
   }, [comments, onCountChange]);
 
-  // Sync with new initialComments when video changes
+  // Single effect to handle comments initialization and fetching
   useEffect(() => {
-    if (Array.isArray(initialComments)) {
-      setComments(initialComments.map(comment => ({
-        ...comment,
-        replies: [...(comment.replies || [])].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-      })));
+    // If we have initial comments, use them
+    if (Array.isArray(initialComments) && initialComments.length > 0) {
+      const sortedComments = [...initialComments]
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .map(comment => ({
+          ...comment,
+          replies: [...(comment.replies || [])].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        }));
+      setComments(sortedComments);
+      return;
     }
-  }, [initialComments, videoId]);
 
-  // Fallback fetch if no initialComments were provided
-  useEffect(() => {
-    if (initialComments && Array.isArray(initialComments) && initialComments.length > 0) return;
+    // If no initial comments and we have a videoId, fetch from API
+    if (!videoId) return;
+
     let cancelled = false;
     const fetchComments = async () => {
       try {
         const res = await fetch(`${API_BASE_URL}/videos/${videoId}`);
         if (res.ok) {
           const data = await res.json();
-          const commentsWithSortedReplies = (data.comments || []).map(comment => ({
-            ...comment,
-            replies: [...(comment.replies || [])].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-          }));
+          const sortedComments = (data.comments || [])
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            .map(comment => ({
+              ...comment,
+              replies: [...(comment.replies || [])].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            }));
           if (!cancelled) {
-            setComments(prev => {
-              const posting = prev.filter(c => c._posting);
-              return [...posting, ...commentsWithSortedReplies];
-            });
+            setComments(sortedComments);
           }
         }
-      } catch (err) {}
+      } catch (err) {
+        console.error('Error fetching comments:', err);
+      }
     };
+
     fetchComments();
     return () => { cancelled = true; };
-  }, [videoId, API_BASE_URL, initialComments]);
+  }, [videoId, initialComments]);
 
   // Helper to render text with styled @usernames
   const renderTextWithStyledMentions = (text) => {

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Header from '../components/Header';
-import ThreeDotsMenu from '../components/ThreeDotsMenu';
+import ChannelActions from '../components/ChannelActions';
 import Sidebar from '../components/Sidebar';
 import SubscribeButton from '../components/SubscribeButton';
 import AboutChannelModal from '../components/AboutChannelModal';
@@ -196,7 +196,7 @@ export default function ChannelProfile() {
             {/* Three dots menu for channel owner - top right of banner */}
             {user && channel && user._id === channel.owner && (
               <div style={{ position: 'absolute', top: 16, right: 24, zIndex: 30 }}>
-                <ThreeDotsMenu
+                <ChannelActions
                   onEdit={handleEditChannel}
                   onDelete={() => setShowDeleteModal(true)}
                 />

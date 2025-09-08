@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import ResponsiveVideoModal from "./ResponsiveVideoModal";
+import VideoOptionsModal from "./videoOptionsModal";
 import FlagContentModal from "./FlagContentModal";
 import {
   MdFavorite,
@@ -8,11 +8,6 @@ import {
   MdThumbDownOffAlt,
   MdComment,
   MdShare,
-  MdFlag,
-  MdBookmark,
-  MdBookmarkBorder,
-  MdQueue,
-  MdPlaylistAdd,
 } from "react-icons/md";
 import { trackButtonClick } from "../utils/analytics";
 
@@ -149,45 +144,15 @@ const VideoInteractions = ({
           <span className="w-1.5 h-1.5 rounded-full my-0.5 transition-colors bg-current"></span>
         </span>
       </button>
-      <ResponsiveVideoModal
+      
+      <VideoOptionsModal
         isOpen={actionsOpen}
         onClose={() => setActionsOpen(false)}
-        actions={[
-          {
-            label: isSaved ? "Saved" : "Save Video",
-            icon: isSaved ? (
-              <MdBookmark size={22} className="dark:text-gray-400 text-black" />
-            ) : (
-              <MdBookmarkBorder size={22} className="dark:text-gray-400 text-black" />
-            ),
-            onClick: onSave,
-          },
-          {
-            label: "Flag Video",
-            icon: <MdFlag size={22} className="dark:text-gray-400 text-black" />,
-            onClick: () => {
-              setActionsOpen(false);
-              setFlagOpen(true);
-            },
-          },
-          {
-            label: "Add to Queue",
-            icon: <MdQueue size={22} className="dark:text-gray-400 text-black" />,
-            onClick: () => {
-              setActionsOpen(false);
-              alert("Added to queue!");
-            },
-          },
-          {
-            label: "Add to Playlist",
-            icon: <MdPlaylistAdd size={22} className="dark:text-gray-400 text-black" />,
-            onClick: () => {
-              setActionsOpen(false);
-              alert("Added to playlist!");
-            },
-          },
-        ]}
-        backdropClassName="bg-black bg-opacity-30"
+        onSave={onSave}
+        onFlag={() => setFlagOpen(true)}
+        onAddToQueue={() => alert("Added to queue!")}
+        onAddToPlaylist={() => alert("Added to playlist!")}
+        isSaved={isSaved}
       />
       
       <FlagContentModal

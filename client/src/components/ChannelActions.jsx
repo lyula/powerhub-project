@@ -1,7 +1,8 @@
+// This component provides a three-dots menu for editing or deleting a channel profile.
 import React, { useState, useRef, useEffect } from 'react';
 import { FiMoreVertical } from 'react-icons/fi';
 
-export default function ThreeDotsMenu({ onEdit, onDelete }) {
+export default function ChannelActions({ onEdit, onDelete }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
 
