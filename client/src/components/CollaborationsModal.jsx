@@ -81,9 +81,9 @@ const CollaborationsModal = ({ onClose }) => {
     setLoading(true);
     try {
       console.log('Environment variable VITE_API_URL:', import.meta.env.VITE_API_URL);
-      console.log('Final API URL being used:', import.meta.env.VITE_API_URL);
+      console.log('Final API URL being used:', import.meta.env.VITE_API_URL || '/api');
       
-      let url = `${import.meta.env.VITE_API_URL}/collaborations`;
+      let url = `${import.meta.env.VITE_API_URL || '/api'}/collaborations`;
       if (category) {
         url += `?category=${encodeURIComponent(category)}`;
       }
@@ -120,7 +120,7 @@ const CollaborationsModal = ({ onClose }) => {
   const fetchMyProjects = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/collaborations/my-projects`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/collaborations/my-projects`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -149,7 +149,7 @@ const CollaborationsModal = ({ onClose }) => {
   const fetchCategoryCounts = async () => {
     try {
       console.log('Fetching category counts...');
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/collaborations/category-counts`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/collaborations/category-counts`);
 
       console.log('Category counts response status:', response.status);
       
@@ -201,7 +201,7 @@ const CollaborationsModal = ({ onClose }) => {
         return;
       }
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/collaborations`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/collaborations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -558,7 +558,7 @@ const CollaborationsModal = ({ onClose }) => {
       try {
         setLoading(true);
         
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/collaborations/${editingProject._id}`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/collaborations/${editingProject._id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -1004,7 +1004,7 @@ const CollaborationsModal = ({ onClose }) => {
                             onClick={() => {
                               setSelectedProject(project);
                               // Track project view
-                              fetch(`${import.meta.env.VITE_API_URL}/collaborations/${project._id}/track-view`, {
+                              fetch(`${import.meta.env.VITE_API_URL || '/api'}/collaborations/${project._id}/track-view`, {
                                 method: 'POST',
                                 headers: {
                                   'Content-Type': 'application/json'
