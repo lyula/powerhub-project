@@ -80,19 +80,19 @@ const CollaborationsModal = ({ onClose }) => {
   const fetchProjects = async (category = null) => {
     setLoading(true);
     try {
-      let url = '/api/collaborations';
+      console.log('Environment variable VITE_API_URL:', import.meta.env.VITE_API_URL);
+      console.log('Final API URL being used:', import.meta.env.VITE_API_URL);
+      
+      let url = `${import.meta.env.VITE_API_URL}/collaborations`;
       if (category) {
         url += `?category=${encodeURIComponent(category)}`;
       }
       console.log('Fetching projects from:', url);
       
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const response = await fetch(url);
 
       console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
       if (response.ok) {
         const data = await response.json();
@@ -120,7 +120,7 @@ const CollaborationsModal = ({ onClose }) => {
   const fetchMyProjects = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/collaborations/my-projects', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/collaborations/my-projects`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -148,21 +148,22 @@ const CollaborationsModal = ({ onClose }) => {
 
   const fetchCategoryCounts = async () => {
     try {
-      const response = await fetch('/api/collaborations/category-counts', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      console.log('Fetching category counts...');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/collaborations/category-counts`);
 
+      console.log('Category counts response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('Category counts data:', data);
         setCategoryCounts(data);
       } else {
-        console.error('Error fetching category counts');
+        const errorText = await response.text();
+        console.error('Error fetching category counts:', response.status, errorText);
         setCategoryCounts({});
       }
     } catch (error) {
-      console.error('Network error:', error);
+      console.error('Network error fetching category counts:', error);
       setCategoryCounts({});
     }
   };
@@ -200,7 +201,7 @@ const CollaborationsModal = ({ onClose }) => {
         return;
       }
 
-      const response = await fetch('/api/collaborations', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/collaborations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -557,7 +558,7 @@ const CollaborationsModal = ({ onClose }) => {
       try {
         setLoading(true);
         
-        const response = await fetch(`/api/collaborations/${editingProject._id}`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/collaborations/${editingProject._id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -1003,7 +1004,7 @@ const CollaborationsModal = ({ onClose }) => {
                             onClick={() => {
                               setSelectedProject(project);
                               // Track project view
-                              fetch(`/api/collaborations/${project._id}/track-view`, {
+                              fetch(`${import.meta.env.VITE_API_URL}/collaborations/${project._id}/track-view`, {
                                 method: 'POST',
                                 headers: {
                                   'Content-Type': 'application/json'

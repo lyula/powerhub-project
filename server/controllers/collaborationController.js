@@ -76,10 +76,15 @@ exports.getCollaborations = async (req, res) => {
   try {
     const { category, status = 'active', page = 1, limit = 10 } = req.query;
     
+    console.log('Query params:', { category, status, page, limit });
+    
     const filter = { status };
-    if (category) {
-      filter.category = category;
+    if (category && category.trim() !== '') {
+      // Use case-insensitive regex for better matching
+      filter.category = new RegExp(`^${category.trim()}$`, 'i');
     }
+
+    console.log('Filter being applied:', filter);
 
     const collaborations = await Collaboration.find(filter)
       .populate('author', 'firstName lastName username profilePicture github whatsapp linkedin instagram')
@@ -88,6 +93,8 @@ exports.getCollaborations = async (req, res) => {
       .skip((page - 1) * limit);
 
     const total = await Collaboration.countDocuments(filter);
+
+    console.log(`Found ${collaborations.length} collaborations out of ${total} total`);
 
     res.json({
       collaborations,
@@ -273,17 +280,23 @@ exports.trackProjectView = async (req, res) => {
 // Get category counts for active projects
 exports.getCategoryCounts = async (req, res) => {
   try {
+    console.log('Fetching category counts...');
+    
     const counts = await Collaboration.aggregate([
       { $match: { status: 'active' } },
       { $group: { _id: '$category', count: { $sum: 1 } } },
       { $project: { category: '$_id', count: 1, _id: 0 } }
     ]);
 
+    console.log('Raw category counts:', counts);
+
     // Convert array to object for easier frontend access
     const countsObject = {};
     counts.forEach(item => {
       countsObject[item.category] = item.count;
     });
+
+    console.log('Category counts object:', countsObject);
 
     res.json(countsObject);
 
