@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import VideoOptionsModal from "./videoOptionsModal";
+import VideoShareModal from "./VideoShareModal";
 import FlagContentModal from "./FlagContentModal";
 import {
   MdFavorite,
@@ -144,6 +145,13 @@ const VideoInteractions = ({
           <span className="w-1.5 h-1.5 rounded-full my-0.5 transition-colors bg-current"></span>
         </span>
       </button>
+      
+      <VideoShareModal
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        videoUrl={videoUrl}
+        onShare={handleShare}
+      />
       
       <VideoOptionsModal
         isOpen={actionsOpen}
