@@ -269,3 +269,26 @@ exports.trackProjectView = async (req, res) => {
     res.status(500).json({ error: 'Failed to track view' });
   }
 };
+
+// Get category counts for active projects
+exports.getCategoryCounts = async (req, res) => {
+  try {
+    const counts = await Collaboration.aggregate([
+      { $match: { status: 'active' } },
+      { $group: { _id: '$category', count: { $sum: 1 } } },
+      { $project: { category: '$_id', count: 1, _id: 0 } }
+    ]);
+
+    // Convert array to object for easier frontend access
+    const countsObject = {};
+    counts.forEach(item => {
+      countsObject[item.category] = item.count;
+    });
+
+    res.json(countsObject);
+
+  } catch (error) {
+    console.error('Error fetching category counts:', error);
+    res.status(500).json({ error: 'Failed to fetch category counts' });
+  }
+};

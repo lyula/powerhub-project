@@ -22,6 +22,7 @@ const CollaborationsModal = ({ onClose }) => {
   });
   const [loading, setLoading] = useState(false);
   const [projects, setProjects] = useState([]);
+  const [categoryCounts, setCategoryCounts] = useState({});
   const [projectForm, setProjectForm] = useState({
     title: '',
     category: '',
@@ -145,6 +146,32 @@ const CollaborationsModal = ({ onClose }) => {
     fetchMyProjects();
   };
 
+  const fetchCategoryCounts = async () => {
+    try {
+      const response = await fetch('/api/collaborations/category-counts', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCategoryCounts(data);
+      } else {
+        console.error('Error fetching category counts');
+        setCategoryCounts({});
+      }
+    } catch (error) {
+      console.error('Network error:', error);
+      setCategoryCounts({});
+    }
+  };
+
+  // Fetch category counts when modal opens
+  useEffect(() => {
+    fetchCategoryCounts();
+  }, []);
+
   // Effect to populate edit form when editing starts
   useEffect(() => {
     if (editingProject) {
@@ -208,6 +235,9 @@ const CollaborationsModal = ({ onClose }) => {
         if (selectedCategory) {
           fetchProjects(selectedCategory);
         }
+        
+        // Refresh category counts to show updated numbers
+        fetchCategoryCounts();
         
         // Show success message
         alert('Collaboration project added successfully!');
@@ -1073,10 +1103,17 @@ const CollaborationsModal = ({ onClose }) => {
                     >
                       <div className="flex items-start gap-3">
                         <span className="text-2xl">{category.icon}</span>
-                        <div>
-                          <h3 className="font-semibold text-gray-800 dark:text-gray-200 group-hover:text-[#0bb6bc] transition-colors">
-                            {category.name}
-                          </h3>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-semibold text-gray-800 dark:text-gray-200 group-hover:text-[#0bb6bc] transition-colors">
+                              {category.name}
+                            </h3>
+                            {categoryCounts[category.name] > 0 && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-500 text-white">
+                                {categoryCounts[category.name]}
+                              </span>
+                            )}
+                          </div>
                           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                             {category.description}
                           </p>

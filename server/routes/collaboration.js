@@ -9,6 +9,9 @@ router.post('/', auth, collaborationController.createCollaboration);
 // Get all collaboration projects (with filtering)
 router.get('/', collaborationController.getCollaborations);
 
+// Get category counts
+router.get('/category-counts', collaborationController.getCategoryCounts);
+
 // Get user's own collaboration projects
 router.get('/my-projects', auth, collaborationController.getMyCollaborations);
 
