@@ -200,15 +200,15 @@ const Profile = () => {
       <div className="hidden md:block">
       <HeaderFixed onToggleSidebar={handleToggleSidebar} />
       </div>
-      <div className="flex flex-row w-full" style={{ height: 'calc(100vh - 56px)', maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
+      <div className="flex flex-row w-full" style={{ height: '100vh', maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
         <SidebarFixed sidebarOpen={sidebarOpen} />
         {!sidebarOpen && (
           <div className="md:ml-20">
             <StudentUtility />
           </div>
         )}
-        <div className={`flex-1 flex flex-col ${sidebarOpen ? 'ml-0 md:ml-64' : 'ml-0 md:ml-0'} w-full`} style={{ maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
-          <div className="p-4 md:p-8">
+        <div className={`flex-1 flex flex-col ${sidebarOpen ? 'ml-0 md:ml-64' : 'ml-0 md:ml-0'} w-full pt-12 overflow-y-auto`} style={{ maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
+          <div className="p-4 md:p-8 pb-20 md:pb-8">
             <h2 className="hidden md:block text-2xl font-bold mb-6 text-[#0bb6bc] dark:text-[#0bb6bc] mt-8 pl-12">My Profile</h2>
             
             {message.text && (

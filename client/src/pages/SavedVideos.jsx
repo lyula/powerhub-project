@@ -142,7 +142,7 @@ export default function SavedVideos() {
       <div
         className="flex flex-row w-full pt-14"
         style={{
-          height: "calc(100vh - 56px)",
+          height: "100vh",
           maxWidth: "100vw",
           overflowX: "hidden",
           scrollbarWidth: "none",
@@ -158,9 +158,9 @@ export default function SavedVideos() {
         <div
           className={`flex-1 flex flex-col ${
             sidebarOpen ? "ml-64" : "ml-20"
-          } w-full overflow-y-auto`}
+          } w-full overflow-y-auto scrollbar-hide`}
         >
-          <div className="p-4 md:p-8">
+          <div className="p-4 md:p-8 pb-8">
             <h2 className="text-2xl font-bold mb-4 text-[#0bb6bc] dark:text-[#0bb6bc]">
               Saved Videos
             </h2>

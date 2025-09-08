@@ -78,6 +78,7 @@ exports.getLikedVideos = async (req, res) => {
         },
       },
       { $sort: { "userLike.likedAt": -1 } },
+      { $limit: 100 }, // Limit to latest 100 liked videos
     ]);
     // Populate channel info manually
     const Video = require("../models/Video");
