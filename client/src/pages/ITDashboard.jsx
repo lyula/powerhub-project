@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { trackButtonClick } from '../utils/analytics';
-import { FormattedNumber } from '../utils/numberFormatter.jsx';
+import { FormattedNumber, FormattedSessionDuration } from '../utils/numberFormatter.jsx';
 import ReviewContentModal from '../components/ReviewContentModal';
 import { colors } from '../theme/colors';
 import {
@@ -1557,10 +1557,36 @@ const ITDashboard = () => {
                        <dl>
                          <dt className="text-sm font-medium text-gray-500 truncate">Avg Session</dt>
                          <dd className="text-lg font-medium text-gray-900">
-                           {systemOverview.averageSessionDuration ? 
-                             `${systemOverview.averageSessionDuration}m` : 
-                             '0m'
-                           }
+                           <FormattedSessionDuration
+                             value={systemOverview.averageSessionDuration || 0}
+                             className="text-lg font-medium text-gray-900"
+                           />
+                         </dd>
+                       </dl>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+
+               {/* Average Time Per User Card */}
+               <div className="group relative bg-gradient-to-br from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-green-200">
+                 <div className="p-6">
+                   <div className="flex items-center">
+                     <div className="flex-shrink-0">
+                       <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
+                         <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                         </svg>
+                       </div>
+                     </div>
+                     <div className="ml-5 w-0 flex-1">
+                       <dl>
+                         <dt className="text-sm font-medium text-gray-500 truncate">Avg Time Per User</dt>
+                         <dd className="text-lg font-medium text-gray-900">
+                           <FormattedSessionDuration
+                             value={systemOverview.averageTimePerUser || 0}
+                             className="text-lg font-medium text-gray-900"
+                           />
                          </dd>
                        </dl>
                      </div>
@@ -1892,10 +1918,10 @@ const ITDashboard = () => {
                       </div>
                       <div>
                         <div className="text-2xl font-bold text-red-600">
-                          {systemOverview.averageSessionDuration ? 
-                            `${systemOverview.averageSessionDuration}m` : 
-                            '0m'
-                          }
+                          <FormattedSessionDuration
+                            value={systemOverview.averageSessionDuration || 0}
+                            className="text-2xl font-bold text-red-600"
+                          />
                         </div>
                         <div className="text-sm text-gray-500">Session Duration</div>
                       </div>

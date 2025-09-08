@@ -17,6 +17,7 @@ const systemSettingsSchema = new mongoose.Schema({
     totalWatchTime: { type: Number, default: 0 }, // in minutes
     averageWatchTimePerDay: { type: Number, default: 0 }, // in minutes
     averageSessionDuration: { type: Number, default: 0 }, // in minutes
+    averageTimePerUser: { type: Number, default: 0 }, // in minutes
     serverHealth: { type: String, enum: ['healthy', 'warning', 'critical'], default: 'healthy' },
     databaseStatus: { type: String, enum: ['connected', 'disconnected'], default: 'connected' }
   },
