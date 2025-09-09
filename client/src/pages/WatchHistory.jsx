@@ -15,6 +15,8 @@ export default function WatchHistory() {
   const [error, setError] = useState(null);
   const [removing, setRemoving] = useState(null);
   const [toast, setToast] = useState(null);
+  const [confirmClearOpen, setConfirmClearOpen] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
   const HISTORY_URL = `${API_BASE_URL}/history`;
@@ -143,7 +145,9 @@ export default function WatchHistory() {
         document.body.removeChild(ta);
       }
       setToast({ type: 'info', message: 'Link copied to clipboard' });
-    } catch (_) { alert('Copied link: ' + text); }
+    } catch (_) {
+      setToast({ type: 'info', message: 'Link copied to clipboard' });
+    }
   }
 
   async function saveVideoAndGo(videoId) {
@@ -181,9 +185,13 @@ export default function WatchHistory() {
     if (key === 'add-to-queue') return addToQueue(item.videoId);
   }
 
-  async function handleClearAll() {
-    if (!confirm('Clear all watch history?')) return;
+  async function confirmClear() {
+    setConfirmClearOpen(true);
+  }
+
+  async function doClearAll() {
     try {
+      setClearing(true);
       const sessionId = localStorage.getItem('sessionId') || '';
       const url = `${HISTORY_URL}?sessionId=${encodeURIComponent(sessionId)}`;
       await fetch(url, {
@@ -191,8 +199,20 @@ export default function WatchHistory() {
         headers: token ? { 'Authorization': `Bearer ${token}` } : undefined,
       });
       setItems([]);
-    } catch (_) {}
+      setToast({ type: 'success', message: 'Cleared watch history' });
+    } catch (_) {
+    } finally {
+      setClearing(false);
+      setConfirmClearOpen(false);
+    }
   }
+
+  // Auto-dismiss toast after 2s
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-[#111111] w-full" style={{ overflowX: 'hidden', scrollbarWidth: 'none', maxWidth: '100vw' }}>
@@ -211,7 +231,7 @@ export default function WatchHistory() {
               {items.length > 0 && (
                 <button
                   type="button"
-                  onClick={handleClearAll}
+                  onClick={confirmClear}
                   className="px-3 py-1.5 text-sm rounded-md bg-[#c42152] text-white hover:brightness-110 active:scale-[0.98]"
                 >
                   Clear all
@@ -271,6 +291,33 @@ export default function WatchHistory() {
             <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
               <div className={`px-3 py-1.5 text-xs rounded-full shadow-md border ${toast.type==='success' ? 'bg-emerald-600/90 border-emerald-500 text-white' : 'bg-gray-800/90 border-gray-700 text-white'}`}>
                 {toast.message}
+              </div>
+            </div>
+          )}
+
+          {confirmClearOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center">
+              <div className="absolute inset-0 bg-black/40" onClick={() => !clearing && setConfirmClearOpen(false)} />
+              <div className="relative bg-gray-900 text-white rounded-lg shadow-lg border border-gray-700 p-4 w-80">
+                <div className="text-sm font-medium mb-3">Clear all watch history?</div>
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    className="px-3 py-1.5 text-sm rounded-md bg-gray-700 hover:bg-gray-600"
+                    onClick={() => setConfirmClearOpen(false)}
+                    disabled={clearing}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="px-3 py-1.5 text-sm rounded-md bg-[#c42152] text-white hover:brightness-110 disabled:opacity-60"
+                    onClick={doClearAll}
+                    disabled={clearing}
+                  >
+                    {clearing ? 'Clearing…' : 'OK'}
+                  </button>
+                </div>
               </div>
             </div>
           )}

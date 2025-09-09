@@ -42,10 +42,8 @@ export default function HomeThumbnail({ video, source, userId, sessionId, previe
 
   const handleMouseEnter = () => {
     setShowPreview(true);
-    if (video?._id) {
-      clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => upsertHistory(video._id), 8000); // count preview as a watch after 8s
-    }
+    // Do not record watch history on hover/preview anymore.
+    clearTimeout(timerRef.current);
   };
   const handleMouseLeave = () => {
     setTimeout(() => {

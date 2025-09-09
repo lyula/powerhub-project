@@ -17,7 +17,7 @@ function identityFrom(req) {
   return { userId, sessionId, ownerKey, userOwnerKey, sessionOwnerKey };
 }
 
-async function migrateSessionDocToUserIfNeeded({ userOwnerKey, sessionOwnerKey, videoId }) {
+async function migrateSessionDocToUserIfNeeded({ userOwnerKey, sessionOwnerKey, videoId, userId }) {
   if (!userOwnerKey || !sessionOwnerKey || !videoId) return null;
   // If a session doc exists but user doc does not, move it under the user key
   const userDoc = await WatchHistory.findOne({ ownerKey: userOwnerKey, videoId });
@@ -26,6 +26,7 @@ async function migrateSessionDocToUserIfNeeded({ userOwnerKey, sessionOwnerKey, 
   if (!sessionDoc) return null;
   // Reassign ownerKey to the user
   sessionDoc.ownerKey = userOwnerKey;
+  if (userId) sessionDoc.userId = userId; // ensure future cross-device visibility
   try {
     await sessionDoc.save();
   } catch (err) {
@@ -85,7 +86,7 @@ exports.upsert = async (req, res) => {
 
     // Prefer user ownerKey, but migrate any existing session doc
     if (userOwnerKey && sessionOwnerKey) {
-      await migrateSessionDocToUserIfNeeded({ userOwnerKey, sessionOwnerKey, videoId });
+      await migrateSessionDocToUserIfNeeded({ userOwnerKey, sessionOwnerKey, videoId, userId });
     }
     const key = { ownerKey: userOwnerKey || ownerKey, videoId };
     const now = new Date();
@@ -144,7 +145,7 @@ exports.progress = async (req, res) => {
       );
       // If user is present, migrate to user key after update
       if (doc && userOwnerKey) {
-        await migrateSessionDocToUserIfNeeded({ userOwnerKey, sessionOwnerKey, videoId });
+        await migrateSessionDocToUserIfNeeded({ userOwnerKey, sessionOwnerKey, videoId, userId });
         // Re-fetch under user key if migration happened
         const migrated = await WatchHistory.findOne({ ownerKey: userOwnerKey, videoId });
         if (migrated) doc = migrated;
