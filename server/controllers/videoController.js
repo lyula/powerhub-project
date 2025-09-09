@@ -78,6 +78,7 @@ exports.getLikedVideos = async (req, res) => {
         },
       },
       { $sort: { "userLike.likedAt": -1 } },
+      { $limit: 100 }, // Limit to latest 100 liked videos
     ]);
     // Populate channel info manually
     const Video = require("../models/Video");
@@ -1011,5 +1012,25 @@ exports.getSavedVideos = async (req, res) => {
         message: "Server error while fetching saved videos",
         error: error.message,
       });
+  }
+};
+
+// @desc    Get recommendations for a specific video
+// @route   GET /api/videos/:id/recommendations
+// @access  Public
+exports.getRecommendations = async (req, res) => {
+  try {
+    const { id: videoId } = req.params;
+    const suggestContent = require('../utils/contentSuggestion');
+
+    // Get recommendations using the enhanced contentSuggestion utility
+    const recommendations = await suggestContent(videoId);
+
+    res.status(200).json(recommendations);
+  } catch (error) {
+    res.status(500).json({
+      message: "Server error while fetching recommendations",
+      error: error.message,
+    });
   }
 };

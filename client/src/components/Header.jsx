@@ -69,15 +69,40 @@ export default function Header({ onToggleSidebar, searchTerm, onSearchChange }) 
     setIsSidebarOpen((prev) => !prev);
   };
 
+  const handleToggleSidebar = () => {
+    // On mobile (md and below), toggle the mobile sidebar
+    // On desktop (above md), call the onToggleSidebar prop to toggle desktop sidebar
+    if (window.innerWidth >= 768) { // md breakpoint
+      if (onToggleSidebar) {
+        onToggleSidebar();
+      }
+    } else {
+      toggleSidebar();
+    }
+  };
+
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (accountRef.current && !accountRef.current.contains(e.target)) {
         setShowAccountMenu(false);
       }
     };
+
+    const handleResize = () => {
+      // Close mobile sidebar when switching to desktop
+      if (window.innerWidth >= 768 && isSidebarOpen) {
+        setIsSidebarOpen(false);
+      }
+    };
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [isSidebarOpen]);
 
   return (
     <header className="w-full bg-gray-100 dark:bg-[#111111] border-b border-gray-200 dark:border-gray-900 px-4 py-3 flex items-center justify-between" style={{ minHeight: '56px', height: '56px', scrollbarWidth: 'none' }}>
@@ -89,7 +114,7 @@ export default function Header({ onToggleSidebar, searchTerm, onSearchChange }) 
         <button
           className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-900 focus:outline-none"
           aria-label="Toggle sidebar"
-          onClick={toggleSidebar}
+          onClick={handleToggleSidebar}
         >
           <MdMenu size={28} color="#0bb6bc" />
         </button>

@@ -67,6 +67,9 @@ router.post("/:id/view", videoController.addView);
 // Get video details
 router.get("/:id", videoController.getVideo);
 
+// Get recommendations for a video
+router.get("/:id/recommendations", videoController.getRecommendations);
+
 // Increment share count
 router.post("/:id/share", videoController.incrementShareCount);
 

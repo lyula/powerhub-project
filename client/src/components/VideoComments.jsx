@@ -366,6 +366,8 @@ const Comments = ({ videoId, channel, initialComments = [], onCountChange }) => 
     if (!user || !token) return;
     setLikeLoading((prev) => ({ ...prev, [commentId]: true }));
     const prevComments = comments;
+    
+    // Optimistic update
     setComments((prev) => prev.map(comment => {
       if (comment._id === commentId) {
         let likesArr = Array.isArray(comment.likes) ? comment.likes : [];
@@ -376,6 +378,7 @@ const Comments = ({ videoId, channel, initialComments = [], onCountChange }) => 
       }
       return comment;
     }));
+    
     try {
       const endpoint = liked ? 'unlike' : 'like';
       const res = await fetch(`${API_BASE_URL}/videos/${videoId}/comment/${endpoint}`, {
@@ -386,38 +389,14 @@ const Comments = ({ videoId, channel, initialComments = [], onCountChange }) => 
         },
         body: JSON.stringify({ commentId })
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data.likes)) {
-          setComments((prev) => prev.map(comment => {
-            if (comment._id === commentId) {
-              let likesArr = data.likes;
-              if (!liked && !likesArr.includes(user._id)) {
-                likesArr = [...likesArr, user._id];
-              }
-              if (liked && likesArr.includes(user._id)) {
-                likesArr = likesArr.filter(id => id !== user._id);
-              }
-              return { ...comment, likes: likesArr };
-            }
-            return comment;
-          }));
-        } else {
-          const fetchComments = async () => {
-            try {
-              const res = await fetch(`${API_BASE_URL}/videos/${videoId}`);
-              if (res.ok) {
-                const data = await res.json();
-                setComments(data.comments || []);
-              }
-            } catch (err) {}
-          };
-          fetchComments();
-        }
-      } else {
+      
+      if (!res.ok) {
+        // Revert optimistic update if server request failed
         setComments(prevComments);
       }
+      // If successful, keep the optimistic update (no need to update again)
     } catch (err) {
+      // Revert optimistic update on error
       setComments(prevComments);
     } finally {
       setLikeLoading((prev) => ({ ...prev, [commentId]: false }));
@@ -428,6 +407,9 @@ const Comments = ({ videoId, channel, initialComments = [], onCountChange }) => 
   const handleLikeReply = async (commentId, replyId, liked) => {
     if (!user || !token) return;
     
+    const prevComments = comments;
+    
+    // Optimistic update
     setComments((prev) => prev.map(comment => {
       if (comment._id === commentId) {
         return {
@@ -459,43 +441,15 @@ const Comments = ({ videoId, channel, initialComments = [], onCountChange }) => 
         },
         body: JSON.stringify(body)
       });
-      if (res.ok) {
-        const data = await res.json();
-        setComments((prev) => prev.map(comment => {
-          if (comment._id === commentId) {
-            return {
-              ...comment,
-              replies: comment.replies.map(reply => {
-                if (reply._id === replyId && Array.isArray(data.likes)) {
-                  return { ...reply, likes: data.likes };
-                }
-                return reply;
-              })
-            };
-          }
-          return comment;
-        }));
+      
+      if (!res.ok) {
+        // Revert optimistic update if server request failed
+        setComments(prevComments);
       }
+      // If successful, keep the optimistic update (no need to update again)
     } catch (err) {
-      // Revert on error
-      setComments((prev) => prev.map(comment => {
-        if (comment._id === commentId) {
-          return {
-            ...comment,
-            replies: comment.replies.map(reply => {
-              if (reply._id === replyId) {
-                let likesArr = Array.isArray(reply.likes) ? reply.likes : [];
-                let newLikes = liked
-                  ? [...new Set([...likesArr, user._id])]
-                  : likesArr.filter(id => id !== user._id);
-                return { ...reply, likes: newLikes };
-              }
-              return reply;
-            })
-          };
-        }
-        return comment;
-      }));
+      // Revert optimistic update on error
+      setComments(prevComments);
     }
   };
 

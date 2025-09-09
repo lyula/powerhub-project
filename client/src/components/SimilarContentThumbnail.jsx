@@ -62,6 +62,7 @@ export default function SimilarContentThumbnail({ video, source, userId, session
 
   return (
     <div
+    <div Updated upstream
       style={{ position: 'relative', width: '8rem', height: '5rem', minHeight: '5rem', overflow: 'hidden', borderRadius: '0.75rem 0 0 0' }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
