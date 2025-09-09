@@ -8,25 +8,20 @@ export default function useWatchHistory({ videoId, token }) {
   const progressTimerRef = useRef(null);
   const upsertedRef = useRef(false);
 
-  function getSessionId() {
-    const existing = localStorage.getItem('sessionId');
-    if (existing) return existing;
-    const id = `dev-${Math.random().toString(36).slice(2)}`;
-    localStorage.setItem('sessionId', id);
-    return id;
-  }
+  // Session IDs removed: history is user-based only
+  function getSessionId() { return null; }
 
   async function upsert() {
     if (!videoId) return;
+    if (!token) return; // require login
     try {
-      const sessionId = getSessionId();
       const res = await fetch(`${API_BASE_URL}/history/upsert`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ videoId, sessionId })
+        body: JSON.stringify({ videoId })
       });
       // If the API base URL is wrong, avoid throwing to keep UX smooth
       if (!res.ok) {
@@ -40,9 +35,9 @@ export default function useWatchHistory({ videoId, token }) {
 
   async function sendOnce(videoRef) {
     if (!videoId || !videoRef?.current) return;
+    if (!token) return; // require login
     try {
       const el = videoRef.current;
-      const sessionId = getSessionId();
       const lastPositionSec = Math.max(0, Math.floor(el.currentTime || 0));
       const durationSec = Math.max(0, Math.floor(el.duration || 0));
       await fetch(`${API_BASE_URL}/history/progress`, {
@@ -51,7 +46,7 @@ export default function useWatchHistory({ videoId, token }) {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ videoId, lastPositionSec, durationSec, sessionId })
+        body: JSON.stringify({ videoId, lastPositionSec, durationSec })
       });
       window.dispatchEvent(new CustomEvent('watch-history:updated'));
     } catch (_) {}
@@ -71,9 +66,9 @@ export default function useWatchHistory({ videoId, token }) {
 
   async function fetchLastPosition() {
     try {
-      const sessionId = getSessionId();
-      const res = await fetch(`${API_BASE_URL}/history?sessionId=${encodeURIComponent(sessionId)}`, {
-        headers: token ? { 'Authorization': `Bearer ${token}` } : undefined,
+      if (!token) return 0;
+      const res = await fetch(`${API_BASE_URL}/history`, {
+        headers: { 'Authorization': `Bearer ${token}` },
       });
       if (!res.ok) return 0;
       const rows = await res.json();

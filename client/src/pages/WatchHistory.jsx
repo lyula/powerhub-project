@@ -78,9 +78,9 @@ export default function WatchHistory() {
       setLoading(true);
       setError(null);
       try {
-        const sessionId = localStorage.getItem('sessionId') || (()=>{ const id = `dev-${Math.random().toString(36).slice(2)}`; localStorage.setItem('sessionId', id); return id; })();
-        const res = await fetch(`${HISTORY_URL}?sessionId=${encodeURIComponent(sessionId)}`, {
-          headers: token ? { 'Authorization': `Bearer ${token}` } : undefined,
+        if (!token) { setItems([]); return; }
+        const res = await fetch(`${HISTORY_URL}`, {
+          headers: { 'Authorization': `Bearer ${token}` },
         });
         if (!res.ok) throw new Error(`Failed to load: ${res.status}`);
         const rows = await res.json();
@@ -117,10 +117,10 @@ export default function WatchHistory() {
   async function handleRemove(idOrVideoId) {
     try {
       setRemoving(idOrVideoId);
-      const sessionId = localStorage.getItem('sessionId');
-      await fetch(`${HISTORY_URL}/${idOrVideoId}?sessionId=${encodeURIComponent(sessionId || '')}` , {
+      if (!token) return;
+      await fetch(`${HISTORY_URL}/${idOrVideoId}` , {
         method: 'DELETE',
-        headers: token ? { 'Authorization': `Bearer ${token}` } : undefined,
+        headers: { 'Authorization': `Bearer ${token}` },
       });
       setItems(prev => prev.filter(x => x.videoId !== idOrVideoId && x.id !== idOrVideoId));
     } finally {
@@ -192,11 +192,10 @@ export default function WatchHistory() {
   async function doClearAll() {
     try {
       setClearing(true);
-      const sessionId = localStorage.getItem('sessionId') || '';
-      const url = `${HISTORY_URL}?sessionId=${encodeURIComponent(sessionId)}`;
-      await fetch(url, {
+      if (!token) return;
+      await fetch(HISTORY_URL, {
         method: 'DELETE',
-        headers: token ? { 'Authorization': `Bearer ${token}` } : undefined,
+        headers: { 'Authorization': `Bearer ${token}` },
       });
       setItems([]);
       setToast({ type: 'success', message: 'Cleared watch history' });
