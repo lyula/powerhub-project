@@ -2,6 +2,7 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const SystemSettings = require('../models/SystemSettings');
 const AuditLog = require('../models/AuditLog');
+const NotificationService = require('../services/notificationService');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'plppowerhub';
 
@@ -137,10 +138,17 @@ exports.login = async (req, res) => {
 
       // Increment login attempts
       await user.incLoginAttempts();
-      
+
       // Check if account should be locked now
       const updatedUser = await User.findById(user._id);
       if (updatedUser.isLocked()) {
+        // Send security alert notification
+        await NotificationService.sendSecurityAlertNotification(
+          user._id,
+          'account_locked',
+          'Your account has been temporarily locked due to multiple failed login attempts.'
+        );
+
         // Log account lockout
         await AuditLog.logAction({
           action: 'account_locked',
@@ -156,10 +164,19 @@ exports.login = async (req, res) => {
           success: true
         });
 
-        return res.status(423).json({ 
+        return res.status(423).json({
           message: 'Too many failed attempts. Account locked for 10 minutes.',
           lockedUntil: updatedUser.lockUntil
         });
+      }
+
+      // Send security alert for multiple failed attempts (e.g., after 3 attempts)
+      if (updatedUser.loginAttempts >= 3) {
+        await NotificationService.sendSecurityAlertNotification(
+          user._id,
+          'failed_login',
+          `Multiple failed login attempts detected (${updatedUser.loginAttempts} attempts).`
+        );
       }
       
       return res.status(401).json({ 

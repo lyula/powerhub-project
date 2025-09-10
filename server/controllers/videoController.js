@@ -3,6 +3,7 @@ const Channel = require("../models/Channel");
 const User = require("../models/User");
 const AuditLog = require("../models/AuditLog");
 const SavedVideo = require("../models/SavedVideo"); // <-- ADD THIS IMPORT
+const NotificationService = require("../services/notificationService");
 const cloudinary = require("../config/cloudinary");
 const fs = require("fs");
 
@@ -40,6 +41,17 @@ exports.likeVideo = async (req, res) => {
     if (!alreadyLiked) {
       video.likes.push({ user: userId, likedAt: new Date() });
       await video.save();
+
+      // Send notification to video uploader if not liking own video
+      if (video.uploader.toString() !== userId.toString()) {
+        await NotificationService.sendLikeNotification(
+          video.uploader,
+          userId,
+          'video',
+          video._id,
+          video.title
+        );
+      }
     }
     res.json(video);
   } catch (err) {
@@ -536,6 +548,19 @@ exports.addComment = async (req, res) => {
     const author = req.user._id;
     video.comments.push({ author, text });
     await video.save();
+
+    // Send notification to video uploader if not commenting on own video
+    if (video.uploader.toString() !== author.toString()) {
+      await NotificationService.sendCommentNotification(
+        video.uploader,
+        author,
+        'video',
+        video._id,
+        video.title,
+        text.substring(0, 100) + (text.length > 100 ? '...' : '')
+      );
+    }
+
     // Re-fetch video and populate author for comments
     const populatedVideo = await Video.findById(video._id).populate(
       "comments.author",
@@ -628,6 +653,9 @@ exports.replyComment = async (req, res) => {
     const author = req.user._id;
     const comment = video.comments.id(commentId);
     if (!comment) return res.status(404).json({ error: "Comment not found" });
+
+    let recipientId = comment.author; // Default to comment author
+
     if (replyId) {
       // Replying to a reply (second level only)
       const parentReply = comment.replies.id(replyId);
@@ -635,11 +663,36 @@ exports.replyComment = async (req, res) => {
         return res.status(404).json({ error: "Reply not found" });
       if (!parentReply.replies) parentReply.replies = [];
       parentReply.replies.push({ author, text, createdAt: Date.now() });
+      recipientId = parentReply.author; // Notify the reply author
     } else {
       // Replying to a comment (first level)
       comment.replies.push({ author, text, createdAt: Date.now() });
     }
     await video.save();
+
+    // Send notification to the recipient if not replying to own content
+    if (recipientId.toString() !== author.toString()) {
+      await NotificationService.sendCommentNotification(
+        recipientId,
+        author,
+        'video',
+        video._id,
+        video.title,
+        text.substring(0, 100) + (text.length > 100 ? '...' : '')
+      );
+    }
+
+    // Also notify video uploader if different from recipient and not own video
+    if (video.uploader.toString() !== author.toString() && video.uploader.toString() !== recipientId.toString()) {
+      await NotificationService.sendCommentNotification(
+        video.uploader,
+        author,
+        'video',
+        video._id,
+        video.title,
+        text.substring(0, 100) + (text.length > 100 ? '...' : '')
+      );
+    }
     // Return the updated video with populated authors for comments and replies
     // Helper to recursively populate author for replies to replies
     async function deepPopulateReplies(replies) {

@@ -1,7 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Heart, MessageCircle, UserPlus, MoreVertical, Check, X, Trash2, Settings } from 'lucide-react';
+import { Bell, Heart, MessageCircle, UserPlus, MoreVertical, Check, X, Trash2, Settings, Loader2 } from 'lucide-react';
 import Header from "../components/Header";
+import { useAuth } from '../context/AuthContext';
 
 // Mock MobileHeader component
 const MobileHeader = ({ icon, label, rightAction }) => (
@@ -22,69 +23,219 @@ const MobileHeader = ({ icon, label, rightAction }) => (
 
 export default function Notifications() {
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: 'like',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face',
-      user: 'John Doe',
-      action: 'liked your video',
-      target: 'Introduction to React',
-      time: '2 hours ago',
-      timestamp: Date.now() - 2 * 60 * 60 * 1000,
-      read: false,
-    },
-    {
-      id: 2,
-      type: 'comment',
-      avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=40&h=40&fit=crop&crop=face',
-      user: 'Jane Smith',
-      action: 'commented on your post',
-      target: 'Best practices for coding',
-      time: '5 hours ago',
-      timestamp: Date.now() - 5 * 60 * 60 * 1000,
-      read: false,
-    },
-    {
-      id: 3,
-      type: 'subscribe',
-      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop&crop=face',
-      user: 'Alice Johnson',
-      action: 'subscribed to your channel',
-      target: '',
-      time: '1 day ago',
-      timestamp: Date.now() - 24 * 60 * 60 * 1000,
-      read: true,
-    },
-    {
-      id: 4,
-      type: 'like',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop&crop=face',
-      user: 'Bob Wilson',
-      action: 'liked your video',
-      target: 'Advanced JavaScript Tips',
-      time: '2 days ago',
-      timestamp: Date.now() - 2 * 24 * 60 * 60 * 1000,
-      read: true,
-    },
-    {
-      id: 5,
-      type: 'comment',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=40&h=40&fit=crop&crop=face',
-      user: 'Emma Davis',
-      action: 'replied to your comment',
-      target: 'CSS Grid Tutorial',
-      time: '3 days ago',
-      timestamp: Date.now() - 3 * 24 * 60 * 60 * 1000,
-      read: true,
-    },
-  ]);
-
+  const { user, token } = useAuth();
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
   const [selectedNotifications, setSelectedNotifications] = useState([]);
   const [showBulkActions, setShowBulkActions] = useState(false);
+  const [pagination, setPagination] = useState({});
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+  // Helper function to get action text from notification type and message
+  const getActionText = (type, message) => {
+    switch (type) {
+      case 'like':
+        return 'liked your';
+      case 'comment':
+        return 'commented on your';
+      case 'subscribe':
+        return 'subscribed to your';
+      case 'system':
+        return message;
+      default:
+        return message;
+    }
+  };
+
+  // Helper function to format timestamp
+  const formatTime = (timestamp) => {
+    const now = new Date();
+    const date = new Date(timestamp);
+    const diffInSeconds = Math.floor((now - date) / 1000);
+
+    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+
+    return date.toLocaleDateString();
+  };
+
+  // Fetch notifications from API
+  const fetchNotifications = async (page = 1, unreadOnly = false) => {
+    if (!token) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: '20',
+        ...(unreadOnly && { unreadOnly: 'true' })
+      });
+
+      const response = await fetch(`${API_BASE_URL}/notifications?${params}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch notifications');
+      }
+
+      const data = await response.json();
+      // Map API response to component expected format
+      const mappedNotifications = (data.data.notifications || []).map(notification => ({
+        _id: notification._id,
+        id: notification._id, // Keep both for compatibility
+        type: notification.type,
+        title: notification.title,
+        message: notification.message,
+        read: notification.read,
+        createdAt: notification.createdAt,
+        sender: notification.sender,
+        recipient: notification.recipient,
+        priority: notification.priority,
+        relatedContent: notification.relatedContent,
+        // Map to expected UI fields
+        user: notification.sender?.username || 'Unknown User',
+        avatar: notification.sender?.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(notification.sender?.username || 'Unknown')}&background=random&size=48`,
+        action: getActionText(notification.type, notification.message),
+        target: notification.relatedContent?.contentTitle || '',
+        time: formatTime(notification.createdAt),
+        timestamp: new Date(notification.createdAt).getTime()
+      }));
+      setNotifications(mappedNotifications);
+      setPagination(data.data.pagination || {});
+      setUnreadCount(data.data.unreadCount || 0);
+    } catch (err) {
+      setError(err.message);
+      console.error('Error fetching notifications:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Mark notification as read
+  const markAsRead = async (notificationId) => {
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/notifications/${notificationId}/read`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        setNotifications(prev =>
+          prev.map(notification =>
+            notification._id === notificationId
+              ? { ...notification, read: true }
+              : notification
+          )
+        );
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
+    } catch (err) {
+      console.error('Error marking notification as read:', err);
+    }
+  };
+
+  // Mark all notifications as read
+  const markAllAsRead = async () => {
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/notifications/mark-all-read`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        setNotifications(prev =>
+          prev.map(notification => ({ ...notification, read: true }))
+        );
+        setUnreadCount(0);
+      }
+    } catch (err) {
+      console.error('Error marking all notifications as read:', err);
+    }
+  };
+
+  // Delete notification
+  const deleteNotification = async (notificationId) => {
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/notifications/${notificationId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        setNotifications(prev =>
+          prev.filter(notification => notification._id !== notificationId)
+        );
+      }
+    } catch (err) {
+      console.error('Error deleting notification:', err);
+    }
+  };
+
+  // Fetch notifications on component mount
+  useEffect(() => {
+    if (user && token) {
+      fetchNotifications();
+    }
+  }, [user, token]);
+
+  // Real-time polling for new notifications
+  useEffect(() => {
+    if (!user || !token) return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/notifications/unread-count`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const newUnreadCount = data.data.unreadCount || 0;
+
+          // If unread count increased, refresh notifications
+          if (newUnreadCount > unreadCount) {
+            fetchNotifications(1, filter === 'unread');
+          } else {
+            setUnreadCount(newUnreadCount);
+          }
+        }
+      } catch (error) {
+        console.error('Error polling for notifications:', error);
+      }
+    }, 30000); // Poll every 30 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [user, token, unreadCount, filter]);
 
   const getIcon = (type) => {
     const iconProps = { size: 16, className: "text-white" };
@@ -113,25 +264,10 @@ export default function Notifications() {
     }
   };
 
-  const markAsRead = useCallback((id) => {
-    setNotifications(prev =>
-      prev.map(n => n.id === id ? { ...n, read: true } : n)
-    );
-  }, []);
-
   const markAsUnread = useCallback((id) => {
     setNotifications(prev =>
-      prev.map(n => n.id === id ? { ...n, read: false } : n)
+      prev.map(n => n._id === id ? { ...n, read: false } : n)
     );
-  }, []);
-
-  const deleteNotification = useCallback((id) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-    setSelectedNotifications(prev => prev.filter(nId => nId !== id));
-  }, []);
-
-  const markAllAsRead = useCallback(() => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   }, []);
 
   const toggleSelection = useCallback((id) => {
@@ -171,14 +307,14 @@ export default function Notifications() {
       } hover:shadow-lg hover:scale-[1.01] cursor-pointer ${
         isSelected ? 'ring-2 ring-blue-500' : ''
       }`}
-      onClick={() => !notification.read && markAsRead(notification.id)}
+      onClick={() => !notification.read && markAsRead(notification._id)}
     >
       {showBulkActions && (
-        <div 
+        <div
           className="absolute top-3 left-3 z-10"
           onClick={(e) => {
             e.stopPropagation();
-            onToggleSelection(notification.id);
+            onToggleSelection(notification._id);
           }}
         >
           <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
@@ -249,7 +385,7 @@ export default function Notifications() {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                markAsRead(notification.id);
+                markAsRead(notification._id);
               }}
               className="text-xs px-2 py-1 text-blue-600 bg-transparent hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 rounded transition-colors"
             >
@@ -259,7 +395,7 @@ export default function Notifications() {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                markAsUnread(notification.id);
+                markAsUnread(notification._id);
               }}
               className="text-xs px-2 py-1 text-gray-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-700 rounded transition-colors"
             >
@@ -269,7 +405,7 @@ export default function Notifications() {
           <button
             onClick={(e) => {
               e.stopPropagation();
-              deleteNotification(notification.id);
+              deleteNotification(notification._id);
             }}
             className="text-xs px-2 py-1 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 rounded transition-colors"
           >
@@ -385,35 +521,74 @@ export default function Notifications() {
           </div>
         )}
 
-        {/* Notifications List */}
-        <div className="space-y-3">
-          {filteredNotifications.length === 0 ? (
-            <div className="text-center py-12">
-              <Bell className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-500 dark:text-gray-400 text-lg">
-                {filter === 'unread' ? 'No unread notifications' : 
-                 filter === 'read' ? 'No read notifications' : 'No notifications yet'}
-              </p>
-              <p className="text-gray-400 dark:text-gray-500 text-sm mt-2">
-                We'll notify you when something happens
-              </p>
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-12">
+            <Loader2 className="w-8 h-8 mx-auto text-blue-500 animate-spin mb-4" />
+            <p className="text-gray-500 dark:text-gray-400">Loading notifications...</p>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 mx-auto bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4">
+              <X className="w-8 h-8 text-red-500" />
             </div>
-          ) : (
-            filteredNotifications.map((notification) => (
-              <NotificationCard
-                key={notification.id}
-                notification={notification}
-                isSelected={selectedNotifications.includes(notification.id)}
-                onToggleSelection={toggleSelection}
-              />
-            ))
-          )}
-        </div>
+            <p className="text-gray-500 dark:text-gray-400 text-lg mb-2">Failed to load notifications</p>
+            <p className="text-gray-400 dark:text-gray-500 text-sm mb-4">{error}</p>
+            <button
+              onClick={() => fetchNotifications()}
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            >
+              Try again
+            </button>
+          </div>
+        )}
+
+        {/* Notifications List */}
+        {!loading && !error && (
+          <div className="space-y-3">
+            {filteredNotifications.length === 0 ? (
+              <div className="text-center py-12">
+                <Bell className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+                <p className="text-gray-500 dark:text-gray-400 text-lg">
+                  {filter === 'unread' ? 'No unread notifications' :
+                   filter === 'read' ? 'No read notifications' : 'No notifications yet'}
+                </p>
+                <p className="text-gray-400 dark:text-gray-500 text-sm mt-2">
+                  We'll notify you when something happens
+                </p>
+              </div>
+            ) : (
+              filteredNotifications.map((notification) => (
+                <NotificationCard
+                  key={notification._id}
+                  notification={notification}
+                  isSelected={selectedNotifications.includes(notification._id)}
+                  onToggleSelection={toggleSelection}
+                />
+              ))
+            )}
+          </div>
+        )}
 
         {/* Load More Button */}
         {filteredNotifications.length > 0 && (
           <div className="text-center mt-8">
-            <button className="px-6 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors">
+            <button
+              onClick={() => {
+                if (pagination.hasNext) {
+                  fetchNotifications(pagination.current + 1, filter === 'unread');
+                }
+              }}
+              disabled={!pagination.hasNext}
+              className={`px-6 py-2 text-sm rounded-lg transition-colors ${
+                pagination.hasNext
+                  ? 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer'
+                  : 'text-gray-400 cursor-not-allowed'
+              }`}
+            >
               Load more notifications
             </button>
           </div>
