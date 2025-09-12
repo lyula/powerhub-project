@@ -60,18 +60,7 @@ export default function Home() {
     localStorage.setItem('sessionId', id);
     return id;
   }
-  async function upsertHistory(videoId) {
-    try {
-      const sessionId = getSessionId();
-      await fetch(`${API_BASE_URL}/history/upsert`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ videoId, sessionId })
-      });
-      // Let the history page update immediately if open
-      window.dispatchEvent(new CustomEvent('watch-history:updated'));
-    } catch (_) {}
-  }
+  // Removed: we no longer upsert on card click; history is recorded when playback starts on the watch page
 
   const handleToggleSidebar = () => setSidebarOpen((open) => !open);
   const [initialPreview, setInitialPreview] = useState(true);
@@ -395,10 +384,6 @@ export default function Home() {
                           style={{ minHeight: '180px', paddingBottom: '0.5rem' }}
                           onClick={async (e) => {
                             if (e.target.closest('.channel-link')) return;
-                            // Record history immediately on enter to watch
-                            if (video._id) {
-                              try { await upsertHistory(video._id); } catch (_) {}
-                            }
                             navigate(`/watch/${video._id || i + 1}`);
                           }}
                         >
@@ -489,9 +474,6 @@ export default function Home() {
                           style={{ minHeight: '180px', paddingBottom: '0.5rem' }}
                           onClick={async (e) => {
                             if (e.target.closest('.channel-link')) return;
-                            if (video._id) {
-                              try { await upsertHistory(video._id); } catch (_) {}
-                            }
                             navigate(`/watch/${video._id || i + 7}`);
                           }}
                         >

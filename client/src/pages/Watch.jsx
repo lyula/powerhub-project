@@ -210,10 +210,8 @@ export default function Watch() {
       }
     };
     sendView();
-    // Ensure a history row exists and try resuming position
-    upsert();
+    // Only resume last position; we now upsert on actual play
     resumeFromHistory(videoRef);
-    window.dispatchEvent(new CustomEvent('watch-history:updated'));
   }, [id, fetchVideoAndRecommendations]); // 7. Added fetchVideoAndRecommendations to dependency array
 
   useEffect(() => {
@@ -303,8 +301,7 @@ export default function Watch() {
               controlsList="nodownload"
               autoPlay
               onLoadedMetadata={() => {
-                sendOnce(videoRef);
-                window.dispatchEvent(new CustomEvent('watch-history:updated'));
+                // Do not upsert on metadata load; first progress send will happen on play
               }}
               onPlay={handleVideoPlay}
               onPause={handleVideoPause}

@@ -38,6 +38,17 @@ exports.likePost = async (req, res) => {
     if (!post.likes.includes(userId)) {
       post.likes.push(userId);
       await post.save();
+
+      // Send notification to post author if not liking own post
+      if (post.author.toString() !== userId.toString()) {
+        await NotificationService.sendLikeNotification(
+          post.author,
+          userId,
+          'post',
+          post._id,
+          post.content.substring(0, 50) + (post.content.length > 50 ? '...' : '')
+        );
+      }
     }
     res.json({ likes: post.likes.length });
   } catch (err) {
@@ -84,6 +95,19 @@ exports.addComment = async (req, res) => {
   const newComment = { author, content };
   post.comments.push(newComment);
   await post.save();
+
+  // Send notification to post author if not commenting on own post
+  if (post.author.toString() !== author.toString()) {
+    await NotificationService.sendCommentNotification(
+      post.author,
+      author,
+      'post',
+      post._id,
+      post.content.substring(0, 50) + (post.content.length > 50 ? '...' : ''),
+      content.substring(0, 100) + (content.length > 100 ? '...' : '')
+    );
+  }
+
   // Populate author for the new comment
   await post.populate('comments.author', 'username profilePicture');
   const addedComment = post.comments[post.comments.length - 1];
@@ -104,6 +128,8 @@ exports.addReply = async (req, res) => {
     if (!comment) return res.status(404).json({ error: 'Comment not found' });
 
     let newReply;
+    let recipientId = comment.author; // Default to comment author
+
     // If replyId is provided, reply to a reply (nested)
     if (replyId) {
       const parentReply = comment.replies.id(replyId);
@@ -111,16 +137,42 @@ exports.addReply = async (req, res) => {
       parentReply.replies = parentReply.replies || [];
       newReply = { author, content, taggedUser };
       parentReply.replies.unshift(newReply); // Add at the beginning
+      recipientId = parentReply.author; // Notify the reply author
     } else {
       // Reply to comment
       newReply = { author, content, taggedUser };
       comment.replies.unshift(newReply); // Add at the beginning
     }
     await post.save();
+
+    // Send notification to the recipient if not replying to own content
+    if (recipientId.toString() !== author.toString()) {
+      await NotificationService.sendCommentNotification(
+        recipientId,
+        author,
+        'post',
+        post._id,
+        post.content.substring(0, 50) + (post.content.length > 50 ? '...' : ''),
+        content.substring(0, 100) + (content.length > 100 ? '...' : '')
+      );
+    }
+
+    // Also notify post author if different from recipient and not own post
+    if (post.author.toString() !== author.toString() && post.author.toString() !== recipientId.toString()) {
+      await NotificationService.sendCommentNotification(
+        post.author,
+        author,
+        'post',
+        post._id,
+        post.content.substring(0, 50) + (post.content.length > 50 ? '...' : ''),
+        content.substring(0, 100) + (content.length > 100 ? '...' : '')
+      );
+    }
+
     // Populate author for the new reply
     await post.populate('comments.replies.author', 'username profilePicture');
     await post.populate('comments.replies.replies.author', 'username profilePicture');
-    
+
     // Find and return the newly created reply with populated author
     let populatedReply;
     if (replyId) {
@@ -129,7 +181,7 @@ exports.addReply = async (req, res) => {
     } else {
       populatedReply = comment.replies[0]; // First item since we used unshift
     }
-    
+
     res.status(201).json({ reply: populatedReply });
   } catch (err) {
     res.status(500).json({ error: 'Failed to add reply', details: err.message });
@@ -212,6 +264,7 @@ exports.unlikeReply = async (req, res) => {
   }
 };
 const Post = require('../models/Post');
+const NotificationService = require('../services/notificationService');
 
 // Create a new post
 exports.createPost = async (req, res) => {

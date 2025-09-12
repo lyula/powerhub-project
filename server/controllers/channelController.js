@@ -41,6 +41,16 @@ exports.subscribeChannel = async (req, res) => {
       // Remove any invalid subscriber objects
       channel.subscribers = channel.subscribers.filter(sub => sub.user);
       await channel.save();
+
+      // Send notification to channel owner if not subscribing to own channel
+      if (channel.owner.toString() !== userId.toString()) {
+        const NotificationService = require('../services/notificationService');
+        await NotificationService.sendSubscribeNotification(
+          channel.owner,
+          userId,
+          channel.name
+        );
+      }
     }
     res.json(channel);
   } catch (err) {

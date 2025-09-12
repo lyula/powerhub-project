@@ -1,4 +1,4 @@
-const Notification = require('../models/Notification');
+const Notification = require('../models/Notification.local');
 const User = require('../models/User');
 
 class NotificationService {
@@ -231,17 +231,125 @@ class NotificationService {
     }
   }
 
+  // Send like notification
+  static async sendLikeNotification(recipientId, senderId, contentType, contentId, contentTitle) {
+    try {
+      const notification = new Notification({
+        recipient: recipientId,
+        sender: senderId,
+        type: 'like',
+        title: 'New Like',
+        message: `Someone liked your ${contentType}: "${contentTitle}"`,
+        relatedContent: {
+          contentType,
+          contentId,
+          contentTitle
+        },
+        priority: 'low',
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+      });
+
+      await notification.save();
+      console.log(`Like notification sent to user ${recipientId}`);
+      return notification;
+    } catch (error) {
+      console.error('Error sending like notification:', error);
+    }
+  }
+
+  // Send comment notification
+  static async sendCommentNotification(recipientId, senderId, contentType, contentId, contentTitle, commentText) {
+    try {
+      const notification = new Notification({
+        recipient: recipientId,
+        sender: senderId,
+        type: 'comment',
+        title: 'New Comment',
+        message: `Someone commented on your ${contentType}: "${contentTitle}"`,
+        relatedContent: {
+          contentType,
+          contentId,
+          contentTitle
+        },
+        priority: 'medium',
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+      });
+
+      await notification.save();
+      console.log(`Comment notification sent to user ${recipientId}`);
+      return notification;
+    } catch (error) {
+      console.error('Error sending comment notification:', error);
+    }
+  }
+
+  // Send subscribe notification
+  static async sendSubscribeNotification(recipientId, senderId, channelName) {
+    try {
+      const notification = new Notification({
+        recipient: recipientId,
+        sender: senderId,
+        type: 'subscribe',
+        title: 'New Subscriber',
+        message: `Someone subscribed to your channel: ${channelName}`,
+        priority: 'low',
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
+      });
+
+      await notification.save();
+      console.log(`Subscribe notification sent to user ${recipientId}`);
+      return notification;
+    } catch (error) {
+      console.error('Error sending subscribe notification:', error);
+    }
+  }
+
+  // Send security alert notification (for failed attempts)
+  static async sendSecurityAlertNotification(userId, alertType, details) {
+    try {
+      let title, message;
+      switch (alertType) {
+        case 'failed_login':
+          title = 'Security Alert: Failed Login Attempt';
+          message = 'Multiple failed login attempts detected on your account. If this wasn\'t you, please change your password immediately.';
+          break;
+        case 'account_locked':
+          title = 'Security Alert: Account Locked';
+          message = 'Your account has been temporarily locked due to multiple failed login attempts.';
+          break;
+        default:
+          title = 'Security Alert';
+          message = details || 'Suspicious activity detected on your account.';
+      }
+
+      const notification = new Notification({
+        recipient: userId,
+        type: 'system',
+        title,
+        message,
+        priority: 'urgent',
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+      });
+
+      await notification.save();
+      console.log(`Security alert notification sent to user ${userId}`);
+      return notification;
+    } catch (error) {
+      console.error('Error sending security alert notification:', error);
+    }
+  }
+
   // Clean up expired notifications
   static async cleanupExpiredNotifications() {
     try {
       const result = await Notification.deleteMany({
         expiresAt: { $lte: new Date() }
       });
-      
+
       if (result.deletedCount > 0) {
         console.log(`Cleaned up ${result.deletedCount} expired notifications`);
       }
-      
+
       return result.deletedCount;
     } catch (error) {
       console.error('Error cleaning up expired notifications:', error);

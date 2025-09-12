@@ -64,8 +64,7 @@ userSchema.methods.comparePassword = function(candidatePassword) {
 };
 
 // Verify secret answer
-userSchema.methods.compareSecretAnswer = function(candidateAnswer) {
-  if (!this.secretAnswerHash) return Promise.resolve(false);
+userSchema.methods.compareSecretAnswer = function (candidateAnswer) {
   return bcrypt.compare(candidateAnswer, this.secretAnswerHash);
 };
 
