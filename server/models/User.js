@@ -39,7 +39,15 @@ const userSchema = new mongoose.Schema({
   banExpiresAt: { type: Date },
   banNotes: { type: String },
   // Session invalidation for maintenance mode
-  sessionInvalidated: { type: Boolean, default: false }
+  sessionInvalidated: { type: Boolean, default: false },
+  
+  // Secret question for password reset
+  secretQuestionKey: { type: String },
+  secretAnswerHash: { type: String },
+  
+  // Reset verify security
+  resetVerifyAttempts: { type: Number, default: 0 },
+  resetVerifyLockUntil: { type: Date, default: null }
 }, { timestamps: true });
 
 userSchema.pre('save', async function(next) {
@@ -53,6 +61,12 @@ userSchema.pre('save', async function(next) {
 
 userSchema.methods.comparePassword = function(candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
+};
+
+// Verify secret answer
+userSchema.methods.compareSecretAnswer = function(candidateAnswer) {
+  if (!this.secretAnswerHash) return Promise.resolve(false);
+  return bcrypt.compare(candidateAnswer, this.secretAnswerHash);
 };
 
 // Check if account is locked

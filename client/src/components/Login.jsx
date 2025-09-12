@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import GoogleIcon from '../components/GoogleIcon';
-import { colors } from '../theme/colors';
-import { useAuth } from '../context/AuthContext';
-import PWABanner from '../components/PWABanner';
+﻿import React, { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import GoogleIcon from "../components/GoogleIcon";
+import PasswordInput from "../components/PasswordInput";
+import { colors } from "../theme/colors";
+import { useAuth } from "../context/AuthContext";
+import PWABanner from "../components/PWABanner";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -11,15 +12,15 @@ export default function Login() {
   const { login } = useAuth();
   
   const [formData, setFormData] = useState({
-    email: '',
-    password: ''
+    email: "",
+    password: ""
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [maintenanceMode, setMaintenanceMode] = useState(false);
-  const [maintenanceMessage, setMaintenanceMessage] = useState('');
+  const [maintenanceMessage, setMaintenanceMessage] = useState("");
   const [checkingMaintenance, setCheckingMaintenance] = useState(true);
-  const [maintenanceLogoutMessage, setMaintenanceLogoutMessage] = useState('');
+  const [maintenanceLogoutMessage, setMaintenanceLogoutMessage] = useState("");
 
   // Check for maintenance logout message from location state
   useEffect(() => {
@@ -33,11 +34,11 @@ export default function Login() {
   useEffect(() => {
     const checkMaintenanceMode = async () => {
       try {
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
         const response = await fetch(`${API_BASE_URL}/it-dashboard/maintenance-status`, {
-          method: 'GET',
+          method: "GET",
           headers: {
-            'Content-Type': 'application/json'
+            "Content-Type": "application/json"
           }
         });
         
@@ -49,7 +50,7 @@ export default function Login() {
           }
         }
       } catch (error) {
-        console.error('Error checking maintenance mode:', error);
+        console.error("Error checking maintenance mode:", error);
       } finally {
         setCheckingMaintenance(false);
       }
@@ -63,23 +64,23 @@ export default function Login() {
       ...formData,
       [e.target.name]: e.target.value
     });
-    setError(''); // Clear error when user types
+    setError(""); // Clear error when user types
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
       const result = await login(formData.email, formData.password);
       
       if (result.success) {
         // Redirect based on user role
-        if (result.data.user.role === 'IT') {
-          navigate('/it-dashboard');
+        if (result.data.user.role === "IT") {
+          navigate("/it-dashboard");
         } else {
-        navigate('/home');
+        navigate("/home");
         }
       } else {
         // Don't show error message if maintenance mode is active
@@ -88,10 +89,10 @@ export default function Login() {
         }
       }
     } catch (err) {
-      console.error('Login error:', err);
+      console.error("Login error:", err);
       // Don't show error message if maintenance mode is active
       if (!maintenanceMode) {
-        setError(err.message || 'An unexpected error occurred. Please try again.');
+        setError(err.message || "An unexpected error occurred. Please try again.");
       }
     } finally {
       setLoading(false);
@@ -127,7 +128,7 @@ export default function Login() {
                 <div>
                   <h3 className="text-sm font-medium text-amber-900">System Under Maintenance</h3>
                   <p className="text-sm text-amber-700 mt-1">
-                    {maintenanceLogoutMessage || maintenanceMessage || 'System is under maintenance. Please try again later.'}
+                    {maintenanceLogoutMessage || maintenanceMessage || "System is under maintenance. Please try again later."}
                   </p>
                 </div>
               </div>
@@ -149,14 +150,12 @@ export default function Login() {
               required
               className="w-full px-4 py-3 rounded-lg bg-gray-200 dark:bg-gray-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400" 
             />
-            <input 
-              type="password" 
+            <PasswordInput 
               name="password"
               placeholder="Password" 
               value={formData.password}
               onChange={handleChange}
               required
-              className="w-full px-4 py-3 rounded-lg bg-gray-200 dark:bg-gray-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400" 
             />
             <div className="w-full text-right -mt-2">
               <Link to="/forgot-password-verify" className="text-sm text-blue-600 hover:underline">Forgot password?</Link>
@@ -171,7 +170,7 @@ export default function Login() {
                   <span className="inline-block w-5 h-5 border-2 border-white border-t-blue-400 rounded-full animate-spin"></span>
                   <span>Signing In</span>
                 </>
-              ) : 'Sign In'}
+              ) : "Sign In"}
             </button>
           </form>
           <div className="flex flex-col items-center gap-4 w-full">
@@ -193,5 +192,3 @@ export default function Login() {
     </>
   );
 }
-
-

@@ -6,6 +6,9 @@ import ProgressBar from './components/ProgressBar';
 import useRouteLoader from './hooks/useRouteLoader';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ForgotPasswordVerify from './pages/ForgotPasswordVerify';
+import ForgotPasswordReset from './pages/ForgotPasswordReset';
 import Home from './pages/Home';
 import Profile from './pages/Profile';
 import UploadVideo from './pages/UploadVideo';
@@ -130,6 +133,9 @@ function AppRoutes() {
         <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+        <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
+        <Route path="/forgot-password-verify" element={<PublicRoute><ForgotPasswordVerify /></PublicRoute>} />
+        <Route path="/reset-password" element={<PublicRoute><ForgotPasswordReset /></PublicRoute>} />
         <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/upload" element={channel ? <ProtectedRoute><UploadVideo /></ProtectedRoute> : <Navigate to="/channel-setup" replace />} />

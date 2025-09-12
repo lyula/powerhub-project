@@ -26,13 +26,14 @@ export const AuthProvider = ({ children }) => {
   
   useEffect(() => {
     if (!loading && !user) {
-      // Only redirect if not already on /login, /register, or landing page
+      // Only redirect if not on public routes
       const currentPath = location?.pathname || '';
-      if (currentPath !== '/login' && currentPath !== '/register' && currentPath !== '/') {
+      const publicPaths = ['/', '/login', '/register', '/forgot-password', '/forgot-password-verify', '/reset-password'];
+      if (!publicPaths.includes(currentPath)) {
         navigate('/login', { replace: true });
       }
     }
-    // Do not restrict access to login, register, or landing page for unauthenticated users
+    // Do not restrict access to public routes for unauthenticated users
   }, [loading, user, location, navigate]);
 
   // Check maintenance mode when user logs in
@@ -492,6 +493,71 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Get default secret questions
+  const getSecretQuestions = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/secret-questions`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Failed to load questions');
+      return { success: true, questions: data.data.questions };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  // Reset password with secret question (single step)
+  const resetPasswordWithSecret = async ({ email, secretQuestionKey, secretAnswer, newPassword }) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, secretQuestionKey, secretAnswer, newPassword })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Password reset failed');
+      return { success: true, message: data.message };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  // Two-step: verify secret to get reset token
+  const verifyResetSecret = async ({ email, secretQuestionKey, secretAnswer }) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/reset/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, secretQuestionKey, secretAnswer })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        return { success: false, status: response.status, message: data.message, remainingAttempts: data.remainingAttempts, lockedUntil: data.lockedUntil };
+      }
+      return { success: true, resetToken: data.data.resetToken };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  // Two-step: complete password reset with token
+  const completeResetWithToken = async ({ resetToken, newPassword }) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/reset/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resetToken, newPassword })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Password reset failed');
+      return { success: true, message: data.message };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
   const value = {
     user,
     token,
@@ -501,6 +567,10 @@ export const AuthProvider = ({ children }) => {
     logout,
     updateProfile,
     changePassword,
+    getSecretQuestions,
+    resetPasswordWithSecret,
+    verifyResetSecret,
+    completeResetWithToken,
     channel,
     setChannel,
     serverConnected,

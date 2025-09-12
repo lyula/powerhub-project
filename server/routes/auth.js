@@ -6,6 +6,10 @@ const { trackSessionStart, trackSessionEnd } = require('../middleware/analytics'
 
 router.post('/register', userController.register);
 router.post('/login', userController.login);
+router.get('/secret-questions', userController.getSecretQuestions);
+router.post('/reset-password', userController.resetPasswordWithSecret);
+router.post('/reset/verify', userController.verifySecretForReset);
+router.post('/reset/complete', userController.completePasswordReset);
 router.post('/logout', auth, trackSessionEnd, (req, res) => {
   res.json({ message: 'Logged out successfully' });
 });

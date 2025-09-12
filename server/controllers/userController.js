@@ -2,6 +2,7 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const SystemSettings = require('../models/SystemSettings');
 const AuditLog = require('../models/AuditLog');
+const bcrypt = require('bcryptjs');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'plppowerhub';
 
@@ -16,15 +17,17 @@ exports.register = async (req, res) => {
       });
     }
 
-    const { username, email, password, firstName, lastName, gender } = req.body;
-    if (!username || !email || !password || !firstName || !lastName || !gender) {
+    const { username, email, password, firstName, lastName, gender, secretQuestionKey, secretAnswer } = req.body;
+    if (!username || !email || !password || !firstName || !lastName || !gender || !secretQuestionKey || !secretAnswer) {
       return res.status(400).json({ message: 'All fields are required.' });
     }
     const existingUser = await User.findOne({ $or: [{ email }, { username }] });
     if (existingUser) {
       return res.status(409).json({ message: 'User already exists.' });
     }
-    const user = new User({ username, email, password, firstName, lastName, gender });
+    const user = new User({ username, email, password, firstName, lastName, gender, secretQuestionKey });
+    // Hash secret answer before save
+    user.secretAnswerHash = await bcrypt.hash(secretAnswer, 10);
     await user.save();
 
     // Log user registration
@@ -303,5 +306,170 @@ exports.changePassword = async (req, res) => {
   } catch (err) {
     console.error('Change password error:', err);
     res.status(500).json({ message: 'Server error.' });
+  }
+};
+
+// Get default secret questions
+exports.getSecretQuestions = async (req, res) => {
+  // Static list; can be moved to DB/config if needed
+  const questions = [
+    { key: 'first_school', text: 'What is the name of your first school?' },
+    { key: 'favorite_teacher', text: 'What is the name of your favorite teacher?' },
+    { key: 'birth_city', text: 'In which city were you born?' },
+    { key: 'pet_name', text: 'What was the name of your first pet?' },
+  ];
+  res.json({ success: true, data: { questions } });
+};
+
+// Reset password using secret question (single-step legacy)
+exports.resetPasswordWithSecret = async (req, res) => {
+  try {
+    const { email, secretQuestionKey, secretAnswer, newPassword } = req.body;
+    if (!email || !secretQuestionKey || !secretAnswer || !newPassword) {
+      return res.status(400).json({ message: 'All fields are required.' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'New password must be at least 6 characters long.' });
+    }
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+    if (!user.secretQuestionKey || !user.secretAnswerHash) {
+      return res.status(400).json({ message: 'Password reset not set up for this account.' });
+    }
+    if (user.secretQuestionKey !== secretQuestionKey) {
+      return res.status(401).json({ message: 'Incorrect secret question or answer.' });
+    }
+    const answerMatch = await user.compareSecretAnswer(secretAnswer);
+    if (!answerMatch) {
+      return res.status(401).json({ message: 'Incorrect secret question or answer.' });
+    }
+    // Update password
+    user.password = newPassword;
+    // Optionally rotate question/answer after successful reset for security (skip for now)
+    await user.save();
+
+    // Log audit
+    await AuditLog.logAction({
+      action: 'password_reset_secret',
+      category: 'security',
+      performedBy: user._id,
+      performedByRole: user.role,
+      targetType: 'user',
+      targetId: user._id,
+      targetName: user.username,
+      description: `Password reset via secret question`,
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent'),
+      success: true
+    });
+
+    return res.json({ success: true, message: 'Password reset successfully.' });
+  } catch (err) {
+    console.error('Reset password error:', err);
+    return res.status(500).json({ message: 'Server error.' });
+  }
+};
+
+// Two-step: verify secret to get short-lived reset token
+exports.verifySecretForReset = async (req, res) => {
+  try {
+    const { email, secretQuestionKey, secretAnswer } = req.body;
+    if (!email || !secretQuestionKey || !secretAnswer) {
+      return res.status(400).json({ message: 'All fields are required.' });
+    }
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    // Check lockout
+    if (user.resetVerifyLockUntil && user.resetVerifyLockUntil > new Date()) {
+      const minutesLeft = Math.ceil((user.resetVerifyLockUntil - new Date()) / (1000 * 60));
+      return res.status(423).json({ message: `Too many failed attempts. Try again in ${minutesLeft} minute(s).`, lockedUntil: user.resetVerifyLockUntil });
+    }
+
+    if (user.secretQuestionKey !== secretQuestionKey) {
+      // increment attempts
+      user.resetVerifyAttempts = (user.resetVerifyAttempts || 0) + 1;
+      if (user.resetVerifyAttempts >= 3) {
+        user.resetVerifyLockUntil = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+        user.resetVerifyAttempts = 0; // reset counter on lock
+      }
+      await user.save();
+      const remaining = user.resetVerifyLockUntil ? 0 : Math.max(0, 3 - user.resetVerifyAttempts);
+      return res.status(401).json({ message: 'Incorrect secret question or answer.', remainingAttempts: remaining });
+    }
+    const answerMatch = await user.compareSecretAnswer(secretAnswer);
+    if (!answerMatch) {
+      user.resetVerifyAttempts = (user.resetVerifyAttempts || 0) + 1;
+      if (user.resetVerifyAttempts >= 3) {
+        user.resetVerifyLockUntil = new Date(Date.now() + 10 * 60 * 1000);
+        user.resetVerifyAttempts = 0;
+      }
+      await user.save();
+      const remaining = user.resetVerifyLockUntil ? 0 : Math.max(0, 3 - user.resetVerifyAttempts);
+      return res.status(401).json({ message: 'Incorrect secret question or answer.', remainingAttempts: remaining });
+    }
+
+    // success: reset attempts
+    user.resetVerifyAttempts = 0;
+    user.resetVerifyLockUntil = null;
+    await user.save();
+
+    // Issue short-lived reset token
+    const resetToken = jwt.sign({ id: user._id, purpose: 'password_reset' }, JWT_SECRET, { expiresIn: '10m' });
+    return res.json({ success: true, data: { resetToken } });
+  } catch (err) {
+    console.error('Verify secret error:', err);
+    return res.status(500).json({ message: 'Server error.' });
+  }
+};
+
+// Two-step: complete password reset with token
+exports.completePasswordReset = async (req, res) => {
+  try {
+    const { resetToken, newPassword } = req.body;
+    if (!resetToken || !newPassword) {
+      return res.status(400).json({ message: 'Reset token and new password are required.' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'New password must be at least 6 characters long.' });
+    }
+    let decoded;
+    try {
+      decoded = jwt.verify(resetToken, JWT_SECRET);
+    } catch (e) {
+      return res.status(401).json({ message: 'Invalid or expired reset token.' });
+    }
+    if (decoded.purpose !== 'password_reset') {
+      return res.status(401).json({ message: 'Invalid reset token.' });
+    }
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+    user.password = newPassword;
+    await user.save();
+
+    await AuditLog.logAction({
+      action: 'password_reset_complete',
+      category: 'security',
+      performedBy: user._id,
+      performedByRole: user.role,
+      targetType: 'user',
+      targetId: user._id,
+      targetName: user.username,
+      description: `Password reset completed via token`,
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent'),
+      success: true
+    });
+
+    return res.json({ success: true, message: 'Password reset successfully.' });
+  } catch (err) {
+    console.error('Complete reset error:', err);
+    return res.status(500).json({ message: 'Server error.' });
   }
 };
