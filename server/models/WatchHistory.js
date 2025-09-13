@@ -5,8 +5,7 @@ const Schema = mongoose.Schema;
 const watchHistorySchema = new Schema({
   // Single identity key to make uniqueness simple (user:<id> or session:<id>)
   ownerKey: { type: String, required: true },
-  userId: { type: Schema.Types.ObjectId, ref: 'User' }, // nullable for anonymous, prefer sessionId if not logged in
-  sessionId: { type: String },
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   videoId: { type: Schema.Types.ObjectId, ref: 'Video', required: true },
   title: { type: String },
   thumbnailUrl: { type: String },
