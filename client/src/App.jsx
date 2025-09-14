@@ -1,11 +1,12 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { useEffect } from 'react';
+import { useEffect, Suspense, useState } from 'react';
 import { trackPageVisit } from './utils/analytics';
 import ProgressBar from './components/ProgressBar';
 import useRouteLoader from './hooks/useRouteLoader';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import InterestsSelection from './pages/InterestsSelection';
 import ForgotPassword from './pages/ForgotPassword';
 import ForgotPasswordVerify from './pages/ForgotPasswordVerify';
 import ForgotPasswordReset from './pages/ForgotPasswordReset';
@@ -30,6 +31,7 @@ import ITDashboard from './pages/ITDashboard'; // Added ITDashboard import
 import MaintenancePage from './pages/MaintenancePage';
 import MobileCollaborationsPage from './pages/MobileCollaborations';
 import MobileCollaborationOptions from './pages/MobileCollaborationOptions';
+import TermsAndConditions from './pages/TermsAndConditions';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, requireRegularUser = false }) => {
@@ -98,7 +100,7 @@ const PublicRoute = ({ children }) => {
   }
   
   // Only redirect if authenticated and on /login or /register
-  if (isAuthenticated && (location === '/login' || location === '/register')) {
+  if (isAuthenticated && (location === '/login' || location === '/register' || location === '/interests')) {
     // Redirect based on user role
     if (user && user.role === 'IT') {
       return <Navigate to="/it-dashboard" replace />;
@@ -125,39 +127,53 @@ const PageTracker = () => {
 };
 
 function AppRoutes() {
+  const [isLoading, setIsLoading] = useState(false);
+  const location = useLocation();
   const { channel } = useAuth();
+
+  useEffect(() => {
+    setIsLoading(true);
+    const timeout = setTimeout(() => setIsLoading(false), 300); // Simulate loading delay
+    return () => clearTimeout(timeout);
+  }, [location]);
+
   return (
     <>
       <PageTracker />
-      <Routes>
-        <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
-        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-        <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-        <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
-        <Route path="/forgot-password-verify" element={<PublicRoute><ForgotPasswordVerify /></PublicRoute>} />
-        <Route path="/reset-password" element={<PublicRoute><ForgotPasswordReset /></PublicRoute>} />
-        <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-        <Route path="/upload" element={channel ? <ProtectedRoute><UploadVideo /></ProtectedRoute> : <Navigate to="/channel-setup" replace />} />
-        <Route path="/channel-setup" element={<ProtectedRoute><ChannelSetup /></ProtectedRoute>} />
-        <Route path="/create-post" element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
-        <Route path="/channel/:author" element={<ProtectedRoute><ChannelProfile /></ProtectedRoute>} />
-        <Route path="/watch/:id" element={<ProtectedRoute><Watch /></ProtectedRoute>} />
-        {/* Sidebar Placeholder Pages */}
-        {/* <Route path="/trending" element={<ProtectedRoute><Trending /></ProtectedRoute>} /> */}
-        <Route path="/specializations" element={<ProtectedRoute><Specializations /></ProtectedRoute>} />
-        <Route path="/subscriptions" element={<ProtectedRoute><Subscriptions /></ProtectedRoute>} />
-        <Route path="/saved-videos" element={<ProtectedRoute><SavedVideos /></ProtectedRoute>} />
-        <Route path="/liked-videos" element={<ProtectedRoute><LikedVideos /></ProtectedRoute>} />
-        <Route path="/course-videos" element={<ProtectedRoute><CourseVideos /></ProtectedRoute>} />
-        <Route path="/watch-history" element={<ProtectedRoute><WatchHistory /></ProtectedRoute>} />
-        <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-        <Route path="/it-dashboard" element={<ProtectedRoute><ITDashboard /></ProtectedRoute>} />
-        <Route path="/post/:postId" element={<ProtectedRoute><PostDetails /></ProtectedRoute>} />
-        <Route path="/mobile-collaboration-options" element={<ProtectedRoute><MobileCollaborationOptions /></ProtectedRoute>} />
-        <Route path="/mobile-collaborations/:categoryName" element={<ProtectedRoute><MobileCollaborationsPage /></ProtectedRoute>} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
+      {isLoading && <ProgressBar loading={true} />}
+      <Suspense fallback={<ProgressBar loading={true} />}>
+        <Routes>
+          <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
+          <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+          <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+          <Route path="/interests" element={<PublicRoute><InterestsSelection /></PublicRoute>} />
+          <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
+          <Route path="/forgot-password-verify" element={<PublicRoute><ForgotPasswordVerify /></PublicRoute>} />
+          <Route path="/reset-password" element={<PublicRoute><ForgotPasswordReset /></PublicRoute>} />
+          <Route path="/terms" element={<PublicRoute><TermsAndConditions /></PublicRoute>} />
+          <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/upload" element={channel ? <ProtectedRoute><UploadVideo /></ProtectedRoute> : <Navigate to="/channel-setup" replace />} />
+          <Route path="/channel-setup" element={<ProtectedRoute><ChannelSetup /></ProtectedRoute>} />
+          <Route path="/create-post" element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
+          <Route path="/channel/:author" element={<ProtectedRoute><ChannelProfile /></ProtectedRoute>} />
+          <Route path="/watch/:id" element={<ProtectedRoute><Watch /></ProtectedRoute>} />
+          {/* Sidebar Placeholder Pages */}
+          {/* <Route path="/trending" element={<ProtectedRoute><Trending /></ProtectedRoute>} /> */}
+          <Route path="/specializations" element={<ProtectedRoute><Specializations /></ProtectedRoute>} />
+          <Route path="/subscriptions" element={<ProtectedRoute><Subscriptions /></ProtectedRoute>} />
+          <Route path="/saved-videos" element={<ProtectedRoute><SavedVideos /></ProtectedRoute>} />
+          <Route path="/liked-videos" element={<ProtectedRoute><LikedVideos /></ProtectedRoute>} />
+          <Route path="/course-videos" element={<ProtectedRoute><CourseVideos /></ProtectedRoute>} />
+          <Route path="/watch-history" element={<ProtectedRoute><WatchHistory /></ProtectedRoute>} />
+          <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+          <Route path="/it-dashboard" element={<ProtectedRoute><ITDashboard /></ProtectedRoute>} />
+          <Route path="/post/:postId" element={<ProtectedRoute><PostDetails /></ProtectedRoute>} />
+          <Route path="/mobile-collaboration-options" element={<ProtectedRoute><MobileCollaborationOptions /></ProtectedRoute>} />
+          <Route path="/mobile-collaborations/:categoryName" element={<ProtectedRoute><MobileCollaborationsPage /></ProtectedRoute>} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </Suspense>
     </>
   );
 }

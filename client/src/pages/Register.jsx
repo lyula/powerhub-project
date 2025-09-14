@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import GoogleIcon from '../components/GoogleIcon';
 import { colors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 import PasswordInput from '../components/PasswordInput';
-
 export default function Register() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { register, getSecretQuestions } = useAuth();
   
   const [formData, setFormData] = useState({
@@ -22,12 +22,18 @@ export default function Register() {
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState('');
   const [checkingMaintenance, setCheckingMaintenance] = useState(true);
 
   // Load questions
   useEffect(() => {
+    // Check for error message from interests page
+    if (location.state?.error) {
+      setError(location.state.error);
+    }
+    
     (async () => {
       const res = await getSecretQuestions();
       if (res.success) {
@@ -37,7 +43,7 @@ export default function Register() {
         }
       }
     })();
-  }, []);
+  }, [location.state]);
 
   // Check maintenance mode on component mount
   useEffect(() => {
@@ -81,12 +87,30 @@ export default function Register() {
     setLoading(true);
     setError('');
 
+    // Validate terms acceptance
+    if (!termsAccepted) {
+      setError('You must accept the Terms and Conditions to create an account.');
+      setLoading(false);
+      return;
+    }
+
     try {
       const result = await register(formData);
       
       if (result.success) {
-        // Redirect to home page
-        navigate('/home');
+        // Store temporary token for interests selection
+        if (result.data.tempToken) {
+          localStorage.setItem('registrationToken', result.data.tempToken);
+        }
+        
+        // Redirect to interests selection page with user data
+        navigate('/interests', {
+          state: {
+            userData: result.data.user,
+            tempToken: result.data.tempToken,
+            message: 'Registration successful! Let\'s personalize your experience.'
+          }
+        });
       } else {
         setError(result.error);
       }
@@ -253,10 +277,39 @@ export default function Register() {
             />
           </div>
 
+          {/* Terms and Conditions */}
+          <div className="flex items-start space-x-3 pt-4">
+            <input
+              type="checkbox"
+              id="termsAccepted"
+              checked={termsAccepted}
+              onChange={(e) => setTermsAccepted(e.target.checked)}
+              className="mt-1 w-4 h-4 rounded focus:ring-2 focus:ring-offset-0 border-gray-300 dark:border-gray-600"
+              style={{ 
+                accentColor: colors.primary,
+                color: colors.primary 
+              }}
+              required
+            />
+            <label htmlFor="termsAccepted" className="text-sm text-gray-700 dark:text-gray-300">
+              I have read and agreed to the{' '}
+              <Link 
+                to="/terms" 
+                className="font-medium hover:underline"
+                style={{ color: colors.primary }}
+              >
+                Terms and Conditions
+              </Link>
+              {' '} of this platform.
+            </label>
+          </div>
+
           <button
             type="submit"
-            disabled={loading}
-            className="w-full py-2 mt-2 rounded-lg text-white font-semibold"
+            disabled={loading || !termsAccepted}
+            className={`w-full py-2 mt-4 rounded-lg text-white font-semibold transition-opacity ${
+              (!termsAccepted || loading) ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
             style={{ backgroundColor: colors.primary }}
           >
             {loading ? 'Creating...' : 'Create account'}

@@ -28,7 +28,7 @@ export const AuthProvider = ({ children }) => {
     if (!loading && !user) {
       // Only redirect if not on public routes
       const currentPath = location?.pathname || '';
-      const publicPaths = ['/', '/login', '/register', '/forgot-password', '/forgot-password-verify', '/reset-password'];
+      const publicPaths = ['/', '/login', '/register', '/terms', '/interests', '/forgot-password', '/forgot-password-verify', '/reset-password'];
       if (!publicPaths.includes(currentPath)) {
         navigate('/login', { replace: true });
       }
@@ -348,10 +348,10 @@ export const AuthProvider = ({ children }) => {
         }
       }
 
-      // Save token and user data
-      localStorage.setItem('token', data.data.token);
-      setToken(data.data.token);
-      setUser(data.data.user);
+      // Don't save token and user data - require manual login
+      // localStorage.setItem('token', data.data.token);
+      // setToken(data.data.token);
+      // setUser(data.data.user);
 
       return { success: true, data: data.data };
     } catch (error) {

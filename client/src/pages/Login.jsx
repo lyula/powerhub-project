@@ -134,6 +134,13 @@ export default function Login() {
             </div>
           )}
           
+          {/* Success Message */}
+          {location.state?.message && !maintenanceMode && (
+            <div className="w-full p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg text-sm">
+              {location.state.message}
+            </div>
+          )}
+          
           {error && !maintenanceMode && (
             <div className="w-full p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
               {error}
