@@ -1087,3 +1087,33 @@ exports.getRecommendations = async (req, res) => {
     });
   }
 };
+
+// @desc    Get home feed recommendations
+// @route   GET /api/videos/recommendations
+// @access  Public
+exports.getHomeFeedRecommendations = async (req, res) => {
+  try {
+    const { limit = 50, userId } = req.query;
+    const { getHomeFeedRecommendations } = require('../utils/homeFeedAlgorithm');
+
+    // Get home feed recommendations using the enhanced algorithm
+    const result = await getHomeFeedRecommendations({
+      limit: parseInt(limit),
+      userId: userId || null,
+      recentCategories: [],
+      recentChannels: []
+    });
+
+    res.status(200).json({
+      videos: result.recommendations,
+      stats: result.stats,
+      debugInfo: result.debugInfo
+    });
+  } catch (error) {
+    console.error('Home feed recommendations error:', error);
+    res.status(500).json({
+      message: "Server error while fetching home feed recommendations",
+      error: error.message,
+    });
+  }
+};

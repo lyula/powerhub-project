@@ -81,35 +81,41 @@ export default function Home() {
     setSearchTerm('');
   };
 
-  // Debounced search effect
+  // Debounced search effect - only run when there's a search term
   useEffect(() => {
     if (searchTerm !== '') {
       setSearchLoading(true);
+      
+      const timeoutId = setTimeout(() => {
+        const sortedVideos = searchAndSortContent(allVideos, searchTerm);
+        setVideos(sortedVideos);
+        setSearchLoading(false);
+      }, 300); // 300ms debounce
+
+      return () => clearTimeout(timeoutId);
+    } else if (searchTerm === '' && selectedFilter === '') {
+      // When search is cleared and no filter is active, restore recommendation sorting
+      setVideos(allVideos);
     }
-    
-    const timeoutId = setTimeout(() => {
-      const sortedVideos = searchAndSortContent(allVideos, searchTerm);
-      setVideos(sortedVideos);
-      setSearchLoading(false);
-    }, 300); // 300ms debounce
+  }, [searchTerm, allVideos, selectedFilter]);
 
-    return () => clearTimeout(timeoutId);
-  }, [searchTerm, allVideos]);
-
-  // Filter effect
+  // Filter effect - only run when there's a filter selected
   useEffect(() => {
     if (selectedFilter !== '') {
       setFilterLoading(true);
-    }
-    
-    const timeoutId = setTimeout(() => {
-      const filteredVideos = filterAndSortContent(allVideos, selectedFilter);
-      setVideos(filteredVideos);
-      setFilterLoading(false);
-    }, 100); // Shorter delay for filters since no typing
+      
+      const timeoutId = setTimeout(() => {
+        const filteredVideos = filterAndSortContent(allVideos, selectedFilter);
+        setVideos(filteredVideos);
+        setFilterLoading(false);
+      }, 100); // Shorter delay for filters since no typing
 
-    return () => clearTimeout(timeoutId);
-  }, [selectedFilter, allVideos]);
+      return () => clearTimeout(timeoutId);
+    } else if (selectedFilter === '' && searchTerm === '') {
+      // When filter is cleared and no search is active, restore recommendation sorting
+      setVideos(allVideos);
+    }
+  }, [selectedFilter, allVideos, searchTerm]);
 
   // Load videos from API or fallback to sample
   useEffect(() => {
@@ -120,7 +126,7 @@ export default function Home() {
         if (res.ok) {
           const dbVideos = await res.json();
           if (dbVideos && dbVideos.length > 0) {
-            // Map database videos to the expected format if needed
+            // Map database videos to the expected format
             const formattedVideos = dbVideos.map(v => {
               let postedAgo = '';
               if (v.createdAt) {
@@ -139,7 +145,7 @@ export default function Home() {
                 title: v.title,
                 description: v.description || '',
                 hashtags: v.hashtags || [],
-                category: v.category || '', // Add category field from database
+                category: v.category || '',
                 author: v.channel?.name || v.author || 'Unknown',
                 profile: v.channel?.avatar || 'https://randomuser.me/api/portraits/men/32.jpg',
                 views: v.viewCount || 0,
@@ -148,27 +154,59 @@ export default function Home() {
                 posted: postedAgo,
                 duration: typeof v.duration === 'number' ? v.duration : 0,
                 _id: v._id,
-                channelId: v.channel?._id || v.channel, // ensure channelId is present
+                channelId: v.channel?._id || v.channel,
                 channel: v.channel || {},
                 createdAt: v.createdAt ? new Date(v.createdAt) : null
               };
             });
-            // Sort by createdAt descending (latest first)
-            const sortedVideos = searchAndSortContent(formattedVideos, '');
-            setAllVideos(formattedVideos); // Store original videos
+
+            // Sort videos with 7-day recency prioritization, then by engagement
+            const now = new Date();
+            const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+            
+            const sortedVideos = formattedVideos.sort((a, b) => {
+              const aCreated = new Date(a.createdAt);
+              const bCreated = new Date(b.createdAt);
+              
+              // Check if videos are within the last 7 days
+              const aIsRecent = aCreated >= sevenDaysAgo;
+              const bIsRecent = bCreated >= sevenDaysAgo;
+              
+              // Recent videos always come first, regardless of other factors
+              if (aIsRecent && !bIsRecent) return -1;
+              if (!aIsRecent && bIsRecent) return 1;
+              
+              // Within the same category (both recent or both old)
+              if (aIsRecent && bIsRecent) {
+                // For recent videos (within 7 days), sort by creation date (newest first)
+                return bCreated - aCreated;
+              } else {
+                // For older videos (7+ days), sort by engagement and views
+                const aEngagement = (a.likes?.length || 0) + (a.comments?.length || 0);
+                const bEngagement = (b.likes?.length || 0) + (b.comments?.length || 0);
+                const aViews = a.views || 0;
+                const bViews = b.views || 0;
+                
+                // Calculate engagement score (views + engagement * 10 to weight engagement higher)
+                const aScore = aViews + (aEngagement * 10);
+                const bScore = bViews + (bEngagement * 10);
+                
+                return bScore - aScore; // Higher engagement score first
+              }
+            });
+
+            // Store the recommendation-sorted videos as the base for search/filter
+            setAllVideos(sortedVideos);
             setVideos(sortedVideos);
             setLoading(false);
             return;
           }
         }
-        // Fallback to sample videos if no real videos
-        const sampleVideos = [
-          // ...existing code...
-        ];
-    // Load videos from API only
-        setAllVideos(sampleVideos);
-        setVideos(sampleVideos);
+        // Fallback to empty array if no videos
+        setAllVideos([]);
+        setVideos([]);
       } catch (err) {
+        console.error('Error loading videos:', err);
         setAllVideos([]);
         setVideos([]);
       } finally {
