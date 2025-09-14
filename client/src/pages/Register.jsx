@@ -15,7 +15,6 @@ export default function Register() {
     password: '',
     firstName: '',
     lastName: '',
-    role: 'student',
     gender: '',
     secretQuestionKey: '',
     secretAnswer: ''
@@ -86,12 +85,8 @@ export default function Register() {
       const result = await register(formData);
       
       if (result.success) {
-        // Redirect based on user role
-        if (result.data.user.role === 'IT') {
-          navigate('/it-dashboard');
-        } else {
-          navigate('/home');
-        }
+        // Redirect to home page
+        navigate('/home');
       } else {
         setError(result.error);
       }
@@ -215,35 +210,20 @@ export default function Register() {
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Gender</label>
-              <select
-                name="gender"
-                value={formData.gender}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2"
-              >
-                <option value="" disabled>Select Gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Role</label>
-              <select
-                name="role"
-                value={formData.role}
-                onChange={handleChange}
-                className="w-full px-4 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2"
-              >
-                <option value="student">Student</option>
-                <option value="admin">Admin</option>
-                <option value="IT">IT</option>
-              </select>
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Gender</label>
+            <select
+              name="gender"
+              value={formData.gender}
+              onChange={handleChange}
+              required
+              className="w-full px-4 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2"
+            >
+              <option value="" disabled>Select Gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
           </div>
 
           {/* Secret question */}
@@ -282,6 +262,19 @@ export default function Register() {
             {loading ? 'Creating...' : 'Create account'}
           </button>
         </form>
+        
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Already have an account?{' '}
+            <Link 
+              to="/login" 
+              className="font-medium hover:underline"
+              style={{ color: colors.primary }}
+            >
+              Sign in
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );
