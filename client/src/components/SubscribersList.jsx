@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserCheck, Search, Filter, TrendingUp, Calendar, Users, Sparkles, Crown, Target, Mail, User, Clock, ExternalLink, MessageCircle } from 'lucide-react';
+import { UserCheck, Search, Filter, TrendingUp, Calendar, Users, Sparkles, Mail, User, Clock } from 'lucide-react';
 import { fetchChannelSubscribers } from '../services/subscriptionApi';
 import LoadingSpinner from './LoadingSpinner';
 import ErrorMessage from './ErrorMessage';

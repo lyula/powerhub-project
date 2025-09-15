@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, UserCheck, Bell, Settings, Search, Filter } from 'lucide-react';
+import { Users, UserCheck, Bell, Settings } from 'lucide-react';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import SubscriptionsList from '../components/SubscriptionsList';
