@@ -31,7 +31,8 @@ const SubscribersList = () => {
     channelName: '',
     socialLinks: {},
     authorId: '',
-    hasChannel: false
+    hasChannel: false,
+    username: ''
   });
 
   useEffect(() => {
@@ -122,19 +123,52 @@ const SubscribersList = () => {
     setCurrentPage(1);
   };
 
-  const handleProfilePictureClick = (subscriber) => {
-    const profilePicture = subscriber.profilePicture || subscriber.avatar;
-    const channelName = subscriber.name || `${subscriber.firstName || ''} ${subscriber.lastName || ''}`.trim() || subscriber.username || 'Unknown User';
-    const socialLinks = subscriber.socialLinks || {};
-    const authorId = subscriber.id || subscriber._id;
-    const hasChannel = !!(subscriber.channelId || subscriber.channel);
-
+  const handleProfilePictureClick = async (subscriber) => {
+    const authorId = subscriber._id || subscriber.id;
+    let hasChannel = false;
+    let channelName = subscriber.username || subscriber.firstName || 'Unknown';
+    let socialLinks = {};
+    
+    // First, check if subscriber has direct social links
+    if (subscriber.socialLinks) {
+      socialLinks = { ...subscriber.socialLinks };
+    }
+    
+    // Add subscriber's email if available
+    if (subscriber.email) {
+      socialLinks.email = subscriber.email;
+    }
+    
+    // Try to fetch additional channel info
+    if (authorId) {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const res = await fetch(`${apiUrl}/channel/by-owner/${authorId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data._id) {
+            hasChannel = true;
+            channelName = data.name || channelName;
+          }
+          // Merge channel contact info with existing social links
+          if (data.contactInfo) {
+            socialLinks = { ...socialLinks, ...data.contactInfo };
+          }
+        }
+      } catch (err) {
+        console.log('Error fetching channel info:', err);
+      }
+    }
+    
+    console.log('Social Links for modal:', socialLinks); // Debug log
+    
     setModalData({
-      profilePicture,
+      profilePicture: subscriber.profilePicture || subscriber.avatar || subscriber.profile || '/default-avatar.png',
       channelName,
       socialLinks,
       authorId,
-      hasChannel
+      hasChannel,
+      username: subscriber.username || subscriber.firstName || 'there' // Add username for WhatsApp message
     });
     setModalOpen(true);
   };
@@ -148,13 +182,11 @@ const SubscribersList = () => {
         if (res.ok) {
           const data = await res.json();
           if (data && data._id) {
-            navigate(`/channel/${data._id}`);
+            window.location.href = `/channel/${data._id}`;
             return;
           }
         }
-      } catch (err) {
-        console.error('Error finding channel:', err);
-      }
+      } catch (err) {}
     }
   };
 
@@ -380,12 +412,14 @@ const SubscribersList = () => {
       {/* Profile Picture Modal */}
       {modalOpen && (
         <ProfilePictureZoomModal
-          isOpen={modalOpen}
+          open={modalOpen}
           onClose={() => setModalOpen(false)}
           profilePicture={modalData.profilePicture}
           channelName={modalData.channelName}
           socialLinks={modalData.socialLinks}
-          onViewChannel={modalData.hasChannel ? handleViewChannel : undefined}
+          hasChannel={modalData.hasChannel}
+          onViewChannel={handleViewChannel}
+          username={modalData.username}
         />
       )}
     </div>
