@@ -99,8 +99,8 @@ const PublicRoute = ({ children }) => {
     return null;
   }
   
-  // Only redirect if authenticated and on /login or /register
-  if (isAuthenticated && (location === '/login' || location === '/register' || location === '/interests')) {
+  // Only redirect if authenticated and on /register or /interests (but allow /login access)
+  if (isAuthenticated && (location === '/register' || location === '/interests')) {
     // Redirect based on user role
     if (user && user.role === 'IT') {
       return <Navigate to="/it-dashboard" replace />;

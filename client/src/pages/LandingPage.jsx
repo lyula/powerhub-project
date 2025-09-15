@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { colors } from "../theme/colors";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import { 
@@ -20,10 +20,13 @@ import {
   FaChevronRight,
   FaUser,
   FaLightbulb,
-  FaHandshake
+  FaHandshake,
+  FaBars,
+  FaTimes
 } from "react-icons/fa";
 
 export default function LandingPage() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   useEffect(() => {
     AOS.init({
       duration: 800,
@@ -32,6 +35,18 @@ export default function LandingPage() {
       offset: 100
     });
   }, []);
+
+  // Close mobile menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (mobileMenuOpen && !event.target.closest('nav') && !event.target.closest('button')) {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [mobileMenuOpen]);
 
   const features = [
     {
@@ -129,7 +144,59 @@ export default function LandingPage() {
                 Get Started
               </Link>
             </nav>
+            
+            {/* Mobile menu button */}
+            <button
+              className="md:hidden p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? <FaTimes className="w-6 h-6" /> : <FaBars className="w-6 h-6" />}
+            </button>
           </div>
+          
+          {/* Mobile menu */}
+          {mobileMenuOpen && (
+            <div className="md:hidden absolute top-16 left-0 right-0 bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800 shadow-lg">
+              <div className="px-6 py-4 space-y-4">
+                <a 
+                  href="#features" 
+                  className="block text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Features
+                </a>
+                <a 
+                  href="#about" 
+                  className="block text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  About
+                </a>
+                <a 
+                  href="#community" 
+                  className="block text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Community
+                </a>
+                <Link 
+                  to="/login" 
+                  className="block text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/register"
+                  className="block w-full text-center px-6 py-2 rounded-full font-semibold transition-all duration-300"
+                  style={{ backgroundColor: colors.primary, color: "#fff" }}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Get Started
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
       </header>
 
