@@ -34,6 +34,10 @@ const channelSchema = new mongoose.Schema({
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true
+    },
+    subscribedAt: {
+      type: Date,
+      default: Date.now
     }
   }],
   // Add more fields as needed (e.g., social links)

@@ -36,8 +36,18 @@ exports.subscribeChannel = async (req, res) => {
     if (!channel) {
       return res.status(404).json({ error: 'Channel not found.' });
     }
-    if (!channel.subscribers.some(sub => sub.user && sub.user.toString() === userId.toString())) {
-      channel.subscribers.push({ user: userId });
+    
+    // Check if user is already subscribed
+    const existingSubscription = channel.subscribers.find(
+      sub => sub.user && sub.user.toString() === userId.toString()
+    );
+    
+    if (!existingSubscription) {
+      channel.subscribers.push({ 
+        user: userId,
+        subscribedAt: new Date()
+      });
+      
       // Remove any invalid subscriber objects
       channel.subscribers = channel.subscribers.filter(sub => sub.user);
       await channel.save();
@@ -52,7 +62,12 @@ exports.subscribeChannel = async (req, res) => {
         );
       }
     }
-    res.json(channel);
+    
+    // Return the updated channel with populated subscribers
+    const updatedChannel = await Channel.findById(channelId)
+      .populate('subscribers.user', 'username firstName lastName email avatar');
+    
+    res.json(updatedChannel);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -67,11 +82,18 @@ exports.unsubscribeChannel = async (req, res) => {
     if (!channel) {
       return res.status(404).json({ error: 'Channel not found.' });
     }
+    
+    // Remove the user from subscribers
     channel.subscribers = channel.subscribers.filter(
       (sub) => sub.user.toString() !== userId.toString()
     );
     await channel.save();
-    res.json(channel);
+    
+    // Return the updated channel with populated subscribers
+    const updatedChannel = await Channel.findById(channelId)
+      .populate('subscribers.user', 'username firstName lastName email avatar');
+    
+    res.json(updatedChannel);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -310,6 +332,82 @@ exports.searchChannels = async (req, res) => {
     res.json(matchingChannels);
   } catch (err) {
     console.error('Error in searchChannels:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Get all channels that the current user is subscribed to
+exports.getUserSubscriptions = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    
+    // Find all channels where the user is in the subscribers array
+    const subscriptions = await Channel.find({
+      'subscribers.user': userId
+    })
+    .populate('owner', 'username firstName lastName email')
+    .populate('subscribers.user', 'username firstName lastName email avatar')
+    .sort({ 'subscribers.subscribedAt': -1 });
+
+    // Format the response to include subscription date for the current user
+    const formattedSubscriptions = subscriptions.map(channel => {
+      const userSubscription = channel.subscribers.find(
+        sub => sub.user._id.toString() === userId.toString()
+      );
+      
+      return {
+        _id: channel._id,
+        name: channel.name,
+        description: channel.description,
+        avatar: channel.avatar,
+        banner: channel.banner,
+        owner: channel.owner,
+        subscriberCount: channel.subscribers.length,
+        subscribedAt: userSubscription ? userSubscription.subscribedAt : null,
+        dateJoined: channel.dateJoined
+      };
+    });
+
+    res.json({ subscriptions: formattedSubscriptions });
+  } catch (err) {
+    console.error('Error fetching user subscriptions:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Get all subscribers of a specific channel with full user details
+exports.getChannelSubscribers = async (req, res) => {
+  try {
+    const channelId = req.params.id;
+    const channel = await Channel.findById(channelId)
+      .populate({
+        path: 'subscribers.user',
+        select: 'username firstName lastName email avatar profilePicture'
+      });
+
+    if (!channel) {
+      return res.status(404).json({ error: 'Channel not found.' });
+    }
+
+    // Format subscribers data
+    const subscribers = channel.subscribers.map(sub => ({
+      _id: sub.user._id,
+      username: sub.user.username,
+      firstName: sub.user.firstName,
+      lastName: sub.user.lastName,
+      email: sub.user.email,
+      avatar: sub.user.avatar,
+      profilePicture: sub.user.profilePicture || sub.user.avatar,
+      subscribedAt: sub.subscribedAt
+    })).sort((a, b) => new Date(b.subscribedAt) - new Date(a.subscribedAt));
+
+    res.json({
+      channelName: channel.name,
+      subscriberCount: subscribers.length,
+      subscribers: subscribers
+    });
+  } catch (err) {
+    console.error('Error fetching channel subscribers:', err);
     res.status(500).json({ error: err.message });
   }
 };

@@ -1,24 +1,14 @@
-// SubscribersList.jsx
-// This component displays a list of subscribers with search, sorting, and pagination functionalities.
-// It fetches subscriber data from an API and provides a user-friendly interface for managing subscribers.
-// The UI is designed to be responsive and visually appealing with gradients, shadows, and hover effects.
-// The component handles loading and error states gracefully.
-// It also provides feedback when there are no subscribers or search results.
-// The SubscriberCard component is assumed to handle displaying individual subscriber details.
-// The fetchChannelSubscribers function is assumed to interact with an API to fetch subscriber data.
-// The LoadingSpinner and ErrorMessage components are assumed to provide user feedback during loading and error states.
-// The lucide-react library is used for icons, and Tailwind CSS classes are applied for styling.
-// The component is exported for use in other parts of the application.
-
-
 import React, { useState, useEffect } from 'react';
-import { UserCheck, Search, Filter, TrendingUp, Calendar, Users, Sparkles, Crown, Target } from 'lucide-react';
-import { fetchChannelSubscribers } from '../services/api';
+import { useNavigate } from 'react-router-dom';
+import { UserCheck, Search, Filter, TrendingUp, Calendar, Users, Sparkles, Crown, Target, Mail, User, Clock, ExternalLink, MessageCircle } from 'lucide-react';
+import { fetchChannelSubscribers } from '../services/subscriptionApi';
 import LoadingSpinner from './LoadingSpinner';
 import ErrorMessage from './ErrorMessage';
-import SubscriberCard from './SubscriberCard';
+import ProfilePictureZoomModal from './ProfilePictureZoomModal';
 
 const SubscribersList = () => {
+  const navigate = useNavigate();
+  
   const [subscribers, setSubscribers] = useState([]);
   const [filteredSubscribers, setFilteredSubscribers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,10 +17,21 @@ const SubscribersList = () => {
   const [sortBy, setSortBy] = useState('recent');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(12);
+  const [channelName, setChannelName] = useState('');
   const [stats, setStats] = useState({
     total: 0,
     thisMonth: 0,
     growthRate: 0
+  });
+  
+  // Modal state for profile picture zoom
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalData, setModalData] = useState({
+    profilePicture: '',
+    channelName: '',
+    socialLinks: {},
+    authorId: '',
+    hasChannel: false
   });
 
   useEffect(() => {
@@ -45,11 +46,46 @@ const SubscribersList = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await fetchChannelSubscribers();
+      
+      // First get the current user's channel
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Authentication required to view subscribers');
+        return;
+      }
+
+      const channelResponse = await fetch('http://localhost:5000/api/channel/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!channelResponse.ok) {
+        throw new Error('Could not fetch your channel information');
+      }
+
+      const channel = await channelResponse.json();
+      
+      // Now fetch the subscribers for this channel
+      const data = await fetchChannelSubscribers(channel._id);
       setSubscribers(data.subscribers);
-      setStats(data.stats);
+      setChannelName(data.channelName);
+      
+      // Calculate stats from the subscribers data
+      const now = new Date();
+      const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const thisMonthCount = data.subscribers.filter(sub => 
+        new Date(sub.subscribedAt || sub.joinedAt) >= thisMonth
+      ).length;
+      
+      setStats({
+        total: data.subscribers.length,
+        thisMonth: thisMonthCount,
+        growthRate: data.subscribers.length > 0 ? (thisMonthCount / data.subscribers.length) * 100 : 0
+      });
     } catch (err) {
-      setError('Failed to load subscribers. Please try again.');
+      setError(err.message || 'Failed to load subscribers. Please try again.');
       console.error('Error loading subscribers:', err);
     } finally {
       setLoading(false);
@@ -58,18 +94,23 @@ const SubscribersList = () => {
 
   const filterAndSortSubscribers = () => {
     let filtered = subscribers.filter(subscriber =>
-      subscriber.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      subscriber.email.toLowerCase().includes(searchTerm.toLowerCase())
+      (subscriber.name && subscriber.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (subscriber.username && subscriber.username.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (subscriber.email && subscriber.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (subscriber.firstName && subscriber.firstName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (subscriber.lastName && subscriber.lastName.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'name':
-          return a.username.localeCompare(b.username);
+          return (a.name || a.username || '').localeCompare(b.name || b.username || '');
+        case 'email':
+          return (a.email || '').localeCompare(b.email || '');
         case 'recent':
-          return new Date(b.subscribedAt) - new Date(a.subscribedAt);
+          return new Date(b.subscribedAt || b.joinedAt || 0) - new Date(a.subscribedAt || a.joinedAt || 0);
         case 'oldest':
-          return new Date(a.subscribedAt) - new Date(b.subscribedAt);
+          return new Date(a.subscribedAt || a.joinedAt || 0) - new Date(b.subscribedAt || b.joinedAt || 0);
         default:
           return 0;
       }
@@ -77,6 +118,75 @@ const SubscribersList = () => {
 
     setFilteredSubscribers(filtered);
     setCurrentPage(1);
+  };
+
+  const handleProfilePictureClick = async (subscriber) => {
+    const authorId = subscriber.id || subscriber._id;
+    let hasChannel = false;
+    let channelName = subscriber.name || subscriber.username || 'Unknown';
+    let socialLinks = {};
+    
+    if (authorId) {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const res = await fetch(`${apiUrl}/channel/by-owner/${authorId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data._id) {
+            hasChannel = true;
+            channelName = data.name || channelName;
+          }
+          if (data.contactInfo) {
+            socialLinks = data.contactInfo;
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching channel:', err);
+      }
+    }
+    
+    setModalData({
+      profilePicture: subscriber.profilePicture || subscriber.avatar || '/default-avatar.png',
+      channelName,
+      socialLinks,
+      authorId,
+      hasChannel
+    });
+    setModalOpen(true);
+  };
+
+  const handleViewChannel = async () => {
+    setModalOpen(false);
+    if (modalData.authorId) {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const res = await fetch(`${apiUrl}/channel/by-owner/${modalData.authorId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data._id) {
+            navigate(`/channel/${data._id}`);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error('Error finding channel:', err);
+      }
+    }
+  };
+
+  const formatRelativeDate = (dateString) => {
+    if (!dateString) return 'Unknown';
+    
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.ceil(diffDays / 7)} weeks ago`;
+    if (diffDays < 365) return `${Math.ceil(diffDays / 30)} months ago`;
+    return `${Math.ceil(diffDays / 365)} years ago`;
   };
 
   // Pagination
@@ -89,109 +199,102 @@ const SubscribersList = () => {
   if (error) return <ErrorMessage message={error} onRetry={loadSubscribers} />;
 
   return (
-    <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 py-4 md:py-8 relative">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       {/* Header with Stats */}
-      <div className="mb-4 md:mb-8">
+      <div className="mb-8">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 rounded-2xl flex items-center justify-center shadow-lg">
-              <UserCheck className="w-6 h-6 md:w-8 md:h-8 text-white" />
+            <div className="w-12 h-12 bg-gradient-to-r from-green-600 to-blue-600 rounded-xl flex items-center justify-center">
+              <UserCheck className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl md:text-4xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 bg-clip-text text-transparent">My Subscribers</h1>
-              <p className="text-gray-600 dark:text-gray-400 text-sm md:text-base font-medium">
-                Your growing community of {stats.total.toLocaleString()} members
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                {channelName ? `${channelName}'s Subscribers` : 'Your Subscribers'}
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400 mt-1">
+                Manage and view your channel subscribers
               </p>
             </div>
           </div>
-          <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-full">
-            <Crown className="w-4 h-4 text-purple-600" />
-            <span className="text-sm font-semibold text-purple-700">Creator</span>
-          </div>
         </div>
-        
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl p-4 md:p-6 border border-gray-200/50 dark:border-gray-700/50 shadow-lg hover:shadow-xl transition-all duration-300 group">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Total Subscribers</p>
-                <p className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">{stats.total.toLocaleString()}</p>
-              </div>
-              <div className="w-12 h-12 md:w-14 md:h-14 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <Users className="w-6 h-6 md:w-7 md:h-7 text-blue-600" />
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl p-4 md:p-6 border border-gray-200/50 dark:border-gray-700/50 shadow-lg hover:shadow-xl transition-all duration-300 group">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">This Month</p>
-                <p className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">{stats.thisMonth.toLocaleString()}</p>
-              </div>
-              <div className="w-12 h-12 md:w-14 md:h-14 bg-gradient-to-r from-green-100 to-emerald-100 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <Calendar className="w-6 h-6 md:w-7 md:h-7 text-green-600" />
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl p-4 md:p-6 border border-gray-200/50 dark:border-gray-700/50 shadow-lg hover:shadow-xl transition-all duration-300 group">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Growth Rate</p>
-                <p className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">+{stats.growthRate}%</p>
-              </div>
-              <div className="w-12 h-12 md:w-14 md:h-14 bg-gradient-to-r from-purple-100 to-pink-100 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <TrendingUp className="w-6 h-6 md:w-7 md:h-7 text-purple-600" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Search and Filter Bar */}
-      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700/50 p-4 md:p-6 mb-4 md:mb-8">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
-              <Search className="text-purple-400 w-5 h-5" />
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Subscribers</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total.toLocaleString()}</p>
+              </div>
+              <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
+                <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              </div>
             </div>
+          </div>
+          
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">This Month</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.thisMonth}</p>
+              </div>
+              <div className="w-12 h-12 bg-green-50 dark:bg-green-900/20 rounded-lg flex items-center justify-center">
+                <Calendar className="w-6 h-6 text-green-600 dark:text-green-400" />
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Growth Rate</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.growthRate.toFixed(1)}%</p>
+              </div>
+              <div className="w-12 h-12 bg-purple-50 dark:bg-purple-900/20 rounded-lg flex items-center justify-center">
+                <TrendingUp className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Search and Filter */}
+        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
               placeholder="Search subscribers..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm hover:shadow-md font-medium"
+              className="pl-10 pr-4 py-3 w-full border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             />
           </div>
-          <div className="relative">
-            <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
-              <Filter className="text-purple-400 w-5 h-5" />
-            </div>
+          <div className="flex items-center gap-3">
+            <Filter className="w-5 h-5 text-gray-400" />
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="pl-12 pr-8 py-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white min-w-[180px] appearance-none cursor-pointer shadow-sm hover:shadow-md font-medium"
+              className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             >
-              <option value="recent">Recently Joined</option>
-              <option value="oldest">Oldest First</option>
-              <option value="name">Alphabetical</option>
+              <option value="recent">Recently subscribed</option>
+              <option value="oldest">Oldest subscribers</option>
+              <option value="name">Name</option>
+              <option value="email">Email</option>
             </select>
           </div>
         </div>
       </div>
 
-      {/* Subscribers Grid */}
+      {/* Subscribers List */}
       {filteredSubscribers.length === 0 ? (
-        <div className="text-center py-20">
-          <div className="w-20 h-20 md:w-24 md:h-24 bg-gradient-to-r from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700 rounded-full flex items-center justify-center mx-auto mb-6">
-            <UserCheck className="w-10 h-10 md:w-12 md:h-12 text-gray-400 dark:text-gray-500" />
+        <div className="text-center py-12">
+          <div className="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+            <UserCheck className="w-10 h-10 text-gray-400" />
           </div>
-          <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-3">
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
             {searchTerm ? 'No matching subscribers' : 'No subscribers yet'}
           </h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-8 text-sm md:text-base max-w-md mx-auto leading-relaxed">
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
             {searchTerm 
               ? 'Try adjusting your search terms'
               : 'Share your channel to start gaining subscribers'
@@ -200,36 +303,103 @@ const SubscribersList = () => {
           {searchTerm && (
             <button
               onClick={() => setSearchTerm('')}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl font-semibold"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium"
             >
-              <Target className="w-4 h-4" />
+              <Sparkles className="w-4 h-4" />
               Clear Search
             </button>
           )}
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8 mb-6 md:mb-10">
-            {currentItems.map((subscriber) => (
-              <SubscriberCard
-                key={subscriber.id}
-                subscriber={subscriber}
-              />
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            {currentItems.map((subscriber, index) => (
+              <div
+                key={subscriber.id || subscriber._id}
+                className={`p-6 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors ${
+                  index !== currentItems.length - 1 ? 'border-b border-gray-200 dark:border-gray-700' : ''
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4 flex-1">
+                    {/* Profile Picture */}
+                    <div 
+                      className="relative cursor-pointer"
+                      onClick={() => handleProfilePictureClick(subscriber)}
+                    >
+                      <img
+                        src={subscriber.profilePicture || subscriber.avatar || '/api/placeholder/60/60'}
+                        alt={subscriber.name || subscriber.username}
+                        className="w-12 h-12 rounded-full object-cover ring-2 ring-gray-200 dark:ring-gray-700"
+                        onError={(e) => {
+                          e.target.src = '/api/placeholder/60/60';
+                        }}
+                      />
+                      <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white dark:border-gray-800"></div>
+                    </div>
+
+                    {/* Subscriber Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold text-gray-900 dark:text-white text-lg">
+                          {subscriber.name || `${subscriber.firstName || ''} ${subscriber.lastName || ''}`.trim() || subscriber.username || 'Unknown User'}
+                        </h3>
+                        {subscriber.username && (
+                          <span className="text-sm text-gray-500 dark:text-gray-400">
+                            @{subscriber.username}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                        {subscriber.email && (
+                          <div className="flex items-center gap-1">
+                            <Mail className="w-4 h-4" />
+                            <span>{subscriber.email}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-4 h-4" />
+                          <span>Subscribed {formatRelativeDate(subscriber.subscribedAt || subscriber.joinedAt)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 ml-4">
+                    <button
+                      onClick={() => handleProfilePictureClick(subscriber)}
+                      className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 bg-gray-50 hover:bg-blue-50 dark:bg-gray-700 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                      title="View profile"
+                    >
+                      <User className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => window.open(`mailto:${subscriber.email}`, '_blank')}
+                      className="p-2 text-gray-400 hover:text-green-600 dark:hover:text-green-400 bg-gray-50 hover:bg-green-50 dark:bg-gray-700 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+                      title="Send email"
+                      disabled={!subscriber.email}
+                    >
+                      <Mail className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex justify-center items-center gap-3 mt-12">
+            <div className="flex justify-center items-center gap-2 mt-8">
               <button
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
-                className="px-6 py-3 border border-gray-300 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-all duration-300 font-semibold shadow-sm hover:shadow-md"
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 Previous
               </button>
               
-              <div className="flex gap-2">
+              <div className="flex gap-1">
                 {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
                   let page;
                   if (totalPages <= 5) {
@@ -241,15 +411,14 @@ const SubscribersList = () => {
                   } else {
                     page = currentPage - 2 + i;
                   }
-                  
                   return (
                     <button
                       key={page}
                       onClick={() => setCurrentPage(page)}
-                      className={`px-4 py-3 rounded-xl transition-all duration-300 text-sm font-semibold transform hover:scale-105 ${
+                      className={`px-3 py-2 rounded-lg transition-colors text-sm ${
                         currentPage === page
-                          ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-200'
-                          : 'border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white shadow-sm hover:shadow-md'
+                          ? 'bg-blue-600 text-white'
+                          : 'border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
                       }`}
                     >
                       {page}
@@ -261,13 +430,26 @@ const SubscribersList = () => {
               <button
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages}
-                className="px-6 py-3 border border-gray-300 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-all duration-300 font-semibold shadow-sm hover:shadow-md"
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 Next
               </button>
             </div>
           )}
         </>
+      )}
+      
+      {/* Profile picture zoom modal */}
+      {modalOpen && (
+        <ProfilePictureZoomModal
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          profilePicture={modalData.profilePicture}
+          channelName={modalData.channelName}
+          socialLinks={modalData.socialLinks}
+          hasChannel={modalData.hasChannel}
+          onViewChannel={handleViewChannel}
+        />
       )}
     </div>
   );
