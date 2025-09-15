@@ -39,13 +39,30 @@ export default function LandingPage() {
   // Close mobile menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (mobileMenuOpen && !event.target.closest('nav') && !event.target.closest('button')) {
+      if (mobileMenuOpen && !event.target.closest('.mobile-menu-container')) {
         setMobileMenuOpen(false);
       }
     };
 
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    const handleEscapeKey = (event) => {
+      if (event.key === 'Escape' && mobileMenuOpen) {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    if (mobileMenuOpen) {
+      document.addEventListener('click', handleClickOutside);
+      document.addEventListener('keydown', handleEscapeKey);
+      document.body.style.overflow = 'hidden'; // Prevent scrolling when menu is open
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener('keydown', handleEscapeKey);
+      document.body.style.overflow = 'unset';
+    };
   }, [mobileMenuOpen]);
 
   const features = [
@@ -110,35 +127,35 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black text-gray-900 dark:text-white overflow-hidden">
+    <div className="min-h-screen bg-white dark:bg-black text-gray-900 dark:text-white overflow-hidden font-primary">
       {/* Navbar */}
       <header 
-        className="fixed w-full top-0 z-50 backdrop-blur-lg bg-white/80 dark:bg-black/80 border-b border-gray-200 dark:border-gray-800"
+        className="fixed w-full top-0 z-50 backdrop-blur-lg bg-white/90 dark:bg-black/90 border-b border-gray-200 dark:border-gray-800 shadow-sm"
         data-aos="fade-down"
       >
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mobile-menu-container">
+          <div className="flex items-center justify-between h-14 sm:h-16">
             <div className="flex items-center space-x-2">
               <div 
-                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center"
                 style={{ backgroundColor: colors.secondary }}
               >
-                <FaPlay className="w-4 h-4 text-white ml-0.5" />
+                <FaPlay className="w-3 h-3 sm:w-4 sm:h-4 text-white ml-0.5" />
               </div>
-              <h1 className="text-2xl font-bold" style={{ color: colors.secondary }}>
+              <h1 className="text-xl sm:text-2xl font-bold font-heading" style={{ color: colors.secondary }}>
                 PowerHub
               </h1>
             </div>
-            <nav className="hidden md:flex items-center space-x-8">
-              <a href="#features" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">Features</a>
-              <a href="#about" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">About</a>
-              <a href="#community" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">Community</a>
-              <Link to="/login" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
+            <nav className="hidden md:flex items-center space-x-6 lg:space-x-8">
+              <a href="#features" className="text-sm lg:text-base text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors font-medium">Features</a>
+              <a href="#about" className="text-sm lg:text-base text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors font-medium">About</a>
+              <a href="#community" className="text-sm lg:text-base text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors font-medium">Community</a>
+              <Link to="/login" className="text-sm lg:text-base text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors font-medium">
                 Login
               </Link>
               <Link
                 to="/register"
-                className="px-6 py-2 rounded-full font-semibold transition-all duration-300 hover:scale-105"
+                className="px-4 lg:px-6 py-2 text-sm lg:text-base rounded-full font-semibold transition-all duration-300 hover:scale-105"
                 style={{ backgroundColor: colors.primary, color: "#fff" }}
               >
                 Get Started
@@ -147,48 +164,53 @@ export default function LandingPage() {
             
             {/* Mobile menu button */}
             <button
-              className="md:hidden p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="md:hidden p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors relative z-50"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Toggle mobile menu"
             >
-              {mobileMenuOpen ? <FaTimes className="w-6 h-6" /> : <FaBars className="w-6 h-6" />}
+              <div className="w-6 h-6 flex flex-col justify-center items-center">
+                <span className={`block w-5 h-0.5 bg-current transition-all duration-300 ${mobileMenuOpen ? 'rotate-45 translate-y-1' : '-translate-y-1'}`}></span>
+                <span className={`block w-5 h-0.5 bg-current transition-all duration-300 ${mobileMenuOpen ? 'opacity-0' : 'opacity-100'}`}></span>
+                <span className={`block w-5 h-0.5 bg-current transition-all duration-300 ${mobileMenuOpen ? '-rotate-45 -translate-y-1' : 'translate-y-1'}`}></span>
+              </div>
             </button>
           </div>
           
           {/* Mobile menu */}
-          {mobileMenuOpen && (
-            <div className="md:hidden absolute top-16 left-0 right-0 bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800 shadow-lg">
-              <div className="px-6 py-4 space-y-4">
-                <a 
-                  href="#features" 
-                  className="block text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Features
-                </a>
-                <a 
-                  href="#about" 
-                  className="block text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  About
-                </a>
-                <a 
-                  href="#community" 
-                  className="block text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Community
-                </a>
+          <div className={`md:hidden absolute top-full left-0 right-0 bg-white/95 dark:bg-black/95 backdrop-blur-lg border-b border-gray-200 dark:border-gray-800 shadow-lg transition-all duration-300 ${mobileMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`}>
+            <div className="px-4 py-6 space-y-4">
+              <a 
+                href="#features" 
+                className="block text-lg font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors py-2"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Features
+              </a>
+              <a 
+                href="#about" 
+                className="block text-lg font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors py-2"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                About
+              </a>
+              <a 
+                href="#community" 
+                className="block text-lg font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors py-2"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Community
+              </a>
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
                 <Link 
                   to="/login" 
-                  className="block text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+                  className="block text-lg font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors py-2"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   Login
                 </Link>
                 <Link
                   to="/register"
-                  className="block w-full text-center px-6 py-2 rounded-full font-semibold transition-all duration-300"
+                  className="block w-full text-center px-6 py-3 mt-4 rounded-full font-semibold transition-all duration-300 text-lg"
                   style={{ backgroundColor: colors.primary, color: "#fff" }}
                   onClick={() => setMobileMenuOpen(false)}
                 >
@@ -196,12 +218,12 @@ export default function LandingPage() {
                 </Link>
               </div>
             </div>
-          )}
+          </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center pt-16">
+      <section className="relative min-h-screen flex items-center justify-center pt-14 sm:pt-16 px-4 sm:px-6">
         {/* Background gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-black dark:via-gray-900 dark:to-black"></div>
         <div 
@@ -211,9 +233,9 @@ export default function LandingPage() {
           }}
         ></div>
         
-        <div className="relative z-10 max-w-6xl mx-auto px-6 lg:px-8 text-center">
+        <div className="relative z-10 max-w-6xl mx-auto text-center">
           <div data-aos="fade-up" data-aos-delay="100">
-            <h1 className="text-5xl md:text-7xl font-bold leading-tight mb-6">
+            <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold leading-tight mb-4 sm:mb-6 font-heading">
               Learn. Share.{" "}
               <span 
                 className="bg-gradient-to-r bg-clip-text text-transparent"
@@ -227,16 +249,16 @@ export default function LandingPage() {
           </div>
           
           <div data-aos="fade-up" data-aos-delay="200">
-            <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 mb-12 max-w-4xl mx-auto leading-relaxed">
+            <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-600 dark:text-gray-300 mb-8 sm:mb-12 max-w-4xl mx-auto leading-relaxed px-4">
               Join the premier educational platform for PLP students. Upload videos, build your channel, 
               collaborate with peers, and accelerate your learning journey.
             </p>
           </div>
 
-          <div data-aos="fade-up" data-aos-delay="300" className="flex flex-col sm:flex-row gap-6 justify-center">
+          <div data-aos="fade-up" data-aos-delay="300" className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center px-4">
             <Link
               to="/register"
-              className="group px-8 py-4 text-lg font-semibold rounded-full transition-all duration-300 hover:scale-105 flex items-center justify-center"
+              className="group px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold rounded-full transition-all duration-300 hover:scale-105 flex items-center justify-center shadow-lg"
               style={{ backgroundColor: colors.primary, color: "#fff" }}
             >
               Start Learning Now
@@ -244,7 +266,7 @@ export default function LandingPage() {
             </Link>
             <Link
               to="/login"
-              className="px-8 py-4 text-lg font-semibold rounded-full border-2 transition-all duration-300 hover:scale-105 hover:bg-gray-900 hover:text-white dark:hover:bg-white dark:hover:text-black"
+              className="px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold rounded-full border-2 transition-all duration-300 hover:scale-105 hover:bg-gray-900 hover:text-white dark:hover:bg-white dark:hover:text-black"
               style={{ borderColor: colors.secondary, color: colors.secondary }}
             >
               Sign In
@@ -252,13 +274,13 @@ export default function LandingPage() {
           </div>
 
           {/* Stats */}
-          <div data-aos="fade-up" data-aos-delay="400" className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-8">
+          <div data-aos="fade-up" data-aos-delay="400" className="mt-12 sm:mt-20 grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-8 px-4">
             {stats.map((stat, index) => (
               <div key={index} className="text-center">
-                <div className="text-3xl md:text-4xl font-bold" style={{ color: colors.primary }}>
+                <div className="text-2xl sm:text-3xl md:text-4xl font-bold font-heading" style={{ color: colors.primary }}>
                   {stat.number}
                 </div>
-                <div className="text-gray-400 mt-2">{stat.label}</div>
+                <div className="text-gray-400 mt-1 sm:mt-2 text-sm sm:text-base">{stat.label}</div>
               </div>
             ))}
           </div>
@@ -266,34 +288,34 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-24 relative">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="text-center mb-16" data-aos="fade-up">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+      <section id="features" className="py-16 sm:py-24 relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12 sm:mb-16" data-aos="fade-up">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 sm:mb-6 font-heading">
               Everything You Need to{" "}
               <span style={{ color: colors.primary }}>Excel</span>
             </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+            <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto px-4">
               PowerHub provides all the tools and features you need to create, share, and learn in an engaging educational environment.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {features.map((feature, index) => (
               <div
                 key={index}
                 data-aos="fade-up"
                 data-aos-delay={index * 100}
-                className="bg-white dark:bg-gray-900/50 backdrop-blur-sm border border-gray-200 dark:border-gray-800 rounded-2xl p-8 hover:border-gray-300 dark:hover:border-gray-700 transition-all duration-300 hover:scale-105 shadow-lg dark:shadow-none"
+                className="bg-white dark:bg-gray-900/50 backdrop-blur-sm border border-gray-200 dark:border-gray-800 rounded-2xl p-6 sm:p-8 hover:border-gray-300 dark:hover:border-gray-700 transition-all duration-300 hover:scale-105 shadow-lg dark:shadow-none"
               >
                 <div 
-                  className="w-16 h-16 rounded-xl flex items-center justify-center mb-6"
+                  className="w-12 sm:w-16 h-12 sm:h-16 rounded-xl flex items-center justify-center mb-4 sm:mb-6"
                   style={{ backgroundColor: `${colors.primary}20`, color: colors.primary }}
                 >
                   {feature.icon}
                 </div>
-                <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">{feature.title}</h3>
-                <p className="text-gray-600 dark:text-gray-300 leading-relaxed">{feature.description}</p>
+                <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-white font-heading">{feature.title}</h3>
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-sm sm:text-base">{feature.description}</p>
               </div>
             ))}
           </div>
@@ -301,15 +323,15 @@ export default function LandingPage() {
       </section>
 
       {/* About Section */}
-      <section id="about" className="py-24 relative">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
+      <section id="about" className="py-16 sm:py-24 relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             <div data-aos="fade-right">
-              <h2 className="text-4xl md:text-5xl font-bold mb-8">
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6 sm:mb-8 font-heading">
                 Built for{" "}
                 <span style={{ color: colors.secondary }}>PLP Students</span>
               </h2>
-              <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 leading-relaxed">
+              <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-300 mb-6 sm:mb-8 leading-relaxed">
                 PowerHub is specifically designed for Power Learn Project students who want to enhance their learning experience through video content, peer collaboration, and community engagement.
               </p>
               

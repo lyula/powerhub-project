@@ -6,7 +6,12 @@ export default {
     "./public/index.html"
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        'primary': ['Inter', 'system-ui', 'sans-serif'],
+        'heading': ['Poppins', 'system-ui', 'sans-serif'],
+      },
+    },
   },
   plugins: [],
 }
