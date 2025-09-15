@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Bell, Heart, MessageCircle, UserPlus, MoreVertical, Check, X, Trash2, Settings, Loader2 } from 'lucide-react';
 import Header from "../components/Header";
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 
 // Mock MobileHeader component
 const MobileHeader = ({ icon, label, rightAction }) => (
@@ -24,6 +25,7 @@ const MobileHeader = ({ icon, label, rightAction }) => (
 export default function Notifications() {
   const navigate = useNavigate();
   const { user, token } = useAuth();
+  const socket = useSocket();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -92,26 +94,41 @@ export default function Notifications() {
 
       const data = await response.json();
       // Map API response to component expected format
-      const mappedNotifications = (data.data.notifications || []).map(notification => ({
-        _id: notification._id,
-        id: notification._id, // Keep both for compatibility
-        type: notification.type,
-        title: notification.title,
-        message: notification.message,
-        read: notification.read,
-        createdAt: notification.createdAt,
-        sender: notification.sender,
-        recipient: notification.recipient,
-        priority: notification.priority,
-        relatedContent: notification.relatedContent,
-        // Map to expected UI fields
-        user: notification.sender?.username || 'Unknown User',
-        avatar: notification.sender?.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(notification.sender?.username || 'Unknown')}&background=random&size=48`,
-        action: getActionText(notification.type, notification.message),
-        target: notification.relatedContent?.contentTitle || '',
-        time: formatTime(notification.createdAt),
-        timestamp: new Date(notification.createdAt).getTime()
-      }));
+      const mappedNotifications = (data.data.notifications || []).map(notification => {
+        const sender = notification.sender;
+        const senderName = sender ? (sender.firstName && sender.lastName ? `${sender.firstName} ${sender.lastName}` : sender.username) : 'Someone';
+        const recipient = notification.recipient;
+        const recipientName = recipient ? (recipient.firstName && recipient.lastName ? `${recipient.firstName} ${recipient.lastName}` : recipient.username) : 'you';
+
+        // Remove recipient name from message and replace with "your"
+        let message = notification.message;
+        if (recipientName && recipientName !== 'you') {
+          const recipientNameRegex = new RegExp(recipientName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'); // Escape special chars
+          message = message.replace(recipientNameRegex, 'your');
+        }
+
+        const avatarName = senderName;
+
+        return {
+          _id: notification._id,
+          id: notification._id, // Keep both for compatibility
+          type: notification.type,
+          title: notification.title,
+          message,
+          read: notification.read,
+          createdAt: notification.createdAt,
+          sender,
+          priority: notification.priority,
+          relatedContent: notification.relatedContent,
+          // Map to expected UI fields
+          user: senderName,
+          avatar: sender?.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(avatarName)}&background=random&size=48`,
+          action: getActionText(notification.type, message),
+          target: notification.relatedContent?.contentTitle || '',
+          time: formatTime(notification.createdAt),
+          timestamp: new Date(notification.createdAt).getTime()
+        };
+      });
       setNotifications(mappedNotifications);
       setPagination(data.data.pagination || {});
       setUnreadCount(data.data.unreadCount || 0);
@@ -205,7 +222,23 @@ export default function Notifications() {
     }
   }, [user, token]);
 
-  // Real-time polling for new notifications
+  // Real-time socket.io listener for new notifications
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewNotification = (notification) => {
+      setNotifications((prev) => [notification, ...prev]);
+      setUnreadCount((prev) => prev + 1);
+    };
+
+    socket.on('new_notification', handleNewNotification);
+
+    return () => {
+      socket.off('new_notification', handleNewNotification);
+    };
+  }, [socket]);
+  
+  // Real-time polling for new notifications (fallback)
   useEffect(() => {
     if (!user || !token) return;
 

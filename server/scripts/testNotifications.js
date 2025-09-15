@@ -8,7 +8,7 @@ const Post = require('../models/Post');
 // Connect to database
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/powerhub');
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://sacredlyula:N7CdjTKSMTRsMB4b@plppowerhub.uc4bwqk.mongodb.net/powerhub?retryWrites=true&w=majority&appName=plppowerhub');
     console.log('MongoDB connected');
   } catch (error) {
     console.error('MongoDB connection error:', error);

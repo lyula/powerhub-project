@@ -4,6 +4,7 @@ import { FaVideo, FaRegEdit, FaGithub } from 'react-icons/fa';
 import { MdMenu, MdNotificationsNone, MdLogout } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 import ThemeToggle from './ThemeToggle';
 import NotificationModal from './NotificationModal';
 import CollaborationsModal from './CollaborationsModal';
@@ -14,9 +15,12 @@ export default function Header({ onToggleSidebar, searchTerm, onSearchChange }) 
   const [showNotifModal, setShowNotifModal] = useState(false);
   const [showCollabModal, setShowCollabModal] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifications, setNotifications] = useState([]);
   const modalRoot = typeof window !== 'undefined' ? document.body : null;
   const navigate = useNavigate();
-  const { user, logout, channel } = useAuth();
+  const { user, logout, channel, token } = useAuth();
+  const socket = useSocket();
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const accountRef = useRef(null);
@@ -65,6 +69,36 @@ export default function Header({ onToggleSidebar, searchTerm, onSearchChange }) 
     navigate(`/collaborations/${categoryName.toLowerCase().replace(/\s+/g, '-')}`);
   };
 
+  // Helper function to get action text from notification type and message
+  const getActionText = (type, message) => {
+    switch (type) {
+      case 'like':
+        return 'liked your';
+      case 'comment':
+        return 'commented on your';
+      case 'subscribe':
+        return 'subscribed to your';
+      case 'system':
+        return message;
+      default:
+        return message;
+    }
+  };
+
+  // Helper function to format timestamp
+  const formatTime = (timestamp) => {
+    const now = new Date();
+    const date = new Date(timestamp);
+    const diffInSeconds = Math.floor((now - date) / 1000);
+
+    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+
+    return date.toLocaleDateString();
+  };
+
   const toggleSidebar = () => {
     setIsSidebarOpen((prev) => !prev);
   };
@@ -80,6 +114,107 @@ export default function Header({ onToggleSidebar, searchTerm, onSearchChange }) 
       toggleSidebar();
     }
   };
+
+  // Fetch initial unread count and notifications
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      if (!token) return;
+
+      try {
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const response = await fetch(`${API_BASE_URL}/notifications/unread-count`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setUnreadCount(data.data.unreadCount || 0);
+        }
+      } catch (error) {
+        console.error('Error fetching unread count:', error);
+      }
+    };
+
+    const fetchNotifications = async () => {
+      if (!token) return;
+
+      try {
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const response = await fetch(`${API_BASE_URL}/notifications?limit=5`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          // Map API response to component expected format
+          const mappedNotifications = (data.data.notifications || []).map(notification => {
+            const sender = notification.sender;
+            const senderName = sender ? (sender.firstName && sender.lastName ? `${sender.firstName} ${sender.lastName}` : sender.username) : 'Someone';
+            const recipient = notification.recipient;
+            const recipientName = recipient ? (recipient.firstName && recipient.lastName ? `${recipient.firstName} ${recipient.lastName}` : recipient.username) : 'you';
+
+            // Remove recipient name from message and replace with "your"
+            let message = notification.message;
+            if (recipientName && recipientName !== 'you') {
+              const recipientNameRegex = new RegExp(recipientName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'); // Escape special chars
+              message = message.replace(recipientNameRegex, 'your');
+            }
+
+            const avatarName = senderName;
+
+            return {
+              _id: notification._id,
+              id: notification._id, // Keep both for compatibility
+              type: notification.type,
+              title: notification.title,
+              message,
+              read: notification.read,
+              createdAt: notification.createdAt,
+              sender,
+              priority: notification.priority,
+              relatedContent: notification.relatedContent,
+              // Map to expected UI fields
+              user: senderName,
+              avatar: sender?.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(avatarName)}&background=random&size=48`,
+              action: getActionText(notification.type, message),
+              target: notification.relatedContent?.contentTitle || '',
+              time: formatTime(notification.createdAt),
+              timestamp: new Date(notification.createdAt).getTime()
+            };
+          });
+          setNotifications(mappedNotifications);
+        }
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+      }
+    };
+
+    if (user && token) {
+      fetchUnreadCount();
+      fetchNotifications();
+    }
+  }, [user, token]);
+
+  // Real-time socket.io listener for new notifications
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewNotification = () => {
+      setUnreadCount((prev) => prev + 1);
+    };
+
+    socket.on('new_notification', handleNewNotification);
+
+    return () => {
+      socket.off('new_notification', handleNewNotification);
+    };
+  }, [socket]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -97,7 +232,7 @@ export default function Header({ onToggleSidebar, searchTerm, onSearchChange }) 
 
     document.addEventListener('mousedown', handleClickOutside);
     window.addEventListener('resize', handleResize);
-    
+
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       window.removeEventListener('resize', handleResize);
@@ -190,7 +325,11 @@ export default function Header({ onToggleSidebar, searchTerm, onSearchChange }) 
                 type="button"
               >
                 <MdNotificationsNone size={26} color="#0bb6bc" />
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5" style={{ minWidth: 18, minHeight: 18, lineHeight: '18px' }}>3</span>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5" style={{ minWidth: 18, minHeight: 18, lineHeight: '18px' }}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
               </button>
               {showCreateModal && modalRoot && createPortal(
                 <>
@@ -238,22 +377,15 @@ export default function Header({ onToggleSidebar, searchTerm, onSearchChange }) 
               <FaVideo className="text-[#c42152] dark:text-[#c42152]" size={22} />
               <span className="text-base font-semibold text-[#c42152] dark:text-[#c42152]">Create</span>
             </button>
-            {showNotifModal && modalRoot && createPortal(
-              <div style={{ position: 'absolute', top: '48px', right: 0, zIndex: 9999 }}>
-                <NotificationModal
-                  notifications={[
-                    { id: 1, title: 'New comment on your video', body: 'Someone commented: "Great video!"' },
-                    { id: 2, title: 'New subscriber', body: 'You have a new subscriber!' },
-                    { id: 3, title: 'Video approved', body: 'Your video "React Basics" is now live.' },
-                    { id: 4, title: 'Mentioned in a post', body: 'You were mentioned in a post.' },
-                    { id: 5, title: 'Channel milestone', body: 'Congrats! 1000 subscribers.' },
-                    { id: 6, title: 'Update available', body: 'A new feature is available.' },
-                  ]}
-                  onClose={() => setShowNotifModal(false)}
-                />
-              </div>,
-              modalRoot
-            )}
+              {showNotifModal && modalRoot && createPortal(
+                <div style={{ position: 'absolute', top: '48px', right: 0, zIndex: 9999 }}>
+                  <NotificationModal
+                    notifications={notifications}
+                    onClose={() => setShowNotifModal(false)}
+                  />
+                </div>,
+                modalRoot
+              )}
           </div>
 
         <button

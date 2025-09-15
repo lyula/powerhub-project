@@ -1,359 +1,362 @@
-const Notification = require('../models/Notification.local');
-const User = require('../models/User');
+// services/NotificationService.js
+const Notification = require("../models/Notification");
+const User = require("../models/User");
 
 class NotificationService {
-  
-  // Send content removal notification
-  static async sendContentRemovedNotification(userId, contentType, contentTitle, reason, actionBy) {
-    try {
-      const notification = new Notification({
-        recipient: userId,
-        type: 'content_removed',
-        title: 'Content Removed',
-        message: `Your ${contentType} "${contentTitle}" has been removed by our moderation team.`,
-        relatedContent: {
-          contentType,
-          contentTitle
-        },
-        moderationAction: {
-          actionType: 'remove',
-          reason,
-          actionBy
-        },
-        priority: 'high',
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
-      });
+  /* -------------------------------------------------
+   * UTILITIES
+   * ------------------------------------------------- */
 
-      await notification.save();
-      console.log(`Content removal notification sent to user ${userId}`);
-      return notification;
-    } catch (error) {
-      console.error('Error sending content removal notification:', error);
-    }
-  }
 
-  // Send user warning notification
-  static async sendWarningNotification(userId, reason, contentType, contentTitle, actionBy) {
-    try {
-      const notification = new Notification({
-        recipient: userId,
-        type: 'content_warning',
-        title: 'Content Warning',
-        message: `Warning: Your ${contentType} "${contentTitle}" violates our community guidelines. Please review our terms of service.`,
-        relatedContent: {
-          contentType,
-          contentTitle
-        },
-        moderationAction: {
-          actionType: 'warn',
-          reason,
-          actionBy
-        },
-        priority: 'medium',
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
-      });
+  /* -------------------------------------------------
+   * CORE METHODS (FETCH, MARK, DELETE, CLEANUP)
+   * ------------------------------------------------- */
 
-      await notification.save();
-      console.log(`Warning notification sent to user ${userId}`);
-      return notification;
-    } catch (error) {
-      console.error('Error sending warning notification:', error);
-    }
-  }
-
-  // Send ban notification
-  static async sendBanNotification(userId, banType, duration, reason, expiresAt, actionBy) {
-    try {
-      let message = `Your account has been ${banType}ly banned. Reason: ${reason}`;
-      
-      if (banType === 'temporary' && expiresAt) {
-        const daysLeft = Math.ceil((expiresAt - new Date()) / (1000 * 60 * 60 * 24));
-        message += ` Your ban will be lifted in ${daysLeft} day(s).`;
-      }
-
-      const notification = new Notification({
-        recipient: userId,
-        type: 'account_banned',
-        title: `Account ${banType === 'permanent' ? 'Permanently' : 'Temporarily'} Banned`,
-        message,
-        moderationAction: {
-          actionType: 'ban',
-          reason,
-          duration,
-          expiresAt: banType === 'temporary' ? expiresAt : null,
-          actionBy
-        },
-        priority: 'urgent',
-        expiresAt: banType === 'temporary' ? 
-          new Date(expiresAt.getTime() + 7 * 24 * 60 * 60 * 1000) : // 7 days after ban expires
-          new Date(Date.now() + 90 * 24 * 60 * 60 * 1000) // 90 days for permanent
-      });
-
-      await notification.save();
-      console.log(`Ban notification sent to user ${userId}`);
-      return notification;
-    } catch (error) {
-      console.error('Error sending ban notification:', error);
-    }
-  }
-
-  // Send unban notification
-  static async sendUnbanNotification(userId, reason, actionBy) {
-    try {
-      const notification = new Notification({
-        recipient: userId,
-        type: 'account_unbanned',
-        title: 'Account Unbanned',
-        message: `Good news! Your account ban has been lifted. You can now access all platform features again.`,
-        moderationAction: {
-          actionType: 'unban',
-          reason,
-          actionBy
-        },
-        priority: 'high',
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
-      });
-
-      await notification.save();
-      console.log(`Unban notification sent to user ${userId}`);
-      return notification;
-    } catch (error) {
-      console.error('Error sending unban notification:', error);
-    }
-  }
-
-  // Send system notification
-  static async sendSystemNotification(userId, title, message, priority = 'medium') {
-    try {
-      const notification = new Notification({
-        recipient: userId,
-        type: 'system',
-        title,
-        message,
-        priority,
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
-      });
-
-      await notification.save();
-      console.log(`System notification sent to user ${userId}`);
-      return notification;
-    } catch (error) {
-      console.error('Error sending system notification:', error);
-    }
-  }
-
-  // Get user notifications
   static async getUserNotifications(userId, page = 1, limit = 20, unreadOnly = false) {
-    try {
-      const skip = (page - 1) * limit;
-      const query = { recipient: userId };
-      
-      if (unreadOnly) {
-        query.read = false;
+  try {
+    const skip = (page - 1) * limit;
+    const query = { recipient: userId };
+
+    if (unreadOnly) query.read = false;
+
+    const notifications = await Notification.find(query)
+      .populate('sender', 'username firstName lastName')
+      .populate('recipient', 'username firstName lastName')
+      .populate('moderationAction.actionBy', 'username firstName lastName')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Notification.countDocuments(query);
+    const unreadCount = await Notification.countDocuments({ recipient: userId, read: false });
+
+    // Optionally, reconstruct message to include sender and recipient names if needed
+    const notificationsWithNames = notifications.map(notification => {
+      const sender = notification.sender;
+      const recipient = notification.recipient;
+      const senderName = sender ? (sender.firstName && sender.lastName ? `${sender.firstName} ${sender.lastName}` : sender.username) : 'Someone';
+      const recipientName = recipient ? (recipient.firstName && recipient.lastName ? `${recipient.firstName} ${recipient.lastName}` : recipient.username) : 'someone';
+
+      // If message contains generic "Someone" or "someone", replace with senderName and recipientName
+      let message = notification.message;
+      if (message.includes('Someone')) {
+        message = message.replace(/Someone/g, senderName);
       }
-
-      const notifications = await Notification.find(query)
-        .populate('moderationAction.actionBy', 'username firstName lastName')
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit);
-
-      const total = await Notification.countDocuments(query);
-      const unreadCount = await Notification.countDocuments({ 
-        recipient: userId, 
-        read: false 
-      });
+      if (message.includes('someone')) {
+        message = message.replace(/someone/g, recipientName);
+      }
 
       return {
-        notifications,
-        pagination: {
-          current: page,
-          total: Math.ceil(total / limit),
-          hasNext: page * limit < total,
-          hasPrev: page > 1
-        },
-        unreadCount
+        ...notification.toObject(),
+        message
       };
-    } catch (error) {
-      console.error('Error getting user notifications:', error);
-      return { notifications: [], pagination: {}, unreadCount: 0 };
-    }
-  }
+    });
 
-  // Mark notification as read
+    return {
+      notifications: notificationsWithNames,
+      pagination: {
+        current: page,
+        total: Math.ceil(total / limit),
+        hasNext: page * limit < total,
+        hasPrev: page > 1
+      },
+      unreadCount
+    };
+  } catch (error) {
+    console.error('Error getting user notifications:', error);
+    return { notifications: [], pagination: {}, unreadCount: 0 };
+  }
+}
+  // 🔹 Mark single notification as read
   static async markAsRead(notificationId, userId) {
     try {
       const notification = await Notification.findOne({
         _id: notificationId,
-        recipient: userId
+        recipient: userId,
       });
 
       if (notification) {
-        await notification.markAsRead();
+        await notification.updateOne({ read: true, readAt: new Date() });
         return true;
       }
       return false;
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      console.error("Error marking notification as read:", error);
       return false;
     }
   }
 
-  // Mark all notifications as read for user
+  // 🔹 Mark all as read
   static async markAllAsRead(userId) {
     try {
       await Notification.updateMany(
         { recipient: userId, read: false },
-        { 
-          read: true, 
-          readAt: new Date(),
-          updatedAt: new Date()
-        }
+        { read: true, readAt: new Date(), updatedAt: new Date() }
       );
       return true;
     } catch (error) {
-      console.error('Error marking all notifications as read:', error);
+      console.error("Error marking all notifications as read:", error);
       return false;
     }
   }
 
-  // Delete notification
+  // 🔹 Delete a notification
   static async deleteNotification(notificationId, userId) {
     try {
-      await Notification.deleteOne({
-        _id: notificationId,
-        recipient: userId
-      });
+      await Notification.deleteOne({ _id: notificationId, recipient: userId });
       return true;
     } catch (error) {
-      console.error('Error deleting notification:', error);
+      console.error("Error deleting notification:", error);
       return false;
     }
   }
 
-  // Send like notification
+  // 🔹 Cleanup expired notifications
+  static async cleanupExpired() {
+    try {
+      await Notification.deleteMany({ expiresAt: { $lte: new Date() } });
+      return true;
+    } catch (error) {
+      console.error("Error cleaning up expired notifications:", error);
+      return false;
+    }
+  }
+
+  /* -------------------------------------------------
+   * EVENT NOTIFICATIONS
+   * ------------------------------------------------- */
+
+  // 🔹 Like
   static async sendLikeNotification(recipientId, senderId, contentType, contentId, contentTitle) {
     try {
+      const sender = await User.findById(senderId).select('username firstName lastName');
+      const senderName = sender ? (sender.firstName && sender.lastName ? `${sender.firstName} ${sender.lastName}` : sender.username) : 'Someone';
+      const recipient = await User.findById(recipientId).select('username firstName lastName');
+      const recipientName = recipient ? (recipient.firstName && recipient.lastName ? `${recipient.firstName} ${recipient.lastName}` : recipient.username) : 'someone';
       const notification = new Notification({
         recipient: recipientId,
         sender: senderId,
-        type: 'like',
-        title: 'New Like',
-        message: `Someone liked your ${contentType}: "${contentTitle}"`,
-        relatedContent: {
-          contentType,
-          contentId,
-          contentTitle
-        },
-        priority: 'low',
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+        type: "like",
+        title: "New Like",
+        message: `${senderName} liked ${recipientName}'s ${contentType}: "${contentTitle}"`,
+        relatedContent: { contentType, contentId, contentTitle },
+        priority: "low",
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       });
 
       await notification.save();
-      console.log(`Like notification sent to user ${recipientId}`);
       return notification;
     } catch (error) {
-      console.error('Error sending like notification:', error);
+      console.error("Error sending like notification:", error);
     }
   }
 
-  // Send comment notification
+  // 🔹 Dislike
+  static async sendDislikeNotification(recipientId, senderId, contentType, contentId, contentTitle) {
+    try {
+      const sender = await User.findById(senderId).select('username firstName lastName');
+      const senderName = sender ? (sender.firstName && sender.lastName ? `${sender.firstName} ${sender.lastName}` : sender.username) : 'Someone';
+      const recipient = await User.findById(recipientId).select('username firstName lastName');
+      const recipientName = recipient ? (recipient.firstName && recipient.lastName ? `${recipient.firstName} ${recipient.lastName}` : recipient.username) : 'someone';
+      const notification = new Notification({
+        recipient: recipientId,
+        sender: senderId,
+        type: "dislike",
+        title: "New Dislike",
+        message: `${senderName} disliked ${recipientName}'s ${contentType}: "${contentTitle}"`,
+        relatedContent: { contentType, contentId, contentTitle },
+        priority: "low",
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      });
+
+      await notification.save();
+      return notification;
+    } catch (error) {
+      console.error("Error sending dislike notification:", error);
+    }
+  }
+
+  // 🔹 Comment
   static async sendCommentNotification(recipientId, senderId, contentType, contentId, contentTitle, commentText) {
     try {
+      const sender = await User.findById(senderId).select('username firstName lastName');
+      const senderName = sender ? (sender.firstName && sender.lastName ? `${sender.firstName} ${sender.lastName}` : sender.username) : 'Someone';
+      const recipient = await User.findById(recipientId).select('username firstName lastName');
+      const recipientName = recipient ? (recipient.firstName && recipient.lastName ? `${recipient.firstName} ${recipient.lastName}` : recipient.username) : 'someone';
       const notification = new Notification({
         recipient: recipientId,
         sender: senderId,
-        type: 'comment',
-        title: 'New Comment',
-        message: `Someone commented on your ${contentType}: "${contentTitle}"`,
-        relatedContent: {
-          contentType,
-          contentId,
-          contentTitle
-        },
-        priority: 'medium',
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+        type: "comment",
+        title: "New Comment",
+        message: `${senderName} commented on ${recipientName}'s ${contentType}: "${contentTitle}" - "${commentText}"`,
+        relatedContent: { contentType, contentId, contentTitle },
+        priority: "medium",
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       });
 
       await notification.save();
-      console.log(`Comment notification sent to user ${recipientId}`);
       return notification;
     } catch (error) {
-      console.error('Error sending comment notification:', error);
+      console.error("Error sending comment notification:", error);
     }
   }
 
-  // Send subscribe notification
+  // 🔹 Reply (with like/dislike option)
+  static async sendReplyNotification(recipientId, senderId, replyId, videoId, replyText, action = "reply") {
+    try {
+      const sender = await User.findById(senderId).select('username firstName lastName');
+      const senderName = sender ? (sender.firstName && sender.lastName ? `${sender.firstName} ${sender.lastName}` : sender.username) : 'Someone';
+      const recipient = await User.findById(recipientId).select('username firstName lastName');
+      const recipientName = recipient ? (recipient.firstName && recipient.lastName ? `${recipient.firstName} ${recipient.lastName}` : recipient.username) : 'someone';
+      const actionLabel = action === "like" ? "liked" : action === "dislike" ? "disliked" : "replied to";
+
+      const notification = new Notification({
+        recipient: recipientId,
+        sender: senderId,
+        type: action,
+        title: `New ${actionLabel.charAt(0).toUpperCase() + actionLabel.slice(1)}`,
+        message: `${senderName} ${actionLabel} ${recipientName}'s reply: "${replyText}" (on video ${videoId})`,
+        relatedContent: { contentType: "reply", contentId: replyId, contentTitle: `On video ${videoId}` },
+        priority: "low",
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      });
+
+      await notification.save();
+      return notification;
+    } catch (error) {
+      console.error(`Error sending reply ${action} notification:`, error);
+    }
+  }
+
+  // 🔹 Share
+  static async sendShareNotification(recipientId, senderId, contentType, contentId, contentTitle) {
+    try {
+      const sender = await User.findById(senderId).select('username firstName lastName');
+      const senderName = sender ? (sender.firstName && sender.lastName ? `${sender.firstName} ${sender.lastName}` : sender.username) : 'Someone';
+      const recipient = await User.findById(recipientId).select('username firstName lastName');
+      const recipientName = recipient ? (recipient.firstName && recipient.lastName ? `${recipient.firstName} ${recipient.lastName}` : recipient.username) : 'someone';
+      const notification = new Notification({
+        recipient: recipientId,
+        sender: senderId,
+        type: "share",
+        title: "Content Shared",
+        message: `${senderName} shared ${recipientName}'s ${contentType}: "${contentTitle}"`,
+        relatedContent: { contentType, contentId, contentTitle },
+        priority: "medium",
+        expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days
+      });
+
+      await notification.save();
+      return notification;
+    } catch (error) {
+      console.error("Error sending share notification:", error);
+    }
+  }
+
+  // 🔹 Flag
+  static async sendFlagNotification(recipientId, senderId, contentType, contentId, contentTitle, reason) {
+    try {
+      const sender = await User.findById(senderId).select('username firstName lastName');
+      const senderName = sender ? (sender.firstName && sender.lastName ? `${sender.firstName} ${sender.lastName}` : sender.username) : 'Someone';
+      const recipient = await User.findById(recipientId).select('username firstName lastName');
+      const recipientName = recipient ? (recipient.firstName && recipient.lastName ? `${recipient.firstName} ${recipient.lastName}` : recipient.username) : 'someone';
+      const notification = new Notification({
+        recipient: recipientId,
+        sender: senderId,
+        type: "flag",
+        title: "Content Flagged",
+        message: `${senderName} flagged ${recipientName}'s ${contentType}: "${contentTitle}" (Reason: ${reason})`,
+        relatedContent: { contentType, contentId, contentTitle },
+        priority: "high",
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+      });
+
+      await notification.save();
+      return notification;
+    } catch (error) {
+      console.error("Error sending flag notification:", error);
+    }
+  }
+
+  // 🔹 Subscribe
   static async sendSubscribeNotification(recipientId, senderId, channelName) {
     try {
+      const sender = await User.findById(senderId).select('username firstName lastName');
+      const senderName = sender ? (sender.firstName && sender.lastName ? `${sender.firstName} ${sender.lastName}` : sender.username) : 'Someone';
       const notification = new Notification({
         recipient: recipientId,
         sender: senderId,
-        type: 'subscribe',
-        title: 'New Subscriber',
-        message: `Someone subscribed to your channel: ${channelName}`,
-        priority: 'low',
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
+        type: "subscribe",
+        title: "New Subscriber",
+        message: `${senderName} subscribed to your channel "${channelName}"`,
+        priority: "medium",
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       });
 
       await notification.save();
-      console.log(`Subscribe notification sent to user ${recipientId}`);
       return notification;
     } catch (error) {
-      console.error('Error sending subscribe notification:', error);
+      console.error("Error sending subscribe notification:", error);
     }
   }
 
-  // Send security alert notification (for failed attempts)
-  static async sendSecurityAlertNotification(userId, alertType, details) {
+  // 🔹 System
+  static async sendSystemNotification(recipientId, title, message, priority = 'medium') {
     try {
-      let title, message;
-      switch (alertType) {
-        case 'failed_login':
-          title = 'Security Alert: Failed Login Attempt';
-          message = 'Multiple failed login attempts detected on your account. If this wasn\'t you, please change your password immediately.';
-          break;
-        case 'account_locked':
-          title = 'Security Alert: Account Locked';
-          message = 'Your account has been temporarily locked due to multiple failed login attempts.';
-          break;
-        default:
-          title = 'Security Alert';
-          message = details || 'Suspicious activity detected on your account.';
-      }
-
       const notification = new Notification({
-        recipient: userId,
-        type: 'system',
+        recipient: recipientId,
+        type: "system",
         title,
         message,
-        priority: 'urgent',
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+        priority,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
       });
 
       await notification.save();
-      console.log(`Security alert notification sent to user ${userId}`);
       return notification;
     } catch (error) {
-      console.error('Error sending security alert notification:', error);
+      console.error("Error sending system notification:", error);
     }
   }
 
-  // Clean up expired notifications
-  static async cleanupExpiredNotifications() {
+  // 🔹 Security Alert
+  static async sendSecurityAlertNotification(recipientId, alertType, message) {
     try {
-      const result = await Notification.deleteMany({
-        expiresAt: { $lte: new Date() }
+      const notification = new Notification({
+        recipient: recipientId,
+        type: "system",
+        title: "Security Alert",
+        message: `${alertType}: ${message}`,
+        priority: "urgent",
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
       });
 
-      if (result.deletedCount > 0) {
-        console.log(`Cleaned up ${result.deletedCount} expired notifications`);
-      }
-
-      return result.deletedCount;
+      await notification.save();
+      return notification;
     } catch (error) {
-      console.error('Error cleaning up expired notifications:', error);
-      return 0;
+      console.error("Error sending security alert notification:", error);
+    }
+  }
+
+  // 🔹 Warning
+  static async sendWarningNotification(recipientId, reason, contentType, contentTitle, actionBy) {
+    try {
+      const actionUser = await User.findById(actionBy).select('username firstName lastName');
+      const actionByName = actionUser ? (actionUser.firstName && actionUser.lastName ? `${actionUser.firstName} ${actionUser.lastName}` : actionUser.username) : 'Admin';
+      const notification = new Notification({
+        recipient: recipientId,
+        type: "content_warning",
+        title: "Content Warning",
+        message: `Your ${contentType} "${contentTitle}" has been flagged for: ${reason}`,
+        moderationAction: { actionType: 'warn', reason, actionBy },
+        priority: "high",
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+      });
+
+      await notification.save();
+      return notification;
+    } catch (error) {
+      console.error("Error sending warning notification:", error);
     }
   }
 }

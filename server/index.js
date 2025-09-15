@@ -1,3 +1,4 @@
+// Add socket.io integration for real-time notifications
 const express = require('express');
 // const mongoose = require('mongoose');
 const cors = require('cors');
@@ -5,6 +6,30 @@ const path = require('path');
 require('dotenv').config();
 
 const app = express();
+const http = require('http').createServer(app);
+const { Server } = require('socket.io');
+
+const io = new Server(http, {
+  cors: {
+    origin: [
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'http://localhost:5175',
+      'http://localhost:3000',
+      'http://localhost:4173',
+      'http://127.0.0.1:5173',
+      'http://127.0.0.1:5174',
+      'http://127.0.0.1:5175',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:4173',
+      'https://plppowerhub.vercel.app'
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token', 'Accept', 'Origin', 'X-Requested-With'],
+    exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar']
+  }
+});
 
 // More permissive CORS configuration for development
 const corsOptions = {
@@ -119,3 +144,20 @@ process.on('SIGINT', () => {
   Scheduler.stopAll();
   process.exit(0);
 });
+
+// Socket.io connection handling
+io.on('connection', (socket) => {
+  console.log('A user connected:', socket.id);
+
+  // Listen for user identification to join room
+  socket.on('identify', (userId) => {
+    console.log(`User identified: ${userId}`);
+    socket.join(userId); // Join room named by userId
+  });
+
+  socket.on('disconnect', () => {
+    console.log('User disconnected:', socket.id);
+  });
+});
+
+module.exports = { app, io };

@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { SocketProvider } from './context/SocketContext';
 import { useEffect } from 'react';
 import { trackPageVisit } from './utils/analytics';
 import ProgressBar from './components/ProgressBar';
@@ -166,8 +167,10 @@ function App() {
   const loading = useRouteLoader();
   return (
     <AuthProvider>
-      <ProgressBar loading={loading} />
-      <AppRoutes />
+      <SocketProvider>
+        <ProgressBar loading={loading} />
+        <AppRoutes />
+      </SocketProvider>
     </AuthProvider>
   );
 }
