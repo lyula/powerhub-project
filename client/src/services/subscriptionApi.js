@@ -35,7 +35,7 @@ export const fetchUserSubscriptions = async () => {
       id: channel._id,
       name: channel.name,
       description: channel.description,
-      avatar: channel.avatar || '/api/placeholder/100/100',
+      avatar: channel.avatar,
       subscriberCount: channel.subscriberCount,
       isSubscribed: true, // Always true for user subscriptions
       notificationsEnabled: true, // Default value, can be enhanced later
@@ -76,8 +76,8 @@ export const fetchChannelSubscribers = async (channelId) => {
         lastName: subscriber.lastName,
         name: `${subscriber.firstName || ''} ${subscriber.lastName || ''}`.trim() || subscriber.username,
         email: subscriber.email,
-        avatar: subscriber.avatar || subscriber.profilePicture || '/api/placeholder/50/50',
-        profilePicture: subscriber.profilePicture || subscriber.avatar || '/api/placeholder/50/50',
+        avatar: subscriber.avatar || subscriber.profilePicture,
+        profilePicture: subscriber.profilePicture || subscriber.avatar,
         subscribedAt: subscriber.subscribedAt,
         joinedAt: subscriber.subscribedAt, // Alias for compatibility
         notificationsEnabled: true // Default value

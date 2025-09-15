@@ -16,7 +16,7 @@ const SubscribersList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('recent');
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(12);
+  const [itemsPerPage] = useState(10);
   const [channelName, setChannelName] = useState('');
   const [stats, setStats] = useState({
     total: 0,
@@ -85,21 +85,19 @@ const SubscribersList = () => {
         growthRate: data.subscribers.length > 0 ? (thisMonthCount / data.subscribers.length) * 100 : 0
       });
     } catch (err) {
-      setError(err.message || 'Failed to load subscribers. Please try again.');
       console.error('Error loading subscribers:', err);
+      setError(err.message || 'Failed to load subscribers. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   const filterAndSortSubscribers = () => {
-    let filtered = subscribers.filter(subscriber =>
-      (subscriber.name && subscriber.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (subscriber.username && subscriber.username.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (subscriber.email && subscriber.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (subscriber.firstName && subscriber.firstName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (subscriber.lastName && subscriber.lastName.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    let filtered = subscribers.filter(subscriber => {
+      const name = subscriber.name || `${subscriber.firstName || ''} ${subscriber.lastName || ''}`.trim() || subscriber.username || '';
+      return name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (subscriber.email && subscriber.email.toLowerCase().includes(searchTerm.toLowerCase()));
+    });
 
     filtered.sort((a, b) => {
       switch (sortBy) {
@@ -108,11 +106,9 @@ const SubscribersList = () => {
           const nameB = b.name || `${b.firstName || ''} ${b.lastName || ''}`.trim() || b.username || '';
           return nameA.localeCompare(nameB);
         case 'recent':
-          return new Date(b.subscribedAt || b.joinedAt) - new Date(a.subscribedAt || a.joinedAt);
+          return new Date(b.subscribedAt || b.joinedAt || 0) - new Date(a.subscribedAt || a.joinedAt || 0);
         case 'oldest':
-          return new Date(a.subscribedAt || a.joinedAt) - new Date(b.subscribedAt || b.joinedAt);
-        case 'email':
-          return (a.email || '').localeCompare(b.email || '');
+          return new Date(a.subscribedAt || a.joinedAt || 0) - new Date(b.subscribedAt || b.joinedAt || 0);
         default:
           return 0;
       }
@@ -122,20 +118,42 @@ const SubscribersList = () => {
     setCurrentPage(1);
   };
 
-  const handleProfilePictureClick = (subscriber) => {
-    const profilePicture = subscriber.profilePicture || subscriber.avatar;
-    const channelName = subscriber.name || `${subscriber.firstName || ''} ${subscriber.lastName || ''}`.trim() || subscriber.username || 'Unknown User';
-    const socialLinks = subscriber.socialLinks || {};
-    const authorId = subscriber.id || subscriber._id;
-    const hasChannel = !!(subscriber.channelId || subscriber.channel);
-
-    setModalData({
-      profilePicture,
+  const handleProfilePictureClick = async (subscriber) => {
+    console.log('Profile picture clicked for subscriber:', subscriber);
+    const authorId = subscriber._id || subscriber.id;
+    let hasChannel = false;
+    let channelName = subscriber.username || subscriber.firstName || 'Unknown';
+    let socialLinks = {};
+    
+    if (authorId) {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const res = await fetch(`${apiUrl}/channel/by-owner/${authorId}`);
+        if (res.ok) {
+          const data = await res.json();
+          console.log('Channel data received:', data);
+          if (data && data._id) {
+            hasChannel = true;
+            channelName = data.name || channelName;
+          }
+          if (data.contactInfo) {
+            socialLinks = data.contactInfo;
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching channel:', err);
+      }
+    }
+    
+    const modalDataToSet = {
+      profilePicture: subscriber.profilePicture || subscriber.avatar || '/default-avatar.png',
       channelName,
       socialLinks,
       authorId,
       hasChannel
-    });
+    };
+    
+    setModalData(modalDataToSet);
     setModalOpen(true);
   };
 
@@ -143,24 +161,20 @@ const SubscribersList = () => {
     setModalOpen(false);
     if (modalData.authorId) {
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const apiUrl = import.meta.env.VITE_API_URL;
         const res = await fetch(`${apiUrl}/channel/by-owner/${modalData.authorId}`);
         if (res.ok) {
           const data = await res.json();
           if (data && data._id) {
-            navigate(`/channel/${data._id}`);
+            window.location.href = `/channel/${data._id}`;
             return;
           }
         }
-      } catch (err) {
-        console.error('Error finding channel:', err);
-      }
+      } catch (err) {}
     }
   };
 
   const formatRelativeDate = (dateString) => {
-    if (!dateString) return 'Unknown';
-    
     const date = new Date(dateString);
     const now = new Date();
     const diffTime = Math.abs(now - date);
@@ -183,53 +197,33 @@ const SubscribersList = () => {
   if (error) return <ErrorMessage message={error} onRetry={loadSubscribers} />;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      {/* Header */}
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* Header with Stats */}
       <div className="mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">My Subscribers</h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              {channelName && `${channelName} • `}{stats.total.toLocaleString()} subscribers
-            </p>
-          </div>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Subscribers</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total.toLocaleString()}</p>
-              </div>
-              <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
-                <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-              </div>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gradient-to-r from-green-600 to-blue-600 rounded-xl flex items-center justify-center">
+              <UserCheck className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                {channelName ? `${channelName}'s Subscribers` : 'Your Subscribers'}
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400 mt-1">
+                {stats.total} total subscribers
+              </p>
             </div>
           </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">This Month</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.thisMonth.toLocaleString()}</p>
-              </div>
-              <div className="w-12 h-12 bg-green-50 dark:bg-green-900/20 rounded-lg flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-green-600 dark:text-green-400" />
-              </div>
+          <div className="flex items-center gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.thisMonth}</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">This month</div>
             </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Growth Rate</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.growthRate.toFixed(1)}%</p>
-              </div>
-              <div className="w-12 h-12 bg-purple-50 dark:bg-purple-900/20 rounded-lg flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-              </div>
+            <div className="flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-full">
+              <TrendingUp className="w-4 h-4 text-green-600 dark:text-green-400" />
+              <span className="text-sm font-medium text-green-700 dark:text-green-300">
+                {stats.growthRate.toFixed(1)}% growth
+              </span>
             </div>
           </div>
         </div>
@@ -243,7 +237,7 @@ const SubscribersList = () => {
               placeholder="Search subscribers..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-3 w-full border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              className="pl-10 pr-4 py-3 w-full border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             />
           </div>
           <div className="flex items-center gap-3">
@@ -251,12 +245,11 @@ const SubscribersList = () => {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             >
               <option value="recent">Recently subscribed</option>
               <option value="oldest">Oldest subscribers</option>
               <option value="name">Name</option>
-              <option value="email">Email</option>
             </select>
           </div>
         </div>
@@ -280,7 +273,7 @@ const SubscribersList = () => {
           {searchTerm && (
             <button
               onClick={() => setSearchTerm('')}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors font-medium"
             >
               <Sparkles className="w-4 h-4" />
               Clear Search
@@ -293,21 +286,22 @@ const SubscribersList = () => {
             {currentItems.map((subscriber, index) => (
               <div
                 key={subscriber.id || subscriber._id}
-                className={`p-6 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors ${
+                className={`p-6 hover:bg-green-50/30 dark:hover:bg-green-900/10 transition-colors ${
                   index !== currentItems.length - 1 ? 'border-b border-gray-200 dark:border-gray-700' : ''
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4 flex-1">
                     {/* Profile Picture */}
-                    <div 
-                      className="relative cursor-pointer"
-                      onClick={() => handleProfilePictureClick(subscriber)}
-                    >
+                    <div className="relative">
                       <img
-                        src={subscriber.profilePicture || subscriber.avatar}
-                        alt={subscriber.name || subscriber.username}
-                        className="w-12 h-12 rounded-full object-cover ring-2 ring-gray-200 dark:ring-gray-700"
+                        src={subscriber.profilePicture || subscriber.avatar || '/api/placeholder/60/60'}
+                        alt={subscriber.name || 'Subscriber'}
+                        className="w-12 h-12 rounded-xl object-cover cursor-pointer"
+                        onClick={() => handleProfilePictureClick(subscriber)}
+                        onError={(e) => {
+                          e.target.src = '/api/placeholder/60/60';
+                        }}
                       />
                       <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white dark:border-gray-800"></div>
                     </div>
@@ -318,23 +312,21 @@ const SubscribersList = () => {
                         <h3 className="font-semibold text-gray-900 dark:text-white text-lg">
                           {subscriber.name || `${subscriber.firstName || ''} ${subscriber.lastName || ''}`.trim() || subscriber.username || 'Unknown User'}
                         </h3>
-                        {subscriber.username && (
-                          <span className="text-sm text-gray-500 dark:text-gray-400">
-                            @{subscriber.username}
-                          </span>
-                        )}
                       </div>
+                      <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">
+                        {subscriber.email || 'No email provided'}
+                      </p>
                       <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
-                        {subscriber.email && (
-                          <div className="flex items-center gap-1">
-                            <Mail className="w-4 h-4" />
-                            <span>{subscriber.email}</span>
-                          </div>
-                        )}
                         <div className="flex items-center gap-1">
                           <Clock className="w-4 h-4" />
                           <span>Subscribed {formatRelativeDate(subscriber.subscribedAt || subscriber.joinedAt)}</span>
                         </div>
+                        {subscriber.username && (
+                          <div className="flex items-center gap-1">
+                            <User className="w-4 h-4" />
+                            <span>@{subscriber.username}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -343,18 +335,17 @@ const SubscribersList = () => {
                   <div className="flex items-center gap-2 ml-4">
                     <button
                       onClick={() => handleProfilePictureClick(subscriber)}
-                      className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 bg-gray-50 hover:bg-blue-50 dark:bg-gray-700 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                      className="p-2 text-gray-400 hover:text-green-600 dark:hover:text-green-400 bg-gray-50 hover:bg-green-50/30 dark:bg-gray-700 dark:hover:bg-green-900/10 rounded-lg transition-colors"
                       title="View profile"
                     >
-                      <User className="w-4 h-4" />
+                      <ExternalLink className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => window.open(`mailto:${subscriber.email}`, '_blank')}
-                      className="p-2 text-gray-400 hover:text-green-600 dark:hover:text-green-400 bg-gray-50 hover:bg-green-50 dark:bg-gray-700 dark:hover:bg-green-900/20 rounded-lg transition-colors"
-                      title="Send email"
-                      disabled={!subscriber.email}
+                      onClick={() => handleProfilePictureClick(subscriber)}
+                      className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 bg-gray-50 hover:bg-blue-50/30 dark:bg-gray-700 dark:hover:bg-blue-900/10 rounded-lg transition-colors"
+                      title="Send message"
                     >
-                      <Mail className="w-4 h-4" />
+                      <MessageCircle className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
@@ -368,7 +359,7 @@ const SubscribersList = () => {
               <button
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-50/30 dark:hover:bg-green-900/10 transition-colors"
               >
                 Previous
               </button>
@@ -385,15 +376,14 @@ const SubscribersList = () => {
                   } else {
                     page = currentPage - 2 + i;
                   }
-                  
                   return (
                     <button
                       key={page}
                       onClick={() => setCurrentPage(page)}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      className={`px-3 py-2 rounded-lg transition-colors text-sm ${
                         currentPage === page
-                          ? 'bg-blue-600 text-white'
-                          : 'border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
+                          ? 'bg-green-600 text-white'
+                          : 'border border-gray-300 dark:border-gray-600 hover:bg-green-50/30 dark:hover:bg-green-900/10 text-gray-900 dark:text-white'
                       }`}
                     >
                       {page}
@@ -405,7 +395,7 @@ const SubscribersList = () => {
               <button
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-50/30 dark:hover:bg-green-900/10 transition-colors"
               >
                 Next
               </button>
@@ -414,15 +404,16 @@ const SubscribersList = () => {
         </>
       )}
 
-      {/* Profile Picture Modal */}
+      {/* Profile picture zoom modal */}
       {modalOpen && (
         <ProfilePictureZoomModal
-          isOpen={modalOpen}
+          open={modalOpen}
           onClose={() => setModalOpen(false)}
           profilePicture={modalData.profilePicture}
           channelName={modalData.channelName}
           socialLinks={modalData.socialLinks}
-          onViewChannel={modalData.hasChannel ? handleViewChannel : undefined}
+          hasChannel={modalData.hasChannel}
+          onViewChannel={handleViewChannel}
         />
       )}
     </div>

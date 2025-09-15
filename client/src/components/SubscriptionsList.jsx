@@ -207,7 +207,7 @@ const SubscriptionsList = () => {
             {currentItems.map((channel, index) => (
               <div
                 key={channel.id}
-                className={`p-6 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors ${
+                className={`p-6 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors ${
                   index !== currentItems.length - 1 ? 'border-b border-gray-200 dark:border-gray-700' : ''
                 }`}
               >
@@ -216,12 +216,9 @@ const SubscriptionsList = () => {
                     {/* Channel Avatar */}
                     <div className="relative">
                       <img
-                        src={channel.avatar || '/api/placeholder/60/60'}
+                        src={channel.avatar}
                         alt={channel.name}
-                        className="w-12 h-12 rounded-xl object-cover"
-                        onError={(e) => {
-                          e.target.src = '/api/placeholder/60/60';
-                        }}
+                        className="w-12 h-12 rounded-full object-cover"
                       />
                       {channel.owner && (
                         <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white dark:border-gray-800"></div>
@@ -305,7 +302,7 @@ const SubscriptionsList = () => {
               <button
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors"
               >
                 Previous
               </button>
@@ -329,7 +326,7 @@ const SubscriptionsList = () => {
                       className={`px-3 py-2 rounded-lg transition-colors text-sm ${
                         currentPage === page
                           ? 'bg-blue-600 text-white'
-                          : 'border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
+                          : 'border border-gray-300 dark:border-gray-600 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 text-gray-900 dark:text-white'
                       }`}
                     >
                       {page}
@@ -341,7 +338,7 @@ const SubscriptionsList = () => {
               <button
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors"
               >
                 Next
               </button>
