@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Search, Filter, TrendingUp, Calendar, Sparkles, Bell, BellOff, Trash2, ExternalLink, User, Clock, Crown } from 'lucide-react';
+import { Users, Search, Filter, TrendingUp, Calendar, Sparkles, Bell, BellOff, Trash2, ExternalLink, User, Crown } from 'lucide-react';
 import { fetchUserSubscriptions, toggleSubscription, updateNotificationSettings } from '../services/subscriptionApi';
 import LoadingSpinner from './LoadingSpinner';
 import ErrorMessage from './ErrorMessage';
@@ -104,18 +104,7 @@ const SubscriptionsList = () => {
     });
   };
 
-  const formatRelativeDate = (dateString) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now - date);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.ceil(diffDays / 7)} weeks ago`;
-    if (diffDays < 365) return `${Math.ceil(diffDays / 30)} months ago`;
-    return `${Math.ceil(diffDays / 365)} years ago`;
-  };
 
   // Pagination
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -245,10 +234,6 @@ const SubscriptionsList = () => {
                         <div className="flex items-center gap-1">
                           <User className="w-4 h-4" />
                           <span>{channel.subscriberCount.toLocaleString()} subscribers</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" />
-                          <span>Subscribed {formatRelativeDate(channel.subscribedAt)}</span>
                         </div>
                         {channel.owner && (
                           <div className="flex items-center gap-1">

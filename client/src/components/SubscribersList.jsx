@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserCheck, Search, Filter, TrendingUp, Calendar, Users, Sparkles, Mail, User, Clock } from 'lucide-react';
+import { UserCheck, Search, Filter, TrendingUp, Calendar, Users, Sparkles } from 'lucide-react';
 import { fetchChannelSubscribers } from '../services/subscriptionApi';
 import LoadingSpinner from './LoadingSpinner';
 import ErrorMessage from './ErrorMessage';
@@ -158,20 +158,7 @@ const SubscribersList = () => {
     }
   };
 
-  const formatRelativeDate = (dateString) => {
-    if (!dateString) return 'Unknown';
-    
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now - date);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.ceil(diffDays / 7)} weeks ago`;
-    if (diffDays < 365) return `${Math.ceil(diffDays / 30)} months ago`;
-    return `${Math.ceil(diffDays / 365)} years ago`;
-  };
 
   // Pagination
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -327,35 +314,11 @@ const SubscribersList = () => {
                       <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
                         {subscriber.email && (
                           <div className="flex items-center gap-1">
-                            <Mail className="w-4 h-4" />
                             <span>{subscriber.email}</span>
                           </div>
                         )}
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" />
-                          <span>Subscribed {formatRelativeDate(subscriber.subscribedAt || subscriber.joinedAt)}</span>
-                        </div>
                       </div>
                     </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-2 ml-4">
-                    <button
-                      onClick={() => handleProfilePictureClick(subscriber)}
-                      className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 bg-gray-50 hover:bg-blue-50 dark:bg-gray-700 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                      title="View profile"
-                    >
-                      <User className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => window.open(`mailto:${subscriber.email}`, '_blank')}
-                      className="p-2 text-gray-400 hover:text-green-600 dark:hover:text-green-400 bg-gray-50 hover:bg-green-50 dark:bg-gray-700 dark:hover:bg-green-900/20 rounded-lg transition-colors"
-                      title="Send email"
-                      disabled={!subscriber.email}
-                    >
-                      <Mail className="w-4 h-4" />
-                    </button>
                   </div>
                 </div>
               </div>
