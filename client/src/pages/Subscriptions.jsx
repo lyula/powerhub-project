@@ -1,13 +1,5 @@
-// Subscriptions.jsx
-// This page component integrates the Header, Sidebar, and SubscriptionManager components to create a cohesive subscriptions management interface.
-// It manages the state for sidebar visibility and active tabs, ensuring a responsive and user-friendly layout.
-// The design incorporates gradients, shadows, and responsive elements for an engaging user experience.
-// The component uses React state to manage the sidebar's open/closed state and the active tab for displaying either subscriptions or subscribers.
-// Tailwind CSS classes are applied for styling, and lucide-react icons are used for visual elements.
-
-
 import React, { useState } from 'react';
-import { Users, UserCheck, Bell, Settings, Search, Filter } from 'lucide-react';
+import { Users, UserCheck, Bell, Settings } from 'lucide-react';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import SubscriptionsList from '../components/SubscriptionsList';
@@ -37,15 +29,15 @@ export default function Subscriptions() {
   const ActiveComponent = tabs.find(tab => tab.id === activeTab)?.component;
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-[#111111] w-full" style={{ overflowX: 'hidden', scrollbarWidth: 'none', maxWidth: '100vw' }}>
-      <div className="fixed top-0 left-0 w-full z-40" style={{ height: '56px' }}>
+    <div className="min-h-screen bg-gray-100 dark:bg-[#111111] w-full">
+      <div className="fixed top-0 left-0 w-full z-40 h-14">
         <Header onToggleSidebar={handleToggleSidebar} />
       </div>
-      <div className="flex flex-row w-full pt-14" style={{ height: 'calc(100vh - 56px)', maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
+      <div className="flex w-full pt-14">
         <div className={`fixed top-14 left-0 h-[calc(100vh-56px)] ${sidebarOpen ? 'w-64' : 'w-20'} z-30 bg-transparent md:block`}>
           <Sidebar collapsed={!sidebarOpen} />
         </div>
-        <div className={`flex-1 flex flex-col ${sidebarOpen ? 'ml-64' : 'ml-20'} w-full`} style={{ maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
+        <div className={`flex-1 flex flex-col ${sidebarOpen ? 'ml-64' : 'ml-20'} min-h-[calc(100vh-56px)]`}>
           
           {/* Page Header */}
           <div className="p-2 md:p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1a1a1a]">
@@ -92,7 +84,7 @@ export default function Subscriptions() {
           </div>
 
           {/* Main Content Area */}
-          <div className="flex-1 overflow-y-auto bg-gradient-to-br from-gray-50 to-blue-50 dark:from-[#111111] dark:to-[#1a1a1a]">
+          <div className="flex-1 bg-gradient-to-br from-gray-50 to-blue-50 dark:from-[#111111] dark:to-[#1a1a1a]">
             {ActiveComponent && <ActiveComponent />}
           </div>
         </div>
@@ -100,9 +92,3 @@ export default function Subscriptions() {
     </div>
   );
 }
-
-
-// This code defines a Subscriptions page that includes a header, sidebar, and tabs for managing subscriptions and subscribers.
-// The page uses a responsive layout with a fixed header and collapsible sidebar. It includes navigation tabs for switching between "My Subscriptions" and "My Subscribers" sections, each displaying relevant content.
-// The header features a notification icon and a settings button, while the sidebar contains navigation links.
-// The main content area displays the active component based on the selected tab, allowing users to manage their subscriptions and subscribers effectively.

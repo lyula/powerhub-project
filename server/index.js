@@ -111,6 +111,7 @@ app.use(trackSessionStart); // Track session start
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/user', require('./routes/user'));
 app.use('/api/filters', require('./routes/filter'));
 app.use('/api/channel', require('./routes/channel'));
 app.use('/api/posts', require('./routes/post')); // Move posts BEFORE videos

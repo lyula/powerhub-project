@@ -23,12 +23,13 @@ export const AuthProvider = ({ children }) => {
   const [serverConnected, setServerConnected] = useState(true);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   useEffect(() => {
     if (!loading && !user) {
       // Only redirect if not on public routes
       const currentPath = location?.pathname || '';
-      const publicPaths = ['/', '/login', '/register', '/forgot-password', '/forgot-password-verify', '/reset-password'];
+      const publicPaths = ['/', '/login', '/register', '/terms', '/interests', '/forgot-password', '/forgot-password-verify', '/reset-password'];
       if (!publicPaths.includes(currentPath)) {
         navigate('/login', { replace: true });
       }
@@ -142,6 +143,7 @@ export const AuthProvider = ({ children }) => {
     console.log('Handling maintenance mode logout');
     setUser(null);
     setToken(null);
+    setIsAuthenticated(false);
     localStorage.removeItem('token');
     navigate('/login', { 
       state: { 
@@ -220,12 +222,14 @@ export const AuthProvider = ({ children }) => {
               const data = await response.json();
               userData = data.data.user;
               setUser(userData);
+              setIsAuthenticated(true);
             } else {
               // Server returned non-JSON response
               console.error('Auth endpoint returned non-JSON response');
               localStorage.removeItem('token');
               setToken(null);
               setUser(null);
+              setIsAuthenticated(false);
             }
           } else {
             // Parse response for error handling
@@ -243,6 +247,7 @@ export const AuthProvider = ({ children }) => {
               // Unauthorized: treat as not logged in
               setUser(null);
               setToken(null);
+              setIsAuthenticated(false);
               localStorage.removeItem('token');
             } else if (response.status === 503 && data.maintenanceMode) {
               // Maintenance mode
@@ -251,6 +256,7 @@ export const AuthProvider = ({ children }) => {
               // Don't log out IT users during maintenance
               if (userData && (userData.role === 'IT' || userData.role === 'admin')) {
                 setUser(userData);
+                setIsAuthenticated(true);
               } else {
                 handleMaintenanceLogout();
               }
@@ -259,6 +265,7 @@ export const AuthProvider = ({ children }) => {
               localStorage.removeItem('token');
               setToken(null);
               setUser(null);
+              setIsAuthenticated(false);
             }
           }
           // Always fetch channel info after user check
@@ -309,11 +316,13 @@ export const AuthProvider = ({ children }) => {
           localStorage.removeItem('token');
           setToken(null);
           setUser(null);
+          setIsAuthenticated(false);
           setChannel(null);
         }
       } else {
         setChannel(null);
         setUser(null);
+        setIsAuthenticated(false);
       }
       setLoading(false);
     };
@@ -348,10 +357,10 @@ export const AuthProvider = ({ children }) => {
         }
       }
 
-      // Save token and user data
-      localStorage.setItem('token', data.data.token);
-      setToken(data.data.token);
-      setUser(data.data.user);
+      // Don't save token and user data - require manual login
+      // localStorage.setItem('token', data.data.token);
+      // setToken(data.data.token);
+      // setUser(data.data.user);
 
       return { success: true, data: data.data };
     } catch (error) {
@@ -401,6 +410,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', data.data.token);
       setToken(data.data.token);
       setUser(data.data.user);
+      setIsAuthenticated(true);
 
       return { success: true, data: data.data };
     } catch (error) {
@@ -427,6 +437,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('user'); // Also remove user data if stored
       setToken(null);
       setUser(null);
+      setIsAuthenticated(false);
       setChannel(null);
       navigate('/login');
     }
@@ -577,7 +588,7 @@ export const AuthProvider = ({ children }) => {
     maintenanceMode,
     maintenanceMessage,
     checkMaintenanceMode,
-    isAuthenticated: !!token,
+    isAuthenticated: isAuthenticated,
     uploadProfilePicture: async (file) => {
       // Upload image directly to Cloudinary
       const CLOUDINARY_NAME = import.meta.env.VITE_CLOUDINARY_NAME;

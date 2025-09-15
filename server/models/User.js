@@ -47,7 +47,10 @@ const userSchema = new mongoose.Schema({
   
   // Reset verify security
   resetVerifyAttempts: { type: Number, default: 0 },
-  resetVerifyLockUntil: { type: Date, default: null }
+  resetVerifyLockUntil: { type: Date, default: null },
+  
+  // User interests for content recommendation
+  interests: [{ type: String }]
 }, { timestamps: true });
 
 userSchema.pre('save', async function(next) {

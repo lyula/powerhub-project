@@ -20,6 +20,7 @@ export default function Login() {
   const [maintenanceMessage, setMaintenanceMessage] = useState('');
   const [checkingMaintenance, setCheckingMaintenance] = useState(true);
   const [maintenanceLogoutMessage, setMaintenanceLogoutMessage] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // Check for maintenance logout message from location state
   useEffect(() => {
@@ -134,6 +135,13 @@ export default function Login() {
             </div>
           )}
           
+          {/* Success Message */}
+          {location.state?.message && !maintenanceMode && (
+            <div className="w-full p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg text-sm">
+              {location.state.message}
+            </div>
+          )}
+          
           {error && !maintenanceMode && (
             <div className="w-full p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
               {error}
@@ -149,15 +157,24 @@ export default function Login() {
               required
               className="w-full px-4 py-3 rounded-lg bg-gray-200 dark:bg-gray-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400" 
             />
-            <input 
-              type="password" 
-              name="password"
-              placeholder="Password" 
-              value={formData.password}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-3 rounded-lg bg-gray-200 dark:bg-gray-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400" 
-            />
+            <div className="relative w-full">
+              <input 
+                type={showPassword ? "text" : "password"} 
+                name="password"
+                placeholder="Password" 
+                value={formData.password}
+                onChange={handleChange}
+                required
+                className="w-full px-4 py-3 rounded-lg bg-gray-200 dark:bg-gray-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400" 
+              />
+              <button 
+                type="button" 
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-3 text-gray-600 dark:text-gray-400"
+              >
+                {showPassword ? "Hide" : "Show"}
+              </button>
+            </div>
             <div className="w-full text-right -mt-2">
               <Link to="/forgot-password-verify" className="text-sm text-blue-600 hover:underline">Forgot password?</Link>
             </div>

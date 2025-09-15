@@ -2,7 +2,7 @@ import React from 'react';
 import { FaYoutube, FaTwitter, FaInstagram, FaFacebook, FaTiktok, FaLinkedin, FaWhatsapp, FaGithub, FaEnvelope } from 'react-icons/fa';
 
 
-export default function ProfilePictureZoomModal({ open, onClose, profilePicture, channelName, socialLinks, hasChannel, onViewChannel }) {
+export default function ProfilePictureZoomModal({ open, onClose, profilePicture, channelName, socialLinks, hasChannel, onViewChannel, username }) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80" onClick={onClose}>
@@ -37,7 +37,23 @@ export default function ProfilePictureZoomModal({ open, onClose, profilePicture,
               // Show other icons only if present
               if (socialLinks?.linkedin) icons.push(<a href={socialLinks.linkedin} target="_blank" rel="noopener noreferrer" title="LinkedIn" key="linkedin"><FaLinkedin className="text-blue-700 text-2xl" /></a>);
               if (socialLinks?.instagram) icons.push(<a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer" title="Instagram" key="instagram"><FaInstagram className="text-pink-500 text-2xl" /></a>);
-              if (socialLinks?.whatsapp) icons.push(<a href={socialLinks.whatsapp} target="_blank" rel="noopener noreferrer" title="WhatsApp" key="whatsapp"><FaWhatsapp className="text-green-500 text-2xl" /></a>);
+              if (socialLinks?.whatsapp) {
+                // Format WhatsApp link properly with custom message
+                let whatsappUrl = socialLinks.whatsapp;
+                const displayName = username || channelName || 'there';
+                if (!whatsappUrl.startsWith('http')) {
+                  // If it's just a phone number, format it for WhatsApp
+                  const phoneNumber = whatsappUrl.replace(/[^\d+]/g, '');
+                  const message = encodeURIComponent(`Hello ${displayName}, I came across your profile from PLP-Powerhub. Mind helping me with something?`);
+                  whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
+                } else {
+                  // If it's already a URL, add the message parameter
+                  const message = encodeURIComponent(`Hello ${displayName}, I came across your profile from PLP-Powerhub. Mind helping me with something?`);
+                  const separator = whatsappUrl.includes('?') ? '&' : '?';
+                  whatsappUrl = `${whatsappUrl}${separator}text=${message}`;
+                }
+                icons.push(<a href={whatsappUrl} target="_blank" rel="noopener noreferrer" title="WhatsApp" key="whatsapp"><FaWhatsapp className="text-green-500 text-2xl" /></a>);
+              }
               if (socialLinks?.github) icons.push(<a href={socialLinks.github} target="_blank" rel="noopener noreferrer" title="GitHub" key="github"><FaGithub className="text-gray-200 text-2xl" /></a>);
               if (socialLinks?.youtube) icons.push(<a href={socialLinks.youtube} target="_blank" rel="noopener noreferrer" title="YouTube" key="youtube"><FaYoutube className="text-red-600 text-2xl" /></a>);
               if (socialLinks?.twitter) icons.push(<a href={socialLinks.twitter} target="_blank" rel="noopener noreferrer" title="Twitter" key="twitter"><FaTwitter className="text-blue-400 text-2xl" /></a>);

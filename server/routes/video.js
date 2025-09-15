@@ -64,6 +64,9 @@ router.get("/", videoController.getAllVideos);
 // Add a view to a video
 router.post("/:id/view", videoController.addView);
 
+// Get home feed recommendations (must be before /:id routes)
+router.get("/recommendations", videoController.getHomeFeedRecommendations);
+
 // Get video details
 router.get("/:id", videoController.getVideo);
 

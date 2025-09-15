@@ -14,12 +14,17 @@ router.post('/', auth, upload.fields([
 // Get current user's channel (authenticated)
 router.get('/me', auth, channelController.getMyChannel);
 
+// Get current user's subscriptions (authenticated)
+router.get('/subscriptions', auth, channelController.getUserSubscriptions);
 
 // Subscribe to a channel
 router.post('/:id/subscribe', auth, channelController.subscribeChannel);
 
 // Unsubscribe from a channel
 router.post('/:id/unsubscribe', auth, channelController.unsubscribeChannel);
+
+// Get channel subscribers
+router.get('/:id/subscribers', channelController.getChannelSubscribers);
 
 // Search for channels by name similarity (must be before /:id route)
 router.get('/search', channelController.searchChannels);

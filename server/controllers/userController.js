@@ -49,9 +49,31 @@ exports.register = async (req, res) => {
     // Reset session invalidation on successful registration
     await user.resetSessionInvalidation();
 
-    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '7d' });
-    res.status(201).json({ data: { user, token } });
+    // Create a temporary token for interests selection (expires in 1 hour)
+    const tempToken = jwt.sign(
+      { 
+        id: user._id, 
+        purpose: 'interests_selection',
+        username: user.username 
+      }, 
+      JWT_SECRET, 
+      { expiresIn: '1h' }
+    );
+    
+    res.status(201).json({ 
+      data: { 
+        user: {
+          id: user._id,
+          username: user.username,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email
+        }, 
+        tempToken 
+      } 
+    });
   } catch (err) {
+    console.error('Registration error:', err);
     res.status(500).json({ message: 'Server error.' });
   }
 };
@@ -487,6 +509,64 @@ exports.completePasswordReset = async (req, res) => {
     return res.json({ success: true, message: 'Password reset successfully.' });
   } catch (err) {
     console.error('Complete reset error:', err);
+    return res.status(500).json({ message: 'Server error.' });
+  }
+};
+
+// Save user interests
+exports.saveInterests = async (req, res) => {
+  try {
+    console.log('saveInterests called with body:', req.body);
+    const { interests, tempToken } = req.body;
+    
+    console.log('Extracted - tempToken:', tempToken ? 'present' : 'missing');
+    console.log('Extracted - interests:', interests);
+    
+    if (!tempToken) {
+      console.log('Missing tempToken');
+      return res.status(400).json({ message: 'Registration token is required.' });
+    }
+    
+    if (!interests || !Array.isArray(interests)) {
+      console.log('Invalid interests:', interests);
+      return res.status(400).json({ message: 'Interests must be an array.' });
+    }
+    
+    // Verify the temporary token
+    let decoded;
+    try {
+      console.log('Verifying token...');
+      decoded = jwt.verify(tempToken, JWT_SECRET);
+      console.log('Token decoded successfully:', decoded);
+      
+      // Check if token is for interests selection
+      if (decoded.purpose !== 'interests_selection') {
+        console.log('Invalid token purpose:', decoded.purpose);
+        return res.status(401).json({ message: 'Invalid token purpose.' });
+      }
+    } catch (tokenError) {
+      console.log('Token verification failed:', tokenError.message);
+      return res.status(401).json({ message: 'Invalid or expired registration token.' });
+    }
+    
+    // Update user with interests
+    const user = await User.findByIdAndUpdate(
+      decoded.id,
+      { interests: interests },
+      { new: true }
+    ).select('-password -secretAnswerHash');
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+    
+    return res.json({ 
+      success: true, 
+      message: 'Interests saved successfully.',
+      data: { user }
+    });
+  } catch (err) {
+    console.error('Save interests error:', err);
     return res.status(500).json({ message: 'Server error.' });
   }
 };
