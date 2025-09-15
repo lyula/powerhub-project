@@ -65,7 +65,7 @@ const TermsAndConditions = () => {
             5. Contact Us
           </h2>
           <p className="text-gray-700 dark:text-gray-300">
-            If you have any questions about these terms, please contact us at support@ourplatform.com.
+            If you have any questions about these terms, please contact us at support@plp-powerhub.com.
           </p>
         </div>
       </div>
