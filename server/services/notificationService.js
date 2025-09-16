@@ -30,27 +30,60 @@ class NotificationService {
     const total = await Notification.countDocuments(query);
     const unreadCount = await Notification.countDocuments({ recipient: userId, read: false });
 
-    // Optionally, reconstruct message to include sender and recipient names if needed
-    const notificationsWithNames = notifications.map(notification => {
-      const sender = notification.sender;
-      const recipient = notification.recipient;
-      const senderName = sender ? (sender.firstName && sender.lastName ? `${sender.firstName} ${sender.lastName}` : sender.username) : 'Someone';
-      const recipientName = recipient ? (recipient.firstName && recipient.lastName ? `${recipient.firstName} ${recipient.lastName}` : recipient.username) : 'someone';
+    // Rebuild message dynamically if needed
+ const notificationsWithNames = notifications.map(notification => {
+  const sender = notification.sender;
+  const recipient = notification.recipient;
 
-      // If message contains generic "Someone" or "someone", replace with senderName and recipientName
-      let message = notification.message;
-      if (message.includes('Someone')) {
-        message = message.replace(/Someone/g, senderName);
-      }
-      if (message.includes('someone')) {
-        message = message.replace(/someone/g, recipientName);
-      }
+  const senderName = sender
+    ? sender.firstName && sender.lastName
+      ? `${sender.firstName} ${sender.lastName}`
+      : sender.username
+    : "Someone";
 
-      return {
-        ...notification.toObject(),
-        message
-      };
-    });
+  const recipientName = recipient
+    ? recipient.firstName && recipient.lastName
+      ? `${recipient.firstName} ${recipient.lastName}`
+      : recipient.username
+    : "someone";
+
+  let contentOwner = recipient && recipient._id.toString() === notification.recipient._id.toString()
+    ? "your"
+    : `${recipientName}'s`;
+
+  let message = "";
+
+  switch (notification.type) {
+    case "comment": {
+      const text = notification.relatedContent.commentText;
+      message = text && text.trim() !== ""
+        ? `${senderName} commented on ${contentOwner} ${notification.relatedContent.contentType}: "${notification.relatedContent.contentTitle}" - "${text}"`
+        : `${senderName} commented on ${contentOwner} ${notification.relatedContent.contentType}: "${notification.relatedContent.contentTitle}"`;
+      break;
+    }
+    case "reply": {
+      const text = notification.relatedContent.commentText;
+      message = text && text.trim() !== ""
+        ? `${senderName} replied to your comment on ${notification.relatedContent.contentType}: "${notification.relatedContent.contentTitle}" - "${text}"`
+        : `${senderName} replied to your comment on ${notification.relatedContent.contentType}: "${notification.relatedContent.contentTitle}"`;
+      break;
+    }
+    case "like":
+      message = `${senderName} liked ${contentOwner} ${notification.relatedContent.contentType}: "${notification.relatedContent.contentTitle}"`;
+      break;
+    case "share":
+      message = `${senderName} shared ${contentOwner} ${notification.relatedContent.contentType}: "${notification.relatedContent.contentTitle}"`;
+      break;
+    default:
+      message = "You have a new notification";
+  }
+
+  return {
+    ...notification.toObject(),
+    message,
+  };
+});
+
 
     return {
       notifications: notificationsWithNames,
@@ -137,8 +170,8 @@ class NotificationService {
         recipient: recipientId,
         sender: senderId,
         type: "like",
-        title: "New Like",
-        message: `${senderName} liked ${recipientName}'s ${contentType}: "${contentTitle}"`,
+        title: "New Like", 
+        message: `${senderName} liked your ${contentType}: "${contentTitle}"`,
         relatedContent: { contentType, contentId, contentTitle },
         priority: "low",
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
@@ -173,7 +206,7 @@ class NotificationService {
         sender: senderId,
         type: "dislike",
         title: "New Dislike",
-        message: `${senderName} disliked ${recipientName}'s ${contentType}: "${contentTitle}"`,
+        message: `${senderName} disliked your ${contentType}: "${contentTitle}"`,
         relatedContent: { contentType, contentId, contentTitle },
         priority: "low",
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
@@ -197,63 +230,95 @@ class NotificationService {
   }
 
   // 🔹 Comment
-  static async sendCommentNotification(recipientId, senderId, contentType, contentId, contentTitle, commentText, io = null) {
-    try {
-      const sender = await User.findById(senderId).select('username firstName lastName');
-      const senderName = sender ? (sender.firstName && sender.lastName ? `${sender.firstName} ${sender.lastName}` : sender.username) : 'Someone';
-      const recipient = await User.findById(recipientId).select('username firstName lastName');
-      const recipientName = recipient ? (recipient.firstName && recipient.lastName ? `${recipient.firstName} ${recipient.lastName}` : recipient.username) : 'someone';
-      const notification = new Notification({
-        recipient: recipientId,
-        sender: senderId,
-        type: "comment",
-        title: "New Comment",
-        message: `${senderName} commented on ${recipientName}'s ${contentType}: "${contentTitle}" - "${commentText}"`,
-        relatedContent: { contentType, contentId, contentTitle },
-        priority: "medium",
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      });
+// 🔹 Comment
+static async sendCommentNotification(
+  recipientId,
+  senderId,
+  contentType,
+  contentId,
+  contentTitle,
+  commentText,
+  io = null,
+  isReply = false
+) {
+  try {
+    const sender = await User.findById(senderId).select("username firstName lastName");
+    const senderName = sender
+      ? sender.firstName && sender.lastName
+        ? `${sender.firstName} ${sender.lastName}`
+        : sender.username
+      : "Someone";
 
-      await notification.save();
-    
-    // Emit real-time notification if socket.io instance is provided
+    // Base message
+    let message;
+    if (isReply) {
+      message = `${senderName} replied to your comment on ${contentType}: "${contentTitle}" - "${commentText}"`;
+    } else {
+      message = `${senderName} commented on your ${contentType}: "${contentTitle}" - "${commentText}"`;
+    }
+
+    const notification = new Notification({
+      recipient: recipientId,
+      sender: senderId,
+      type: isReply ? "reply" : "comment",
+      title: isReply ? "New Reply" : "New Comment",
+      message,
+      relatedContent: {
+        contentType,
+        contentId,
+        contentTitle,
+        commentText: commentText || "" // ✅ store the actual comment text
+      },
+      priority: "medium",
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+    });
+
+    await notification.save();
+
+    // Emit via socket.io if present
     if (io) {
       const populatedNotification = await Notification.findById(notification._id)
-        .populate('sender', 'username firstName lastName')
-        .populate('recipient', 'username firstName lastName');
-      
-      io.to(recipientId.toString()).emit('new_notification', populatedNotification);
+        .populate("sender", "username firstName lastName")
+        .populate("recipient", "username firstName lastName");
+
+      io.to(recipientId.toString()).emit("new_notification", populatedNotification);
     }
-    
-      return notification;
-    } catch (error) {
-      console.error("Error sending comment notification:", error);
-    }
+
+    return notification;
+  } catch (error) {
+    console.error("Error sending comment/reply notification:", error);
   }
+}
+
+
 
   // 🔹 Reply (with like/dislike option)
-  static async sendReplyNotification(recipientId, senderId, replyId, videoId, replyText, action = "reply", io = null) {
-    try {
-      const sender = await User.findById(senderId).select('username firstName lastName');
-      const senderName = sender ? (sender.firstName && sender.lastName ? `${sender.firstName} ${sender.lastName}` : sender.username) : 'Someone';
-      const recipient = await User.findById(recipientId).select('username firstName lastName');
-      const recipientName = recipient ? (recipient.firstName && recipient.lastName ? `${recipient.firstName} ${recipient.lastName}` : recipient.username) : 'someone';
-      const actionLabel = action === "like" ? "liked" : action === "dislike" ? "disliked" : "replied to";
+static async sendReplyNotification(recipientId, senderId, replyId, videoId, replyText, action = "reply", io = null) {
+  try {
+    const sender = await User.findById(senderId).select('username firstName lastName');
+    const senderName = sender ? (sender.firstName && sender.lastName ? `${sender.firstName} ${sender.lastName}` : sender.username) : 'Someone';
+    const recipient = await User.findById(recipientId).select('username firstName lastName');
+    const recipientName = recipient ? (recipient.firstName && recipient.lastName ? `${recipient.firstName} ${recipient.lastName}` : recipient.username) : 'someone';
+    const actionLabel = action === "like" ? "liked" : action === "dislike" ? "disliked" : "replied to";
 
-      const notification = new Notification({
-        recipient: recipientId,
-        sender: senderId,
-        type: action,
-        title: `New ${actionLabel.charAt(0).toUpperCase() + actionLabel.slice(1)}`,
-        message: `${senderName} ${actionLabel} ${recipientName}'s reply: "${replyText}" (on video ${videoId})`,
-        relatedContent: { contentType: "reply", contentId: replyId, contentTitle: `On video ${videoId}` },
-        priority: "low",
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      });
+    const notification = new Notification({
+      recipient: recipientId,
+      sender: senderId,
+      type: action,
+      title: `New ${actionLabel.charAt(0).toUpperCase() + actionLabel.slice(1)}`,
+      message: `${senderName} ${actionLabel} your reply: "${replyText}" (on video ${videoId})`,
+      relatedContent: { 
+        contentType: "reply", 
+        contentId: replyId, 
+        contentTitle: `On video ${videoId}`,
+        commentText: replyText // ✅ added
+      },
+      priority: "low",
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    });
 
-      await notification.save();
-    
-    // Emit real-time notification if socket.io instance is provided
+    await notification.save();
+
     if (io) {
       const populatedNotification = await Notification.findById(notification._id)
         .populate('sender', 'username firstName lastName')
@@ -261,34 +326,36 @@ class NotificationService {
       
       io.to(recipientId.toString()).emit('new_notification', populatedNotification);
     }
-    
-      return notification;
-    } catch (error) {
-      console.error(`Error sending reply ${action} notification:`, error);
-    }
+
+    return notification;
+  } catch (error) {
+    console.error(`Error sending reply ${action} notification:`, error);
   }
+}
+
 
   // 🔹 Share
   static async sendShareNotification(recipientId, senderId, contentType, contentId, contentTitle, io = null) {
-    try {
-      const sender = await User.findById(senderId).select('username firstName lastName');
-      const senderName = sender ? (sender.firstName && sender.lastName ? `${sender.firstName} ${sender.lastName}` : sender.username) : 'Someone';
-      const recipient = await User.findById(recipientId).select('username firstName lastName');
-      const recipientName = recipient ? (recipient.firstName && recipient.lastName ? `${recipient.firstName} ${recipient.lastName}` : recipient.username) : 'someone';
-      const notification = new Notification({
-        recipient: recipientId,
-        sender: senderId,
-        type: "share",
-        title: "Content Shared",
-        message: `${senderName} shared ${recipientName}'s ${contentType}: "${contentTitle}"`,
-        relatedContent: { contentType, contentId, contentTitle },
-        priority: "medium",
-        expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days
-      });
+  try {
+    const sender = await User.findById(senderId).select('username firstName lastName');
+    const senderName = sender ? (sender.firstName && sender.lastName ? `${sender.firstName} ${sender.lastName}` : sender.username) : 'Someone';
 
-      await notification.save();
-    
-    // Emit real-time notification if socket.io instance is provided
+    const message = `${senderName} shared your ${contentType}: "${contentTitle}"`;
+
+    const notification = new Notification({
+      recipient: recipientId,
+      sender: senderId,
+      type: "share",
+      title: "Content Shared",
+      message, // 👈 clean single message
+      relatedContent: { contentType, contentId, contentTitle },
+      priority: "medium",
+      expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days
+    });
+
+    await notification.save();
+
+    // Emit without altering message
     if (io) {
       const populatedNotification = await Notification.findById(notification._id)
         .populate('sender', 'username firstName lastName')
@@ -296,12 +363,12 @@ class NotificationService {
       
       io.to(recipientId.toString()).emit('new_notification', populatedNotification);
     }
-    
-      return notification;
-    } catch (error) {
-      console.error("Error sending share notification:", error);
-    }
+
+    return notification;
+  } catch (error) {
+    console.error("Error sending share notification:", error);
   }
+}
 
   // 🔹 Flag
   static async sendFlagNotification(recipientId, senderId, contentType, contentId, contentTitle, reason, io = null) {
@@ -315,7 +382,7 @@ class NotificationService {
         sender: senderId,
         type: "flag",
         title: "Content Flagged",
-        message: `${senderName} flagged ${recipientName}'s ${contentType}: "${contentTitle}" (Reason: ${reason})`,
+        message: `${senderName} flagged your ${contentType}: "${contentTitle}" (Reason: ${reason})`,
         relatedContent: { contentType, contentId, contentTitle },
         priority: "high",
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days

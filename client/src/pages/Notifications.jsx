@@ -96,35 +96,23 @@ export default function Notifications() {
       // Map API response to component expected format
       const mappedNotifications = (data.data.notifications || []).map(notification => {
         const sender = notification.sender;
-        const senderName = sender ? (sender.firstName && sender.lastName ? `${sender.firstName} ${sender.lastName}` : sender.username) : 'Someone';
-        const recipient = notification.recipient;
-        const recipientName = recipient ? (recipient.firstName && recipient.lastName ? `${recipient.firstName} ${recipient.lastName}` : recipient.username) : 'you';
-
-        // Remove recipient name from message and replace with "your"
-        let message = notification.message;
-        if (recipientName && recipientName !== 'you') {
-          const recipientNameRegex = new RegExp(recipientName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'); // Escape special chars
-          message = message.replace(recipientNameRegex, 'your');
-        }
-
-        const avatarName = senderName;
+        const senderName = sender
+          ? (sender.firstName && sender.lastName
+              ? `${sender.firstName} ${sender.lastName}`
+              : sender.username)
+          : 'Someone';
 
         return {
           _id: notification._id,
-          id: notification._id, // Keep both for compatibility
+          id: notification._id,
           type: notification.type,
-          title: notification.title,
-          message,
+          message: notification.message, // ✅ direct from backend
           read: notification.read,
           createdAt: notification.createdAt,
           sender,
-          priority: notification.priority,
           relatedContent: notification.relatedContent,
-          // Map to expected UI fields
           user: senderName,
-          avatar: sender?.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(avatarName)}&background=random&size=48`,
-          action: getActionText(notification.type, message),
-          target: notification.relatedContent?.contentTitle || '',
+          avatar: sender?.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(senderName)}&background=random&size=48`,
           time: formatTime(notification.createdAt),
           timestamp: new Date(notification.createdAt).getTime()
         };
@@ -432,13 +420,7 @@ export default function Notifications() {
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-2 transition-all duration-200 group-hover:opacity-60">
-                <span className="font-semibold">{notification.user}</span>{' '}
-                <span className="font-normal">{notification.action}</span>
-                {notification.target && (
-                  <span className="font-medium text-blue-600 dark:text-blue-400">
-                    {' "' + notification.target + '"'}
-                  </span>
-                )}
+                {notification.message} {/* ✅ backend string already clean */}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 {notification.time}
