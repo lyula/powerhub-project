@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FaChartBar } from 'react-icons/fa';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
@@ -418,6 +418,25 @@ const PostDetails = () => {
     hasChannel: false,
     authorId: ''
   });
+  const [searchParams] = useSearchParams();
+  const commentsRef = useRef(null);
+
+  // Handle scroll to comments from notification
+  useEffect(() => {
+    const scrollToComments = searchParams.get('scrollToComments');
+    if (scrollToComments === 'true' && post && commentsRef.current) {
+      // Wait for comments to render, then scroll
+      setTimeout(() => {
+        if (commentsRef.current) {
+          commentsRef.current.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          });
+        }
+      }, 500); // Give time for comments to load
+    }
+  }, [post, searchParams]);
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleToggleSidebar = () => setSidebarOpen((open) => !open);
@@ -1047,7 +1066,7 @@ const PostDetails = () => {
                       {commentError && <div className="text-red-500 text-sm mt-2">{commentError}</div>}
                     </form>
                     {Array.isArray(post.comments) && post.comments.length > 0 ? (
-                      <div className="flex flex-col gap-4">
+                      <div ref={commentsRef} className="flex flex-col gap-4">
                         <CommentThread
                           comments={post.comments}
                           postId={postId}

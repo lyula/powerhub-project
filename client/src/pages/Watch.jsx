@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react"; // 1. Import useCallback
 import { useAuth } from "../context/AuthContext";
-import { Link, useParams, useNavigate } from "react-router-dom"; // 2. Import useNavigate
+import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom"; // 2. Import useNavigate
 import VideoComments from "../components/VideoComments";
 import VideoInteractions from "../components/VideoInteractions";
 import DescriptionWithReadMore from "./DescriptionWithReadMore";
@@ -74,6 +74,29 @@ export default function Watch() {
   const [saveLoading, setSaveLoading] = useState(false);
 
   const { upsert, start, stop, sendOnce, resumeFromHistory } = useWatchHistory({ videoId: id, token });
+
+  
+  // Handle scroll to comments from notification
+  const [searchParams] = useSearchParams();
+  
+  useEffect(() => {
+    const scrollToComments = searchParams.get('scrollToComments');
+    if (scrollToComments === 'true' && video && commentsRef.current) {
+      // Show comments first
+      setShowComments(true);
+      
+      // Wait for comments to render, then scroll
+      setTimeout(() => {
+        if (commentsRef.current) {
+          commentsRef.current.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          });
+        }
+      }, 500); // Give time for comments to load
+    }
+  }, [video, searchParams]);
+
 
   useEffect(() => {
     const checkSavedStatus = async () => {

@@ -3,6 +3,17 @@ const router = express.Router();
 const { auth } = require('../middleware/auth');
 const FlaggedContent = require('../models/FlaggedContent');
 const ContentModerationService = require('../services/contentModerationService');
+const NotificationService = require("../services/notificationService");
+const Video = require("../models/Video");
+const Post = require("../models/Post");
+
+// Import socket.io instance for real-time notifications
+let io = null;
+try {
+  ({ io } = require("../index"));
+} catch (error) {
+  console.log("Socket.io instance not available, notifications will be database-only");
+}
 
 // Flag content
 router.post('/', auth, async (req, res) => {
@@ -48,6 +59,42 @@ router.post('/', auth, async (req, res) => {
     });
 
     await flaggedContent.save();
+
+    // Send notification to content author
+    try {
+      let contentAuthor = null;
+      let contentTitle = "";
+      
+      if (contentType === "video") {
+        const video = await Video.findById(contentId);
+        if (video) {
+          contentAuthor = video.uploader;
+          contentTitle = video.title;
+        }
+      } else if (contentType === "post") {
+        const post = await Post.findById(contentId);
+        if (post) {
+          contentAuthor = post.author;
+          contentTitle = post.content.substring(0, 50) + (post.content.length > 50 ? "..." : "");
+        }
+      }
+      
+      // Send notification if not flagging own content
+      if (contentAuthor && contentAuthor.toString() !== req.user.id) {
+        await NotificationService.sendFlagNotification(
+          contentAuthor,
+          req.user.id,
+          contentType,
+          contentId,
+          contentTitle,
+          reason,
+          io // Pass socket.io instance for real-time emission
+        );
+      }
+    } catch (notificationError) {
+      console.error("Error sending flag notification:", notificationError);
+      // Don"t fail the main operation if notification fails
+    }
 
     // Prepare response message based on auto-moderation
     let message = 'Content flagged successfully';

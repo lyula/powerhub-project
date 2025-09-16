@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Bell, Heart, MessageCircle, UserPlus } from 'lucide-react';
 import { MdArrowBack } from 'react-icons/md';
 
@@ -43,60 +43,7 @@ const NotificationModal = ({ notifications, onClose, anchorRef }) => {
 
   const markAllAsRead = () => {
     setLocalNotifications(prev => prev.map(n => ({ ...n, read: true })));
-  }
-  const navigate = useNavigate();
-
-  // Handle notification click navigation
-  const handleNotificationClick = (notification) => {
-    // Close the modal first
-    onClose();
-
-    // Navigate based on notification type and related content
-    const { type, relatedContent } = notification;
-    
-    if (!relatedContent || !relatedContent.contentId) {
-      console.log('No related content found for notification:', notification);
-      return;
-    }
-
-    const { contentType, contentId } = relatedContent;
-
-    switch (type) {
-      case 'like':
-      case 'dislike':
-      case 'share':
-      case 'flag':
-        // Navigate to the content (video or post)
-        if (contentType === 'video') {
-          navigate(`/watch/${contentId}`);
-        } else if (contentType === 'post') {
-          navigate(`/post/${contentId}`);
-        }
-        break;
-        
-      case 'comment':
-      case 'reply':
-        // Navigate to the content and scroll to comments
-        if (contentType === 'video') {
-          navigate(`/watch/${contentId}?scrollToComments=true`);
-        } else if (contentType === 'post') {
-          navigate(`/post/${contentId}?scrollToComments=true`);
-        }
-        break;
-        
-      case 'subscribe':
-        // Navigate to the user's profile
-        if (notification.sender && notification.sender._id) {
-          navigate(`/profile/${notification.sender._id}`);
-        }
-        break;
-        
-      default:
-        console.log('Unknown notification type:', type);
-        break;
-    }
   };
-
 
   return (
     <div 

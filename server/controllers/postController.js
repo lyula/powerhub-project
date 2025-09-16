@@ -105,7 +105,9 @@ exports.addComment = async (req, res) => {
       post._id,
       post.content.substring(0, 50) + (post.content.length > 50 ? '...' : ''),
       content.substring(0, 100) + (content.length > 100 ? '...' : '')
-    );
+    ,
+        io // Pass socket.io instance for real-time emission
+      );
   }
 
   // Populate author for the new comment
@@ -154,6 +156,8 @@ exports.addReply = async (req, res) => {
         post._id,
         post.content.substring(0, 50) + (post.content.length > 50 ? '...' : ''),
         content.substring(0, 100) + (content.length > 100 ? '...' : '')
+      ,
+        io // Pass socket.io instance for real-time emission
       );
     }
 
@@ -166,6 +170,8 @@ exports.addReply = async (req, res) => {
         post._id,
         post.content.substring(0, 50) + (post.content.length > 50 ? '...' : ''),
         content.substring(0, 100) + (content.length > 100 ? '...' : '')
+      ,
+        io // Pass socket.io instance for real-time emission
       );
     }
 
@@ -239,6 +245,19 @@ exports.likeReply = async (req, res) => {
       reply.likes.push(userId);
       await post.save();
     }
+      
+      // Send notification to reply author if not liking own reply
+      if (reply.author.toString() !== userId.toString()) {
+        await NotificationService.sendReplyNotification(
+          reply.author,
+          userId,
+          replyId,
+          post._id,
+          reply.text.substring(0, 100) + (reply.text.length > 100 ? '...' : ''),
+          'like',
+          io // Pass socket.io instance for real-time emission
+        );
+      }
     res.json({ likes: reply.likes });
   } catch (err) {
     res.status(500).json({ error: 'Failed to like reply', details: err.message });
@@ -265,6 +284,14 @@ exports.unlikeReply = async (req, res) => {
 };
 const Post = require('../models/Post');
 const NotificationService = require('../services/notificationService');
+
+// Import socket.io instance for real-time notifications
+let io = null;
+try {
+  ({ io } = require("../index"));
+} catch (error) {
+  console.log("Socket.io instance not available, notifications will be database-only");
+}
 
 // Create a new post
 exports.createPost = async (req, res) => {

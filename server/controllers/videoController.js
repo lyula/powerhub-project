@@ -7,6 +7,14 @@ const NotificationService = require("../services/notificationService");
 const cloudinary = require("../config/cloudinary");
 const fs = require("fs");
 
+// Import socket.io instance for real-time notifications
+let io = null;
+try {
+  ({ io } = require("../index"));
+} catch (error) {
+  console.log("Socket.io instance not available, notifications will be database-only");
+}
+
 // Unlike a video
 exports.unlikeVideo = async (req, res) => {
   try {
@@ -22,6 +30,19 @@ exports.unlikeVideo = async (req, res) => {
       return like.toString() !== userId.toString();
     });
     await video.save();
+
+    // Send notification to video uploader if not sharing own video
+    if (video.uploader.toString() !== req.user._id.toString()) {
+      await NotificationService.sendShareNotification(
+        video.uploader,
+        req.user._id,
+        'video',
+        video._id,
+        video.title,
+        io // Pass socket.io instance for real-time emission
+      );
+    }
+        
     res.json(video);
   } catch (err) {
     res.status(500).json({ error: "Unlike failed", details: err });
@@ -42,6 +63,19 @@ exports.likeVideo = async (req, res) => {
       video.likes.push({ user: userId, likedAt: new Date() });
       await video.save();
 
+    // Send notification to video uploader if not sharing own video
+    if (video.uploader.toString() !== req.user._id.toString()) {
+      await NotificationService.sendShareNotification(
+        video.uploader,
+        req.user._id,
+        'video',
+        video._id,
+        video.title,
+        io // Pass socket.io instance for real-time emission
+      );
+    }
+        
+
       // Send notification to video uploader if not liking own video
       if (video.uploader.toString() !== userId.toString()) {
         await NotificationService.sendLikeNotification(
@@ -50,7 +84,9 @@ exports.likeVideo = async (req, res) => {
           'video',
           video._id,
           video.title
-        );
+        ,
+        io // Pass socket.io instance for real-time emission
+      );
       }
     }
     res.json(video);
@@ -130,6 +166,19 @@ exports.incrementShareCount = async (req, res) => {
     if (!video) return res.status(404).json({ error: "Video not found" });
     video.shareCount = (video.shareCount || 0) + 1;
     await video.save();
+
+    // Send notification to video uploader if not sharing own video
+    if (video.uploader.toString() !== req.user._id.toString()) {
+      await NotificationService.sendShareNotification(
+        video.uploader,
+        req.user._id,
+        'video',
+        video._id,
+        video.title,
+        io // Pass socket.io instance for real-time emission
+      );
+    }
+        
     res.json({ success: true, shareCount: video.shareCount });
   } catch (err) {
     res
@@ -165,6 +214,19 @@ exports.likeReply = async (req, res) => {
     if (video.uploader.toString() === userId.toString())
       reply.authorLiked = true;
     await video.save();
+
+    // Send notification to video uploader if not sharing own video
+    if (video.uploader.toString() !== req.user._id.toString()) {
+      await NotificationService.sendShareNotification(
+        video.uploader,
+        req.user._id,
+        'video',
+        video._id,
+        video.title,
+        io // Pass socket.io instance for real-time emission
+      );
+    }
+        
     let updatedVideo = await Video.findById(video._id)
       .populate("uploader", "username")
       .populate("channel", "name description avatar banner")
@@ -236,6 +298,19 @@ exports.unlikeComment = async (req, res) => {
     if (video.uploader.toString() === userId.toString())
       comment.authorLiked = false;
     await video.save();
+
+    // Send notification to video uploader if not sharing own video
+    if (video.uploader.toString() !== req.user._id.toString()) {
+      await NotificationService.sendShareNotification(
+        video.uploader,
+        req.user._id,
+        'video',
+        video._id,
+        video.title,
+        io // Pass socket.io instance for real-time emission
+      );
+    }
+        
     let updatedVideo = await Video.findById(video._id)
       .populate("uploader", "username")
       .populate("channel", "name description avatar banner")
@@ -317,6 +392,19 @@ exports.unlikeReply = async (req, res) => {
     if (video.uploader.toString() === userId.toString())
       reply.authorLiked = false;
     await video.save();
+
+    // Send notification to video uploader if not sharing own video
+    if (video.uploader.toString() !== req.user._id.toString()) {
+      await NotificationService.sendShareNotification(
+        video.uploader,
+        req.user._id,
+        'video',
+        video._id,
+        video.title,
+        io // Pass socket.io instance for real-time emission
+      );
+    }
+        
     let updatedVideo = await Video.findById(video._id)
       .populate("uploader", "username")
       .populate("channel", "name description avatar banner")
@@ -382,6 +470,19 @@ exports.addView = async (req, res) => {
     // For now, just increment viewCount
     video.viewCount = (video.viewCount || 0) + 1;
     await video.save();
+
+    // Send notification to video uploader if not sharing own video
+    if (video.uploader.toString() !== req.user._id.toString()) {
+      await NotificationService.sendShareNotification(
+        video.uploader,
+        req.user._id,
+        'video',
+        video._id,
+        video.title,
+        io // Pass socket.io instance for real-time emission
+      );
+    }
+        
     res.json({ success: true, viewCount: video.viewCount });
   } catch (err) {
     res.status(500).json({ error: "Failed to add view", details: err });
@@ -463,6 +564,19 @@ exports.uploadVideo = async (req, res) => {
       duration: finalDuration,
     });
     await video.save();
+
+    // Send notification to video uploader if not sharing own video
+    if (video.uploader.toString() !== req.user._id.toString()) {
+      await NotificationService.sendShareNotification(
+        video.uploader,
+        req.user._id,
+        'video',
+        video._id,
+        video.title,
+        io // Pass socket.io instance for real-time emission
+      );
+    }
+        
     console.log(
       "Video document saved to MongoDB with duration:",
       finalDuration,
@@ -517,6 +631,19 @@ exports.dislikeVideo = async (req, res) => {
       video.dislikes.push(userId);
     }
     await video.save();
+
+    // Send notification to video uploader if not sharing own video
+    if (video.uploader.toString() !== req.user._id.toString()) {
+      await NotificationService.sendShareNotification(
+        video.uploader,
+        req.user._id,
+        'video',
+        video._id,
+        video.title,
+        io // Pass socket.io instance for real-time emission
+      );
+    }
+        
     res.json(video);
   } catch (err) {
     res.status(500).json({ error: "Dislike failed", details: err });
@@ -534,6 +661,19 @@ exports.undislikeVideo = async (req, res) => {
       (id) => id.toString() !== userId.toString()
     );
     await video.save();
+
+    // Send notification to video uploader if not sharing own video
+    if (video.uploader.toString() !== req.user._id.toString()) {
+      await NotificationService.sendShareNotification(
+        video.uploader,
+        req.user._id,
+        'video',
+        video._id,
+        video.title,
+        io // Pass socket.io instance for real-time emission
+      );
+    }
+        
     res.json(video);
   } catch (err) {
     res.status(500).json({ error: "Undislike failed", details: err });
@@ -549,6 +689,19 @@ exports.addComment = async (req, res) => {
     video.comments.push({ author, text });
     await video.save();
 
+    // Send notification to video uploader if not sharing own video
+    if (video.uploader.toString() !== req.user._id.toString()) {
+      await NotificationService.sendShareNotification(
+        video.uploader,
+        req.user._id,
+        'video',
+        video._id,
+        video.title,
+        io // Pass socket.io instance for real-time emission
+      );
+    }
+        
+
     // Send notification to video uploader if not commenting on own video
     if (video.uploader.toString() !== author.toString()) {
       await NotificationService.sendCommentNotification(
@@ -557,7 +710,8 @@ exports.addComment = async (req, res) => {
         'video',
         video._id,
         video.title,
-        text.substring(0, 100) + (text.length > 100 ? '...' : '')
+        text.substring(0, 100) + (text.length > 100 ? '...' : ''),
+        io // Pass socket.io instance for real-time emission
       );
     }
 
@@ -590,6 +744,19 @@ exports.likeComment = async (req, res) => {
     if (video.uploader.toString() === userId.toString())
       comment.authorLiked = true;
     await video.save();
+
+    // Send notification to video uploader if not sharing own video
+    if (video.uploader.toString() !== req.user._id.toString()) {
+      await NotificationService.sendShareNotification(
+        video.uploader,
+        req.user._id,
+        'video',
+        video._id,
+        video.title,
+        io // Pass socket.io instance for real-time emission
+      );
+    }
+        
     let updatedVideo = await Video.findById(video._id)
       .populate("uploader", "username")
       .populate("channel", "name description avatar banner")
@@ -670,6 +837,19 @@ exports.replyComment = async (req, res) => {
     }
     await video.save();
 
+    // Send notification to video uploader if not sharing own video
+    if (video.uploader.toString() !== req.user._id.toString()) {
+      await NotificationService.sendShareNotification(
+        video.uploader,
+        req.user._id,
+        'video',
+        video._id,
+        video.title,
+        io // Pass socket.io instance for real-time emission
+      );
+    }
+        
+
     // Send notification to the recipient if not replying to own content
     if (recipientId.toString() !== author.toString()) {
       await NotificationService.sendCommentNotification(
@@ -678,7 +858,8 @@ exports.replyComment = async (req, res) => {
         'video',
         video._id,
         video.title,
-        text.substring(0, 100) + (text.length > 100 ? '...' : '')
+        text.substring(0, 100) + (text.length > 100 ? '...' : ''),
+        io // Pass socket.io instance for real-time emission
       );
     }
 
@@ -690,7 +871,8 @@ exports.replyComment = async (req, res) => {
         'video',
         video._id,
         video.title,
-        text.substring(0, 100) + (text.length > 100 ? '...' : '')
+        text.substring(0, 100) + (text.length > 100 ? '...' : ''),
+        io // Pass socket.io instance for real-time emission
       );
     }
     // Return the updated video with populated authors for comments and replies
@@ -832,6 +1014,19 @@ exports.editVideo = async (req, res) => {
     if (title) video.title = title;
     if (description) video.description = description;
     await video.save();
+
+    // Send notification to video uploader if not sharing own video
+    if (video.uploader.toString() !== req.user._id.toString()) {
+      await NotificationService.sendShareNotification(
+        video.uploader,
+        req.user._id,
+        'video',
+        video._id,
+        video.title,
+        io // Pass socket.io instance for real-time emission
+      );
+    }
+        
     res.json(video);
   } catch (err) {
     res
@@ -856,6 +1051,19 @@ exports.editComment = async (req, res) => {
     comment.text = text;
     comment.editedAt = new Date();
     await video.save();
+
+    // Send notification to video uploader if not sharing own video
+    if (video.uploader.toString() !== req.user._id.toString()) {
+      await NotificationService.sendShareNotification(
+        video.uploader,
+        req.user._id,
+        'video',
+        video._id,
+        video.title,
+        io // Pass socket.io instance for real-time emission
+      );
+    }
+        
     res.json(comment);
   } catch (err) {
     res
@@ -890,6 +1098,19 @@ exports.editReply = async (req, res) => {
     reply.text = text;
     reply.editedAt = new Date();
     await video.save();
+
+    // Send notification to video uploader if not sharing own video
+    if (video.uploader.toString() !== req.user._id.toString()) {
+      await NotificationService.sendShareNotification(
+        video.uploader,
+        req.user._id,
+        'video',
+        video._id,
+        video.title,
+        io // Pass socket.io instance for real-time emission
+      );
+    }
+        
     res.json(reply);
   } catch (err) {
     res
@@ -914,6 +1135,19 @@ exports.deleteComment = async (req, res) => {
     // Remove the comment using Mongoose array pull
     video.comments.pull(commentId);
     await video.save();
+
+    // Send notification to video uploader if not sharing own video
+    if (video.uploader.toString() !== req.user._id.toString()) {
+      await NotificationService.sendShareNotification(
+        video.uploader,
+        req.user._id,
+        'video',
+        video._id,
+        video.title,
+        io // Pass socket.io instance for real-time emission
+      );
+    }
+        
     res.json({ success: true });
   } catch (err) {
     res
@@ -958,6 +1192,19 @@ exports.deleteReply = async (req, res) => {
     // Use pull method to remove the reply
     comment.replies.pull(replyId);
     await video.save();
+
+    // Send notification to video uploader if not sharing own video
+    if (video.uploader.toString() !== req.user._id.toString()) {
+      await NotificationService.sendShareNotification(
+        video.uploader,
+        req.user._id,
+        'video',
+        video._id,
+        video.title,
+        io // Pass socket.io instance for real-time emission
+      );
+    }
+        
     console.log("Reply deleted successfully");
     res.json({ success: true });
   } catch (err) {

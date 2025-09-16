@@ -127,7 +127,7 @@ class NotificationService {
    * ------------------------------------------------- */
 
   // 🔹 Like
-  static async sendLikeNotification(recipientId, senderId, contentType, contentId, contentTitle) {
+  static async sendLikeNotification(recipientId, senderId, contentType, contentId, contentTitle, io = null) {
     try {
       const sender = await User.findById(senderId).select('username firstName lastName');
       const senderName = sender ? (sender.firstName && sender.lastName ? `${sender.firstName} ${sender.lastName}` : sender.username) : 'Someone';
@@ -145,6 +145,16 @@ class NotificationService {
       });
 
       await notification.save();
+    
+    // Emit real-time notification if socket.io instance is provided
+    if (io) {
+      const populatedNotification = await Notification.findById(notification._id)
+        .populate('sender', 'username firstName lastName')
+        .populate('recipient', 'username firstName lastName');
+      
+      io.to(recipientId.toString()).emit('new_notification', populatedNotification);
+    }
+    
       return notification;
     } catch (error) {
       console.error("Error sending like notification:", error);
@@ -152,7 +162,7 @@ class NotificationService {
   }
 
   // 🔹 Dislike
-  static async sendDislikeNotification(recipientId, senderId, contentType, contentId, contentTitle) {
+  static async sendDislikeNotification(recipientId, senderId, contentType, contentId, contentTitle, io = null) {
     try {
       const sender = await User.findById(senderId).select('username firstName lastName');
       const senderName = sender ? (sender.firstName && sender.lastName ? `${sender.firstName} ${sender.lastName}` : sender.username) : 'Someone';
@@ -170,6 +180,16 @@ class NotificationService {
       });
 
       await notification.save();
+    
+    // Emit real-time notification if socket.io instance is provided
+    if (io) {
+      const populatedNotification = await Notification.findById(notification._id)
+        .populate('sender', 'username firstName lastName')
+        .populate('recipient', 'username firstName lastName');
+      
+      io.to(recipientId.toString()).emit('new_notification', populatedNotification);
+    }
+    
       return notification;
     } catch (error) {
       console.error("Error sending dislike notification:", error);
@@ -177,7 +197,7 @@ class NotificationService {
   }
 
   // 🔹 Comment
-  static async sendCommentNotification(recipientId, senderId, contentType, contentId, contentTitle, commentText) {
+  static async sendCommentNotification(recipientId, senderId, contentType, contentId, contentTitle, commentText, io = null) {
     try {
       const sender = await User.findById(senderId).select('username firstName lastName');
       const senderName = sender ? (sender.firstName && sender.lastName ? `${sender.firstName} ${sender.lastName}` : sender.username) : 'Someone';
@@ -195,6 +215,16 @@ class NotificationService {
       });
 
       await notification.save();
+    
+    // Emit real-time notification if socket.io instance is provided
+    if (io) {
+      const populatedNotification = await Notification.findById(notification._id)
+        .populate('sender', 'username firstName lastName')
+        .populate('recipient', 'username firstName lastName');
+      
+      io.to(recipientId.toString()).emit('new_notification', populatedNotification);
+    }
+    
       return notification;
     } catch (error) {
       console.error("Error sending comment notification:", error);
@@ -202,7 +232,7 @@ class NotificationService {
   }
 
   // 🔹 Reply (with like/dislike option)
-  static async sendReplyNotification(recipientId, senderId, replyId, videoId, replyText, action = "reply") {
+  static async sendReplyNotification(recipientId, senderId, replyId, videoId, replyText, action = "reply", io = null) {
     try {
       const sender = await User.findById(senderId).select('username firstName lastName');
       const senderName = sender ? (sender.firstName && sender.lastName ? `${sender.firstName} ${sender.lastName}` : sender.username) : 'Someone';
@@ -222,6 +252,16 @@ class NotificationService {
       });
 
       await notification.save();
+    
+    // Emit real-time notification if socket.io instance is provided
+    if (io) {
+      const populatedNotification = await Notification.findById(notification._id)
+        .populate('sender', 'username firstName lastName')
+        .populate('recipient', 'username firstName lastName');
+      
+      io.to(recipientId.toString()).emit('new_notification', populatedNotification);
+    }
+    
       return notification;
     } catch (error) {
       console.error(`Error sending reply ${action} notification:`, error);
@@ -229,7 +269,7 @@ class NotificationService {
   }
 
   // 🔹 Share
-  static async sendShareNotification(recipientId, senderId, contentType, contentId, contentTitle) {
+  static async sendShareNotification(recipientId, senderId, contentType, contentId, contentTitle, io = null) {
     try {
       const sender = await User.findById(senderId).select('username firstName lastName');
       const senderName = sender ? (sender.firstName && sender.lastName ? `${sender.firstName} ${sender.lastName}` : sender.username) : 'Someone';
@@ -247,6 +287,16 @@ class NotificationService {
       });
 
       await notification.save();
+    
+    // Emit real-time notification if socket.io instance is provided
+    if (io) {
+      const populatedNotification = await Notification.findById(notification._id)
+        .populate('sender', 'username firstName lastName')
+        .populate('recipient', 'username firstName lastName');
+      
+      io.to(recipientId.toString()).emit('new_notification', populatedNotification);
+    }
+    
       return notification;
     } catch (error) {
       console.error("Error sending share notification:", error);
@@ -254,7 +304,7 @@ class NotificationService {
   }
 
   // 🔹 Flag
-  static async sendFlagNotification(recipientId, senderId, contentType, contentId, contentTitle, reason) {
+  static async sendFlagNotification(recipientId, senderId, contentType, contentId, contentTitle, reason, io = null) {
     try {
       const sender = await User.findById(senderId).select('username firstName lastName');
       const senderName = sender ? (sender.firstName && sender.lastName ? `${sender.firstName} ${sender.lastName}` : sender.username) : 'Someone';
@@ -272,6 +322,16 @@ class NotificationService {
       });
 
       await notification.save();
+    
+    // Emit real-time notification if socket.io instance is provided
+    if (io) {
+      const populatedNotification = await Notification.findById(notification._id)
+        .populate('sender', 'username firstName lastName')
+        .populate('recipient', 'username firstName lastName');
+      
+      io.to(recipientId.toString()).emit('new_notification', populatedNotification);
+    }
+    
       return notification;
     } catch (error) {
       console.error("Error sending flag notification:", error);
