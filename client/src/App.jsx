@@ -15,6 +15,7 @@ import ForgotPasswordReset from './pages/ForgotPasswordReset';
 import Home from './pages/Home';
 import Profile from './pages/Profile';
 import UploadVideo from './pages/UploadVideo';
+import EditVideo from './pages/EditVideo';
 import ChannelSetup from './pages/ChannelSetup';
 import CreatePost from './pages/CreatePost';
 import ChannelProfile from './pages/ChannelProfile';
@@ -35,6 +36,7 @@ import MobileCollaborationsPage from './pages/MobileCollaborations';
 import MobileCollaborationOptions from './pages/MobileCollaborationOptions';
 import TermsAndConditions from './pages/TermsAndConditions';
 import { SocketProvider } from "./context/SocketContext";
+import { ToastProvider } from './context/ToastContext';
 
 
 // Protected Route Component
@@ -151,6 +153,7 @@ function AppRoutes() {
           <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/upload" element={channel ? <ProtectedRoute><UploadVideo /></ProtectedRoute> : <Navigate to="/channel-setup" replace />} />
+          <Route path="/edit-video/:videoId" element={<ProtectedRoute><EditVideo /></ProtectedRoute>} />
           <Route path="/channel-setup" element={<ProtectedRoute><ChannelSetup /></ProtectedRoute>} />
           <Route path="/create-post" element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
           <Route path="/channel/:author" element={<ProtectedRoute><ChannelProfile /></ProtectedRoute>} />
@@ -180,8 +183,10 @@ function App() {
   return (
     <AuthProvider>
       <SocketProvider>
-        <ProgressBar loading={loading} />
-        <AppRoutes />
+        <ToastProvider>
+          <ProgressBar loading={loading} />
+          <AppRoutes />
+        </ToastProvider>
       </SocketProvider>
     </AuthProvider>
   );

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import Header from '../components/Header';
 import ChannelActions from '../components/ChannelActions';
 import Sidebar from '../components/Sidebar';
@@ -8,6 +9,7 @@ import SubscribeButton from '../components/SubscribeButton';
 import AboutChannelModal from '../components/AboutChannelModal';
 import ProgressBar from '../components/ProgressBar';
 import { FaGithub, FaEnvelope, FaWhatsapp, FaInstagram, FaLinkedin } from 'react-icons/fa';
+import { MdMoreVert, MdEdit, MdDelete } from 'react-icons/md';
 import { colors } from '../theme/colors';
 import ChannelProfileThumbnail from '../components/ChannelProfileThumbnail';
 import { useImpression } from '../hooks/useImpression';
@@ -25,8 +27,12 @@ export default function ChannelProfile() {
   const { user, token } = useAuth();
   const { author } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
   // Modal for delete confirmation
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showVideoDeleteModal, setShowVideoDeleteModal] = useState(false);
+  const [videoToDelete, setVideoToDelete] = useState(null);
+  const [openVideoMenuId, setOpenVideoMenuId] = useState(null);
   const [channel, setChannel] = useState(null);
   const [loading, setLoading] = useState(true);
   const [progressLoading, setProgressLoading] = useState(false);
@@ -63,12 +69,52 @@ export default function ChannelProfile() {
       if (response.ok) {
         navigate('/home');
       } else {
-        alert('Failed to delete channel.');
+        toast.error('Failed to delete channel.');
       }
     } catch (err) {
-      alert('Error deleting channel.');
+      toast.error('Error deleting channel.');
     }
   };
+
+  const handleEditVideo = (videoId) => {
+    setOpenVideoMenuId(null);
+    navigate(`/edit-video/${videoId}`);
+  };
+
+  const handleDeleteVideo = (video) => {
+    setVideoToDelete(video);
+    setShowVideoDeleteModal(true);
+    setOpenVideoMenuId(null);
+  };
+
+  const confirmDeleteVideo = async () => {
+    if (!videoToDelete) return;
+    
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL;
+      const response = await fetch(`${apiUrl}/videos/${videoToDelete._id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      
+      if (response.ok) {
+        // Remove the video from the channel's videos array
+        setChannel(prev => ({
+          ...prev,
+          videos: prev.videos.filter(v => v._id !== videoToDelete._id)
+        }));
+        setShowVideoDeleteModal(false);
+        setVideoToDelete(null);
+        toast.success('Video deleted successfully!');
+      } else {
+        toast.error('Failed to delete video.');
+      }
+    } catch (err) {
+      toast.error('Error deleting video.');
+    }
+  };
+
+  const isOwner = user && channel && user._id === channel.owner;
 
   useEffect(() => {
     const fetchChannel = async () => {
@@ -95,6 +141,18 @@ export default function ChannelProfile() {
     };
     fetchChannel();
   }, [author]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (openVideoMenuId) {
+        setOpenVideoMenuId(null);
+      }
+    };
+    
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [openVideoMenuId]);
 
   // Extract durations from video elements after metadata loads
   useEffect(() => {
@@ -214,6 +272,35 @@ export default function ChannelProfile() {
                 <div className="flex justify-end gap-2">
                   <button className="px-4 py-2 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200" onClick={() => setShowDeleteModal(false)}>Cancel</button>
                   <button className="px-4 py-2 rounded bg-red-600 text-white" onClick={handleDeleteChannel}>Delete</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Video delete confirmation modal */}
+          {showVideoDeleteModal && videoToDelete && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+              <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6 w-full max-w-sm">
+                <h2 className="text-lg font-bold mb-4 text-red-600">Delete Video?</h2>
+                <p className="mb-4 text-gray-700 dark:text-gray-300">
+                  Are you sure you want to delete "{videoToDelete.title}"? This action cannot be undone.
+                </p>
+                <div className="flex justify-end gap-2">
+                  <button 
+                    className="px-4 py-2 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200" 
+                    onClick={() => {
+                      setShowVideoDeleteModal(false);
+                      setVideoToDelete(null);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    className="px-4 py-2 rounded bg-red-600 text-white" 
+                    onClick={confirmDeleteVideo}
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
             </div>
@@ -377,10 +464,53 @@ export default function ChannelProfile() {
                         )}
                       </div>
                       <div className="mt-2 text-base font-semibold text-black dark:text-white truncate">{video.title}</div>
-                      <div className="flex items-center text-xs text-gray-600 dark:text-gray-300 mt-1 gap-2">
-                        <span>{video.viewCount || 0} views</span>
-                        <span className="font-bold mx-1" style={{fontWeight:700, fontSize:'1.2em'}}>&bull;</span>
-                        <span>{postedAgo}</span>
+                      <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-300 mt-1">
+                        <div className="flex items-center gap-2">
+                          <span>{video.viewCount || 0} views</span>
+                          <span className="font-bold mx-1" style={{fontWeight:700, fontSize:'1.2em'}}>&bull;</span>
+                          <span>{postedAgo}</span>
+                        </div>
+                        
+                        {/* Three dots menu for video owner */}
+                        {isOwner && (
+                          <div className="relative">
+                            <button
+                              className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenVideoMenuId(openVideoMenuId === video._id ? null : video._id);
+                              }}
+                            >
+                              <MdMoreVert size={16} className="text-gray-600 dark:text-gray-400" />
+                            </button>
+                            
+                            {/* Dropdown menu */}
+                            {openVideoMenuId === video._id && (
+                              <div className="absolute top-8 right-0 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-700 py-2 w-32 z-20">
+                                <button
+                                  className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditVideo(video._id);
+                                  }}
+                                >
+                                  <MdEdit size={16} />
+                                  Edit
+                                </button>
+                                <button
+                                  className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-red-600"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteVideo(video);
+                                  }}
+                                >
+                                  <MdDelete size={16} />
+                                  Delete
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );

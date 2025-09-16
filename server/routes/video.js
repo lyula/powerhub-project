@@ -47,7 +47,10 @@ router.post("/:id/comment/reply/like", auth, videoController.likeReply);
 router.post("/:id/comment/reply/unlike", auth, videoController.unlikeReply);
 
 // Edit video title/description
-router.put("/:id", auth, videoController.editVideo);
+router.put("/:id", auth, multer.fields([{ name: "thumbnail", maxCount: 1 }]), videoController.editVideo);
+
+// Delete video
+router.delete("/:id", auth, videoController.deleteVideo);
 // Edit a comment
 router.put("/:id/comment", auth, videoController.editComment);
 // Edit a reply

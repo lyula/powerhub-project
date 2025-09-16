@@ -939,7 +939,7 @@ exports.getVideo = async (req, res) => {
   try {
     let video = await Video.findById(req.params.id)
       .populate("uploader", "username")
-      .populate("channel", "name description avatar banner")
+      .populate("channel", "name description avatar banner owner")
       .populate(
         "comments.author",
         "username avatar profilePicture firstName lastName"
@@ -1000,38 +1000,117 @@ exports.getVideo = async (req, res) => {
   }
 };
 
-// Edit video title/description
+// Edit video title/description/thumbnail
 exports.editVideo = async (req, res) => {
   try {
-    const video = await require("../models/Video").findById(req.params.id);
+    const video = await Video.findById(req.params.id).populate('channel');
     if (!video) return res.status(404).json({ error: "Video not found" });
-    if (video.channel.toString() !== req.user.channel?.toString()) {
+    
+    // Check if user owns the video (check both channel owner and uploader)
+    if (video.channel?.owner?.toString() !== req.user._id.toString() && 
+        video.uploader?.toString() !== req.user._id.toString()) {
       return res
         .status(403)
         .json({ error: "Not authorized to edit this video" });
     }
-    const { title, description } = req.body;
+    
+    const { title, description, category } = req.body;
+    
+    // Update video fields
     if (title) video.title = title;
     if (description) video.description = description;
-    await video.save();
-
-    // Send notification to video uploader if not sharing own video
-    if (video.uploader.toString() !== req.user._id.toString()) {
-      await NotificationService.sendShareNotification(
-        video.uploader,
-        req.user._id,
-        'video',
-        video._id,
-        video.title,
-        io // Pass socket.io instance for real-time emission
-      );
-    }
+    if (category) video.category = category;
+    
+    // Handle thumbnail upload if provided
+    if (req.files && req.files.thumbnail) {
+      try {
+        // Delete old thumbnail from cloudinary if it exists
+        if (video.thumbnailUrl) {
+          const publicId = video.thumbnailUrl.split('/').pop().split('.')[0];
+          await cloudinary.uploader.destroy(publicId);
+        }
         
-    res.json(video);
+        // Upload new thumbnail
+        const thumbnailResult = await cloudinary.uploader.upload(req.files.thumbnail[0].path, {
+          folder: "video_thumbnails",
+          resource_type: "image"
+        });
+        
+        video.thumbnailUrl = thumbnailResult.secure_url;
+        
+        // Clean up uploaded file
+        fs.unlinkSync(req.files.thumbnail[0].path);
+      } catch (cloudinaryError) {
+        console.error("Cloudinary thumbnail upload error:", cloudinaryError);
+        return res.status(500).json({ error: "Failed to update thumbnail" });
+      }
+    }
+    
+    await video.save();
+    
+    res.json({
+      message: "Video updated successfully",
+      video: video
+    });
   } catch (err) {
+    console.error("Edit video error:", err);
     res
       .status(500)
       .json({ error: "Failed to edit video", details: err.message });
+  }
+};
+
+// Delete video
+exports.deleteVideo = async (req, res) => {
+  try {
+    const video = await Video.findById(req.params.id).populate('channel');
+    if (!video) return res.status(404).json({ error: "Video not found" });
+    
+    // Check if user owns the video (check both channel owner and uploader)
+    if (video.channel?.owner?.toString() !== req.user._id.toString() && 
+        video.uploader?.toString() !== req.user._id.toString()) {
+      return res
+        .status(403)
+        .json({ error: "Not authorized to delete this video" });
+    }
+    
+    try {
+      // Delete video file from cloudinary
+      if (video.videoUrl) {
+        const videoPublicId = video.videoUrl.split('/').pop().split('.')[0];
+        await cloudinary.uploader.destroy(videoPublicId, { resource_type: "video" });
+      }
+      
+      // Delete thumbnail from cloudinary
+      if (video.thumbnailUrl) {
+        const thumbnailPublicId = video.thumbnailUrl.split('/').pop().split('.')[0];
+        await cloudinary.uploader.destroy(thumbnailPublicId);
+      }
+    } catch (cloudinaryError) {
+      console.error("Cloudinary deletion error:", cloudinaryError);
+      // Continue with database deletion even if cloudinary deletion fails
+    }
+    
+    // Remove video from channel's videos array
+    if (video.channel) {
+      await Channel.findByIdAndUpdate(
+        video.channel._id,
+        { $pull: { videos: video._id } }
+      );
+    }
+    
+    // Delete all saved video references
+    await SavedVideo.deleteMany({ video: video._id });
+    
+    // Delete the video document
+    await Video.findByIdAndDelete(req.params.id);
+    
+    res.json({ message: "Video deleted successfully" });
+  } catch (err) {
+    console.error("Delete video error:", err);
+    res
+      .status(500)
+      .json({ error: "Failed to delete video", details: err.message });
   }
 };
 
