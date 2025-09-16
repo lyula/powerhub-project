@@ -76,12 +76,8 @@ export default function Login() {
       const result = await login(formData.email, formData.password);
       
       if (result.success) {
-        // Redirect based on user role
-        if (result.data.user.role === "IT") {
-          navigate("/it-dashboard");
-        } else {
+        // All users (including IT) redirect to home page
         navigate("/home");
-        }
       } else {
         // Don't show error message if maintenance mode is active
         if (!maintenanceMode) {

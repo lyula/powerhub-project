@@ -58,7 +58,7 @@ const ProtectedRoute = ({ children, requireRegularUser = false }) => {
   }
   
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
   
   // Check maintenance mode - only IT users can access during maintenance
@@ -68,10 +68,7 @@ const ProtectedRoute = ({ children, requireRegularUser = false }) => {
     return null;
   }
   
-  // If this route requires regular users and the user is IT, redirect to IT dashboard
-  if (requireRegularUser && user && user.role === 'IT') {
-    return <Navigate to="/it-dashboard" replace />;
-  }
+  // Removed automatic IT Dashboard redirect - IT users now land on home page like everyone else
   
   return children;
 };
@@ -105,12 +102,8 @@ const PublicRoute = ({ children }) => {
   
   // Only redirect if authenticated and on /register or /interests (but allow /login access)
   if (isAuthenticated && (location === '/register' || location === '/interests')) {
-    // Redirect based on user role
-    if (user && user.role === 'IT') {
-      return <Navigate to="/it-dashboard" replace />;
-    } else {
-      return <Navigate to="/home" replace />;
-    }
+    // All users (including IT) redirect to home page
+    return <Navigate to="/home" replace />;
   }
   return children;
 };
@@ -175,7 +168,7 @@ function AppRoutes() {
           <Route path="/post/:postId" element={<ProtectedRoute><PostDetails /></ProtectedRoute>} />
           <Route path="/mobile-collaboration-options" element={<ProtectedRoute><MobileCollaborationOptions /></ProtectedRoute>} />
           <Route path="/mobile-collaborations/:categoryName" element={<ProtectedRoute><MobileCollaborationsPage /></ProtectedRoute>} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
     </>

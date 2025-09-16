@@ -993,7 +993,7 @@ const ITDashboard = () => {
     } catch (error) {
       console.error('Logout error:', error);
       // Fallback - force navigation even if logout fails
-      navigate('/login');
+      navigate('/');
     }
   };
 

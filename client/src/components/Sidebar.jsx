@@ -45,7 +45,7 @@ export default function Sidebar({ collapsed }) {
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-red-100 dark:hover:bg-red-900 transition ${collapsed ? 'justify-center' : ''}`}
                 onClick={async () => {
                   await logout();
-                  navigate('/login', { replace: true });
+                  navigate('/', { replace: true });
                 }}
               >
                   <span className="w-6 h-6 relative group flex items-center justify-center">

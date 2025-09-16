@@ -54,12 +54,12 @@ export default function Header({ onToggleSidebar, searchTerm, onSearchChange }) 
     try {
       console.log('Starting logout process...');
       await logout();
-      console.log('Logout successful, navigating to login');
-      navigate('/login');
+      console.log('Logout successful, navigating to landing page');
+      navigate('/');
     } catch (error) {
       console.error('Logout error:', error);
-      // Still navigate to login even if logout fails
-      navigate('/login');
+      // Still navigate to landing page even if logout fails
+      navigate('/');
     }
   };
 

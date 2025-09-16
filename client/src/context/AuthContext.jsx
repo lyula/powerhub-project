@@ -31,7 +31,7 @@ export const AuthProvider = ({ children }) => {
       const currentPath = location?.pathname || '';
       const publicPaths = ['/', '/login', '/register', '/terms', '/interests', '/forgot-password', '/forgot-password-verify', '/reset-password'];
       if (!publicPaths.includes(currentPath)) {
-        navigate('/login', { replace: true });
+        navigate('/', { replace: true });
       }
     }
     // Do not restrict access to public routes for unauthenticated users
@@ -145,7 +145,7 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     setIsAuthenticated(false);
     localStorage.removeItem('token');
-    navigate('/login', { 
+    navigate('/', { 
       state: { 
         message: 'You have been logged out due to system maintenance.',
         maintenanceMode: true 
@@ -439,7 +439,7 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       setIsAuthenticated(false);
       setChannel(null);
-      navigate('/login');
+      navigate('/');
     }
   };
 
