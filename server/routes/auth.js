@@ -3,6 +3,7 @@ const router = express.Router();
 const userController = require('../controllers/userController');
 const { auth } = require('../middleware/auth');
 const { trackSessionStart, trackSessionEnd } = require('../middleware/analytics');
+const AuditLog = require('../models/AuditLog');
 
 router.post('/register', userController.register);
 router.post('/login', userController.login);
@@ -10,8 +11,29 @@ router.get('/secret-questions', userController.getSecretQuestions);
 router.post('/reset-password', userController.resetPasswordWithSecret);
 router.post('/reset/verify', userController.verifySecretForReset);
 router.post('/reset/complete', userController.completePasswordReset);
-router.post('/logout', auth, trackSessionEnd, (req, res) => {
-  res.json({ message: 'Logged out successfully' });
+router.post('/logout', auth, trackSessionEnd, async (req, res) => {
+  try {
+    // Log user logout
+    await AuditLog.logAction({
+      action: 'user_logout',
+      category: 'authentication',
+      performedBy: req.user.id,
+      performedByRole: req.user.role,
+      targetType: 'user',
+      targetId: req.user.id,
+      targetName: req.user.username,
+      description: `User ${req.user.username} logged out successfully`,
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent'),
+      success: true
+    });
+
+    res.json({ message: 'Logged out successfully' });
+  } catch (error) {
+    console.error('Error logging logout:', error);
+    // Still send success response even if logging fails
+    res.json({ message: 'Logged out successfully' });
+  }
 });
 
 // Authenticated user info

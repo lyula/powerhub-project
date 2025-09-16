@@ -163,7 +163,7 @@ exports.login = async (req, res) => {
 
       // Increment login attempts
       await user.incLoginAttempts();
-
+      
       // Check if account should be locked now
       const updatedUser = await User.findById(user._id);
       if (updatedUser.isLocked()) {
@@ -189,7 +189,7 @@ exports.login = async (req, res) => {
           success: true
         });
 
-        return res.status(423).json({
+        return res.status(423).json({ 
           message: 'Too many failed attempts. Account locked for 10 minutes.',
           lockedUntil: updatedUser.lockUntil
         });
@@ -390,18 +390,18 @@ exports.resetPasswordWithSecret = async (req, res) => {
     await user.save();
 
     // Log audit
-    await AuditLog.logAction({
+        await AuditLog.logAction({
       action: 'password_reset_secret',
-      category: 'security',
-      performedBy: user._id,
-      performedByRole: user.role,
-      targetType: 'user',
-      targetId: user._id,
-      targetName: user.username,
+          category: 'security',
+          performedBy: user._id,
+          performedByRole: user.role,
+          targetType: 'user',
+          targetId: user._id,
+          targetName: user.username,
       description: `Password reset via secret question`,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent'),
-      success: true
+          ipAddress: req.ip,
+          userAgent: req.get('User-Agent'),
+          success: true
     });
 
     return res.json({ success: true, message: 'Password reset successfully.' });
@@ -555,7 +555,7 @@ exports.saveInterests = async (req, res) => {
       { interests: interests },
       { new: true }
     ).select('-password -secretAnswerHash');
-    
+
     if (!user) {
       return res.status(404).json({ message: 'User not found.' });
     }

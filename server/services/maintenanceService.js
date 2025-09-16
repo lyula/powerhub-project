@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const AuditLog = require('../models/AuditLog');
 
 /**
  * Service to handle maintenance mode operations
@@ -28,6 +29,27 @@ class MaintenanceService {
       );
       
       console.log(`✅ Invalidated sessions for ${result.modifiedCount} users`);
+      
+      // Log maintenance mode logout for each affected user
+      if (result.modifiedCount > 0) {
+        const affectedUsers = await User.find({
+          role: { $nin: ['admin', 'IT'] },
+          sessionInvalidated: true
+        }).select('_id username role');
+        
+        // Log maintenance logout for each user (but don't spam the logs)
+        // Only log one summary entry for maintenance mode logout
+        await AuditLog.logAction({
+          action: 'maintenance_logout',
+          category: 'system_admin',
+          performedBy: null, // System action
+          performedByRole: 'system',
+          targetType: 'system',
+          description: `Maintenance mode activated - ${result.modifiedCount} users logged out`,
+          success: true
+        });
+      }
+      
       return {
         success: true,
         invalidatedCount: result.modifiedCount,
@@ -103,3 +125,4 @@ class MaintenanceService {
 }
 
 module.exports = MaintenanceService;
+
