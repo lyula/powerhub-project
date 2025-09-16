@@ -107,19 +107,19 @@ export default function LandingPage() {
 
   const testimonials = [
     {
-      name: "Sarah Johnson",
+      name: "Sarah Wanjiru",
       role: "Software Engineering Student",
       content: "PowerHub transformed how I learn. The community is amazing and the content quality is top-notch!",
       rating: 5
     },
     {
-      name: "Mike Chen",
+      name: "Mike Odhiambo",
       role: "Data Science Student", 
       content: "I've built my channel from zero to 1000 subscribers. The platform makes sharing knowledge so easy.",
       rating: 5
     },
     {
-      name: "Aisha Patel",
+      name: "Dennis Kimathi",
       role: "Cybersecurity Student",
       content: "The collaboration features helped me connect with peers and work on amazing projects together.",
       rating: 5
