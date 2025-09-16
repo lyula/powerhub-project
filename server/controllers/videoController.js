@@ -1026,8 +1026,16 @@ exports.editVideo = async (req, res) => {
       try {
         // Delete old thumbnail from cloudinary if it exists
         if (video.thumbnailUrl) {
-          const publicId = video.thumbnailUrl.split('/').pop().split('.')[0];
-          await cloudinary.uploader.destroy(publicId);
+          // Extract public ID from Cloudinary URL more robustly
+          const urlParts = video.thumbnailUrl.split('/');
+          const uploadIndex = urlParts.findIndex(part => part === 'upload');
+          if (uploadIndex !== -1 && uploadIndex + 2 < urlParts.length) {
+            // Get everything after 'upload/v{version}/' and remove file extension
+            const publicIdWithFolder = urlParts.slice(uploadIndex + 2).join('/');
+            const publicId = publicIdWithFolder.replace(/\.[^/.]+$/, "");
+            console.log("Attempting to delete old thumbnail with public ID:", publicId);
+            await cloudinary.uploader.destroy(publicId, { resource_type: "image" });
+          }
         }
         
         // Upload new thumbnail
@@ -1077,14 +1085,28 @@ exports.deleteVideo = async (req, res) => {
     try {
       // Delete video file from cloudinary
       if (video.videoUrl) {
-        const videoPublicId = video.videoUrl.split('/').pop().split('.')[0];
-        await cloudinary.uploader.destroy(videoPublicId, { resource_type: "video" });
+        // Extract public ID from Cloudinary URL more robustly
+        const urlParts = video.videoUrl.split('/');
+        const uploadIndex = urlParts.findIndex(part => part === 'upload');
+        if (uploadIndex !== -1 && uploadIndex + 2 < urlParts.length) {
+          const publicIdWithFolder = urlParts.slice(uploadIndex + 2).join('/');
+          const videoPublicId = publicIdWithFolder.replace(/\.[^/.]+$/, "");
+          console.log("Attempting to delete video with public ID:", videoPublicId);
+          await cloudinary.uploader.destroy(videoPublicId, { resource_type: "video" });
+        }
       }
       
       // Delete thumbnail from cloudinary
       if (video.thumbnailUrl) {
-        const thumbnailPublicId = video.thumbnailUrl.split('/').pop().split('.')[0];
-        await cloudinary.uploader.destroy(thumbnailPublicId);
+        // Extract public ID from Cloudinary URL more robustly
+        const urlParts = video.thumbnailUrl.split('/');
+        const uploadIndex = urlParts.findIndex(part => part === 'upload');
+        if (uploadIndex !== -1 && uploadIndex + 2 < urlParts.length) {
+          const publicIdWithFolder = urlParts.slice(uploadIndex + 2).join('/');
+          const thumbnailPublicId = publicIdWithFolder.replace(/\.[^/.]+$/, "");
+          console.log("Attempting to delete thumbnail with public ID:", thumbnailPublicId);
+          await cloudinary.uploader.destroy(thumbnailPublicId, { resource_type: "image" });
+        }
       }
     } catch (cloudinaryError) {
       console.error("Cloudinary deletion error:", cloudinaryError);
