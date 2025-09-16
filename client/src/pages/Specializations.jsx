@@ -11,10 +11,10 @@ export default function Specializations() {
         <Header onToggleSidebar={handleToggleSidebar} />
       </div>
       <div className="flex flex-row w-full pt-14" style={{ height: '100vh', maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
-        <div className={`fixed top-14 left-0 h-[calc(100vh-56px)] ${sidebarOpen ? 'w-64' : 'w-20'} z-30 bg-transparent md:block`}>
+        <div className={`fixed top-14 left-0 h-[calc(100vh-56px)] ${sidebarOpen ? 'w-64' : 'w-20'} z-30 bg-transparent hidden md:block`}>
           <Sidebar collapsed={!sidebarOpen} />
         </div>
-        <div className={`flex-1 flex flex-col ${sidebarOpen ? 'ml-64' : 'ml-20'} w-full overflow-y-auto`} style={{ maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
+        <div className={`flex-1 flex flex-col ${sidebarOpen ? 'md:ml-64' : 'md:ml-20'} w-full overflow-y-auto`} style={{ maxWidth: '100vw', overflowX: 'hidden', scrollbarWidth: 'none' }}>
           <div className="p-2 md:p-4 pb-8">
             <h2 className="text-lg md:text-xl font-bold mb-2 text-[#0bb6bc] dark:text-[#0bb6bc]">Specializations</h2>
             <div className="mt-4 md:mt-6">

@@ -1,21 +1,54 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { MdClose } from 'react-icons/md';
-import { MdPerson, MdNotifications, MdSettings, MdDashboard } from 'react-icons/md';
+import { 
+  MdPerson, 
+  MdNotifications, 
+  MdSettings, 
+  MdDashboard, 
+  MdHome, 
+  MdWhatshot, 
+  MdSubscriptions, 
+  MdBookmark, 
+  MdFavoriteBorder, 
+  MdPlayCircleOutline, 
+  MdHistory, 
+  MdPersonOutline,
+  MdLogout 
+} from 'react-icons/md';
 import { FaGithub } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 
 const MobileSidebar = ({ isOpen, toggleSidebar }) => {
-  const { user } = useAuth();
+  const { user, channel, logout } = useAuth();
+  const navigate = useNavigate();
   
   const sidebarLinks = [
-    { name: 'My Channel', path: '/my-channel', icon: <MdPerson size={20} /> },
+    { name: 'Home', path: '/home', icon: <MdHome size={20} /> },
+    { name: 'Trending', path: '/home', icon: <MdWhatshot size={20} /> },
+    { name: 'My Channel', path: channel && channel._id ? `/channel/${channel._id}` : '/channel-setup', icon: <MdPerson size={20} /> },
+    { name: 'Subscriptions', path: '/subscriptions', icon: <MdSubscriptions size={20} /> },
+    { name: 'Saved Videos', path: '/saved-videos', icon: <MdBookmark size={20} /> },
+    { name: 'Liked Videos', path: '/liked-videos', icon: <MdFavoriteBorder size={20} /> },
+    { name: 'Course Videos', path: '/course-videos', icon: <MdPlayCircleOutline size={20} /> },
+    { name: 'Watch History', path: '/watch-history', icon: <MdHistory size={20} /> },
     { name: 'Collaborations', path: '/mobile-collaboration-options', icon: <FaGithub size={20} /> },
     { name: 'Notifications', path: '/notifications', icon: <MdNotifications size={20} /> },
+    { name: 'Profile', path: '/profile', icon: <MdPersonOutline size={20} /> },
     // Only show IT Dashboard for users with IT role
     ...(user && user.role === 'IT' ? [{ name: 'IT Dashboard', path: '/it-dashboard', icon: <MdDashboard size={20} /> }] : []),
     { name: 'Settings', path: '/settings', icon: <MdSettings size={20} /> },
   ];
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toggleSidebar(); // Close sidebar
+      navigate('/login', { replace: true });
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
 
   return (
     <div
@@ -41,7 +74,7 @@ const MobileSidebar = ({ isOpen, toggleSidebar }) => {
           className="w-20 h-auto mb-4 rounded-lg shadow-sm"
         />
       </div>
-      <nav className="mt-4">
+      <nav className="mt-4 flex-1">
         <ul className="space-y-4 px-4">
           {sidebarLinks.map((link) => (
             <li key={link.name}>
@@ -56,6 +89,17 @@ const MobileSidebar = ({ isOpen, toggleSidebar }) => {
             </li>
           ))}
         </ul>
+        
+        {/* Logout button at the bottom */}
+        <div className="px-4 mt-8 pb-4">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors w-full"
+          >
+            <MdLogout size={20} />
+            Logout
+          </button>
+        </div>
       </nav>
     </div>
   );

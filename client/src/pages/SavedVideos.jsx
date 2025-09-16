@@ -151,13 +151,13 @@ export default function SavedVideos() {
         <div
           className={`fixed top-14 left-0 h-[calc(100vh-56px)] ${
             sidebarOpen ? "w-64" : "w-20"
-          } z-30 bg-transparent md:block`}
+          } z-30 bg-transparent hidden md:block`}
         >
           <Sidebar collapsed={!sidebarOpen} />
         </div>
         <div
           className={`flex-1 flex flex-col ${
-            sidebarOpen ? "ml-64" : "ml-20"
+            sidebarOpen ? "md:ml-64" : "md:ml-20"
           } w-full overflow-y-auto scrollbar-hide`}
         >
           <div className="p-4 md:p-8 pb-8">

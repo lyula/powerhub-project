@@ -34,10 +34,10 @@ export default function Subscriptions() {
         <Header onToggleSidebar={handleToggleSidebar} />
       </div>
       <div className="flex w-full pt-14">
-        <div className={`fixed top-14 left-0 h-[calc(100vh-56px)] ${sidebarOpen ? 'w-64' : 'w-20'} z-30 bg-transparent md:block`}>
+        <div className={`fixed top-14 left-0 h-[calc(100vh-56px)] ${sidebarOpen ? 'w-64' : 'w-20'} z-30 bg-transparent hidden md:block`}>
           <Sidebar collapsed={!sidebarOpen} />
         </div>
-        <div className={`flex-1 flex flex-col ${sidebarOpen ? 'ml-64' : 'ml-20'} min-h-[calc(100vh-56px)]`}>
+        <div className={`flex-1 flex flex-col ${sidebarOpen ? 'md:ml-64' : 'md:ml-20'} min-h-[calc(100vh-56px)]`}>
           
           {/* Page Header */}
           <div className="p-2 md:p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1a1a1a]">
