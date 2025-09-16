@@ -41,5 +41,7 @@ router.put('/security-alerts/:alertId/resolve', itDashboardController.resolveSec
 // Advanced analytics endpoint
 router.get('/advanced-analytics', itDashboardController.getAdvancedAnalytics);
 
+// Audit log management
+router.post('/audit-logs/cleanup', itDashboardController.cleanupAuditLogs);
 
 module.exports = router;

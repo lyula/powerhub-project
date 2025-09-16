@@ -198,18 +198,7 @@ exports.getMaintenanceStatus = async (req, res) => {
 // Get system overview metrics
 exports.getSystemOverview = async (req, res) => {
   try {
-    // Log IT dashboard access
-    await AuditLog.logAction({
-      action: 'it_dashboard_access',
-      category: 'system_admin',
-      performedBy: req.user.id,
-      performedByRole: req.user.role,
-      targetType: 'system',
-      description: `IT user ${req.user.username} accessed the IT dashboard`,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent'),
-      success: true
-    });
+    // Removed repetitive IT dashboard access logging - only log meaningful events
 
     // Get counts
     const totalUsers = await User.countDocuments();
@@ -667,15 +656,34 @@ exports.updateUserRole = async (req, res) => {
       return res.status(400).json({ message: 'Invalid role' });
     }
 
+    // Get the user before updating to capture the old role
+    const oldUser = await User.findById(userId).select('-password');
+    if (!oldUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
     const user = await User.findByIdAndUpdate(
       userId,
       { role },
       { new: true, runValidators: true }
     ).select('-password');
 
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
+    // Log user role change
+    await AuditLog.logAction({
+      action: 'user_role_changed',
+      category: 'user_management',
+      performedBy: req.user.id,
+      performedByRole: req.user.role,
+      targetType: 'user',
+      targetId: userId,
+      targetName: user.username,
+      description: `User ${user.username} role changed from ${oldUser.role} to ${role} by IT user ${req.user.username}`,
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent'),
+      success: true,
+      oldValues: { role: oldUser.role },
+      newValues: { role: role }
+    });
 
     res.json({
       success: true,
@@ -708,6 +716,25 @@ exports.deleteUser = async (req, res) => {
     if (user.role === 'IT') {
       return res.status(403).json({ message: 'Cannot delete other IT users' });
     }
+
+    // Log user deletion before actually deleting
+    await AuditLog.logAction({
+      action: 'user_deleted',
+      category: 'user_management',
+      performedBy: itUserId,
+      performedByRole: req.user.role,
+      targetType: 'user',
+      targetId: userId,
+      targetName: user.username,
+      description: `User ${user.username} (${user.email}) deleted by IT user ${req.user.username}`,
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent'),
+      success: true,
+      metadata: {
+        deletedUserRole: user.role,
+        deletedUserEmail: user.email
+      }
+    });
 
     await User.findByIdAndDelete(userId);
 
@@ -755,6 +782,25 @@ exports.toggleUserSuspension = async (req, res) => {
       updateData,
       { new: true, runValidators: true }
     ).select('-password');
+
+    // Log user suspension/unsuspension
+    await AuditLog.logAction({
+      action: suspended ? 'user_suspended' : 'user_unsuspended',
+      category: 'user_management',
+      performedBy: itUserId,
+      performedByRole: req.user.role,
+      targetType: 'user',
+      targetId: userId,
+      targetName: user.username,
+      description: `User ${user.username} ${suspended ? 'suspended' : 'unsuspended'} by IT user ${req.user.username}${reason ? ` - Reason: ${reason}` : ''}`,
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent'),
+      success: true,
+      metadata: {
+        reason: reason || null,
+        suspendedAt: suspended ? new Date() : null
+      }
+    });
 
     res.json({
       success: true,
@@ -1606,5 +1652,25 @@ exports.acknowledgeSecurityAlert = async (req, res) => {
   } catch (error) {
     console.error('Error acknowledging security alert:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Clean up repetitive audit logs
+exports.cleanupAuditLogs = async (req, res) => {
+  try {
+    console.log('Starting audit log cleanup...');
+    await AuditLog.cleanupRepetitiveLogs();
+    
+    res.json({
+      success: true,
+      message: 'Audit logs cleaned up successfully'
+    });
+  } catch (error) {
+    console.error('Error cleaning up audit logs:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to clean up audit logs',
+      details: error.message
+    });
   }
 };
