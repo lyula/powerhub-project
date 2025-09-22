@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { FaVideo, FaRegEdit, FaGithub } from 'react-icons/fa';
 import { MdMenu, MdNotificationsNone, MdLogout } from 'react-icons/md';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import ThemeToggle from './ThemeToggle';
@@ -253,10 +253,10 @@ export default function Header({ onToggleSidebar, searchTerm, onSearchChange }) 
         >
           <MdMenu size={28} color="#0bb6bc" />
         </button>
-            <a href="/" className="hidden md:inline text-lg font-bold" style={{ textDecoration: 'none' }}>
+            <Link to="/home" className="hidden md:inline text-lg font-bold" style={{ textDecoration: 'none' }}>
               <span style={{ color: '#c42152' }}>PLP</span>
               <span className="text-[#0bb6bc] dark:text-[#0bb6bc]"> PowerHub</span>
-            </a>
+            </Link>
             
             {/* GitHub Collaboration Button */}
             <div className="relative">
