@@ -5,6 +5,8 @@ import { colors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 import PWABanner from '../components/PWABanner';
 
+import PasswordInput from '../components/PasswordInput';
+
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -145,14 +147,12 @@ export default function Login() {
               required
               className="w-full px-4 py-3 rounded-lg bg-gray-200 dark:bg-gray-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400" 
             />
-            <input 
-              type="password" 
+            <PasswordInput
               name="password"
-              placeholder="Password" 
+              placeholder="Password"
               value={formData.password}
               onChange={handleChange}
               required
-              className="w-full px-4 py-3 rounded-lg bg-gray-200 dark:bg-gray-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400" 
             />
             <div className="w-full text-right -mt-2">
               <Link to="/forgot-password-verify" className="text-sm text-blue-600 hover:underline">Forgot password?</Link>
