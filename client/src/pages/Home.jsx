@@ -12,6 +12,7 @@ import HomeThumbnail from '../components/HomeThumbnail';
 import { searchAndSortContent } from '../utils/searchUtility';
 import { filterAndSortContent } from '../utils/filterUtility';
 import ChannelSearchResult from '../components/ChannelSearchResult';
+import { timeAgo } from '../utils/timeAgo';
 
 // Format duration as h:mm:ss or m:ss
 function formatDuration(seconds) {
@@ -130,14 +131,7 @@ export default function Home() {
             const formattedVideos = dbVideos.map(v => {
               let postedAgo = '';
               if (v.createdAt) {
-                const posted = new Date(v.createdAt);
-                const now = new Date();
-                const diff = Math.floor((now - posted) / 1000);
-                if (diff < 60) postedAgo = `${diff}s ago`;
-                else if (diff < 3600) postedAgo = `${Math.floor(diff/60)}m ago`;
-                else if (diff < 86400) postedAgo = `${Math.floor(diff/3600)}h ago`;
-                else if (diff < 2592000) postedAgo = `${Math.floor(diff/86400)}d ago`;
-                else postedAgo = posted.toLocaleDateString();
+                postedAgo = timeAgo(v.createdAt);
               }
               return {
                 videoUrl: v.videoUrl,
