@@ -163,7 +163,7 @@ const SubscribersList = () => {
     console.log('Social Links for modal:', socialLinks); // Debug log
     
     setModalData({
-      profilePicture: subscriber.profilePicture || subscriber.avatar || subscriber.profile || '/default-avatar.png',
+      profilePicture: subscriber.profilePicture || subscriber.avatar || subscriber.profile || '/user-avatar.jpg',
       channelName,
       socialLinks,
       authorId,
@@ -324,8 +324,8 @@ const SubscribersList = () => {
                       onClick={() => handleProfilePictureClick(subscriber)}
                     >
                       <img
-                        src={subscriber.profilePicture || subscriber.avatar}
-                        alt={subscriber.name || subscriber.username}
+                        src={subscriber.profilePicture || subscriber.avatar || '/user-avatar.jpg'}
+                        alt={subscriber.name || subscriber.username || 'Default User'}
                         className="w-12 h-12 rounded-full object-cover ring-2 ring-gray-200 dark:ring-gray-700"
                       />
                       <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white dark:border-gray-800"></div>

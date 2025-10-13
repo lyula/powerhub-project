@@ -96,7 +96,7 @@ const CommentThread = ({ comments, postId, token, userId, onReply, replyingTo, r
           <div key={comment._id} className="py-2 px-0">
             <div className="flex items-center gap-2 mb-1">
               <img
-                src={comment.author?.profilePicture || comment.author?.avatar || '/default-avatar.png'}
+                src={comment.author?.profilePicture || comment.author?.avatar || '/user-avatar.jpg'}
                 alt={comment.author?.username || 'User'}
                 className="w-7 h-7 rounded-full object-cover border border-gray-300 dark:border-gray-700 cursor-pointer"
                 onClick={() => onProfileClick(comment.author)}
@@ -220,7 +220,7 @@ const CommentThread = ({ comments, postId, token, userId, onReply, replyingTo, r
                       <div key={reply._id} className="py-2 px-0">
                         <div className="flex items-center gap-2 mb-1">
                           <img
-                            src={reply.author?.profilePicture || reply.author?.avatar || '/default-avatar.png'}
+                            src={reply.author?.profilePicture || reply.author?.avatar || '/user-avatar.jpg'}
                             alt={reply.author?.username || 'User'}
                             className="w-7 h-7 rounded-full object-cover border border-gray-300 dark:border-gray-700 cursor-pointer"
                             onClick={() => onProfileClick(reply.author)}
@@ -463,7 +463,7 @@ const PostDetails = () => {
       } catch {}
     }
     setModalData({
-      profilePicture: author.profilePicture || author.avatar || '/default-avatar.png',
+      profilePicture: author.profilePicture || author.avatar || '/user-avatar.jpg',
       channelName,
       socialLinks,
       hasChannel,
@@ -981,7 +981,7 @@ const PostDetails = () => {
                       </svg>
                     </button>
                     <img
-                      src={post.author?.profilePicture || post.author?.avatar || post.author?.profile || '/default-avatar.png'}
+                      src={post.author?.profilePicture || post.author?.avatar || post.author?.profile || '/user-avatar.jpg'}
                       alt={post.author?.username || 'User'}
                       className="w-12 h-12 rounded-full border-2 border-gray-300 dark:border-gray-700 flex-shrink-0 cursor-pointer"
                       style={{ width: '48px', height: '48px', objectFit: 'cover', aspectRatio: '1/1', minWidth: '48px', minHeight: '48px', maxWidth: '48px', maxHeight: '48px' }}

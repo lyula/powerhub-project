@@ -12,7 +12,7 @@ const ChannelSearchResult = ({ channel }) => {
       >
         {/* Profile Picture */}
         <img 
-          src={channel.avatar || '/default-avatar.png'} 
+          src={channel.avatar || '/user-avatar.jpg'} 
           alt={`${channel.name} profile`}
           className="w-10 h-10 rounded-full object-cover mr-3 border-2 border-gray-300 dark:border-gray-600"
         />

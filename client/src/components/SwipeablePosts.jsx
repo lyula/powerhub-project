@@ -71,7 +71,7 @@ const ExpandablePostCard = ({ post }) => {
       } catch (err) {}
     }
     setModalData({
-      profilePicture: author.profilePicture || author.avatar || author.profile || '/default-avatar.png',
+      profilePicture: author.profilePicture || author.avatar || author.profile || '/user-avatar.jpg',
       channelName,
       socialLinks,
       authorId,
@@ -167,7 +167,7 @@ const ExpandablePostCard = ({ post }) => {
         <div className="flex flex-col flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <img
-              src={post.author?.profilePicture || post.author?.avatar || post.author?.profile || '/default-avatar.png'}
+              src={post.author?.profilePicture || post.author?.avatar || post.author?.profile || '/user-avatar.jpg'}
               alt={post.author?.username || 'User'}
               className="w-8 h-8 rounded-full object-cover border border-gray-300 dark:border-gray-700 cursor-pointer"
               onClick={e => { e.stopPropagation(); handleProfilePictureClick(post.author); }}
