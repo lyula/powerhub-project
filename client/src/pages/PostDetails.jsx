@@ -8,21 +8,7 @@ import StudentUtility from '../components/StudentUtility';
 import BottomTabs from '../components/BottomTabs';
 import ProfilePictureZoomModal from '../components/ProfilePictureZoomModal';
 import ConfirmationModal from '../components/ConfirmationModal';
-
-// Helper to format relative time
-const formatRelativeTime = (dateString) => {
-  if (!dateString) return 'just now';
-  const posted = new Date(dateString);
-  const now = new Date();
-  const diffInSeconds = Math.floor((now - posted) / 1000);
-  if (diffInSeconds < 60) return 'just now';
-  const diffInMinutes = Math.floor(diffInSeconds / 60);
-  if (diffInMinutes < 60) return `${diffInMinutes} minute${diffInMinutes === 1 ? '' : 's'} ago`;
-  const diffInHours = Math.floor(diffInMinutes / 60);
-  if (diffInHours < 24) return `${diffInHours} hour${diffInHours === 1 ? '' : 's'} ago`;
-  const diffInDays = Math.floor(diffInHours / 24);
-  return `${diffInDays} day${diffInDays === 1 ? '' : 's'} ago`;
-};
+import { timeAgo } from '../utils/timeAgo';
 
 // Helper to count all comments and replies (flattened structure)
 const countAllComments = (comments) => {
@@ -103,7 +89,7 @@ const CommentThread = ({ comments, postId, token, userId, onReply, replyingTo, r
               />
               <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{comment.author?.username || 'Unknown'}</span>
               {comment.createdAt && (
-                <span className="text-xs text-gray-400 ml-2">{formatRelativeTime(comment.createdAt)}</span>
+                <span className="text-xs text-gray-400 ml-2">{timeAgo(comment.createdAt)}</span>
               )}
             </div>
             <div className="flex flex-col pl-9">
@@ -227,7 +213,7 @@ const CommentThread = ({ comments, postId, token, userId, onReply, replyingTo, r
                           />
                           <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{reply.author?.username || 'Unknown'}</span>
                           {reply.createdAt && (
-                            <span className="text-xs text-gray-400 ml-2">{formatRelativeTime(reply.createdAt)}</span>
+                            <span className="text-xs text-gray-400 ml-2">{timeAgo(reply.createdAt)}</span>
                           )}
                         </div>
                         <div className="flex flex-col pl-9">
@@ -990,7 +976,7 @@ const PostDetails = () => {
                     <div className="flex flex-col min-w-0" style={{ flex: 1, minWidth: 0 }}>
                       <span className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{post.author?.username || 'Unknown'}</span>
                       {post.createdAt && (
-                        <span className="text-xs text-gray-500 dark:text-gray-400 mb-1">{formatRelativeTime(post.createdAt)}</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 mb-1">{timeAgo(post.createdAt)}</span>
                       )}
                       <span className="text-xs text-[#c42152] font-semibold">{post.specialization}</span>
                     </div>
